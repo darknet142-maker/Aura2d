@@ -1,0 +1,6 @@
+{
+  "name": "Aura2d",
+  "description": "Lecteur musical spatial 2D avec navigation matricielle horizontale (Flux d'artistes X) et verticale (Profondeur d'album Y), spectre interactif Smart Drop, paroles synchronisées et synthétiseur Web Audio temps réel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

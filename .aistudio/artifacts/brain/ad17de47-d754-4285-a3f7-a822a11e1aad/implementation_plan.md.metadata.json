@@ -1,0 +1,6 @@
+{
+  "summary":  "Plan d'implémentation pour l'architecture Offline-First (Store-and-Forward avec API Express /api/sync-metrics, déduplication idempotente UUID et simulateur Hors-Ligne), les Fiches Artistes plein écran (discographie, équipe studio, top auditeurs), l'épuration des cartes Catalogue/Utilisateurs et le design Icon-First (icône Play au lieu de \"écoutes\" et suppression des textes superflus).",
+  "updatedAt":  "2026-10-31T16:07:07.090259737Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
