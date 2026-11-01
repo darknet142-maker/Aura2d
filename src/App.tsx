@@ -2,18 +2,12 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Play,
   Pause,
-  SkipBack,
-  SkipForward,
-  Shuffle,
-  Repeat,
-  Heart,
   Compass,
   Disc,
   Music,
   Shield,
   Users,
   Upload,
-  Link2,
   LogOut,
   Plus,
   Trash2,
@@ -32,51 +26,110 @@ import {
   Headphones,
   Building2,
   Clock,
-  BarChart3,
   Layers,
   Filter,
   Check,
   Wifi,
   WifiOff,
   RefreshCw,
-  CloudCheck,
   Database,
   Mic2,
+  Heart,
+  Repeat,
+  Grid,
 } from 'lucide-react';
 import {
   streamTracker,
   SyncStatusSnapshot,
   OfflineStreamEvent,
+  GabonSubscriptionPass,
+  GabonNetworkOperator,
 } from './services/offlineStreamTracker';
+import {
+  CoverArtwork,
+  ArtworkType,
+  DropOfficialLogo,
+  RankMedalSvg,
+} from './components/CoverArtwork';
+import { Immersive3DPlayer, LyricLine } from './components/Immersive3DPlayer';
+import {
+  StudioEntityRole,
+  CertificationBadgeSvg,
+  OfficialQrCodeSvg,
+} from './components/ReusableAnalyticsSheets';
+import {
+  CommunityRecommendationItem,
+  FeaturingSplitMode,
+  CreditHandshakeRecord,
+  GABON_PASS_SPECS,
+  evaluateEcgStreamValidation,
+  computeAllDecoupledStudioRankings,
+  computeDropAwardsCategories,
+  computeTrackExplosionScore,
+  getTrackCertification,
+  getAlbumCertification,
+} from './utils/rankingEngine';
 
 // --- Types ---
 export interface Track {
   id: string;
   title: string;
   artist: string;
+  featuringArtists?: string[];
+  featuringSplitMode?: FeaturingSplitMode; // '70_30' (Classique) ou '50_50' (Co-Lead)
   album: string;
   category: string;
   labelName: string;
+  copyrightText?: string;
   beatmakerName: string;
   soundEngineerName: string;
+  recordingEngineerName?: string; // 20% Prise de son
+  mixingEngineerName?: string; // 50% Mixage
+  masteringEngineerName?: string; // 30% Mastering
+  lyricistName: string;
+  isExternalLyricist?: boolean; // Bonus x1.25 Plume Externe
+  hasSynchronizedLyrics?: boolean; // Éligibilité Parolier
+  gabonTerritoryPct?: number; // Quota >= 70% territoire gabonais (+241)
+  weeksInTop10?: number;
+  isPreAlbumSingleOver6Months?: boolean;
+  lufsMasterLevel?: number; // Standard -14 LUFS
+  acousticClippingDetected?: boolean;
+  retention45sPct?: number; // Rétention à 45 secondes (Beatmaker)
+  halfLifeRetentionJ90Pct?: number; // Demi-vie à J+90 (Parolier)
+  creditHandshake?: CreditHandshakeRecord; // Gouvernance Handshake & Séquestre
   cover: string;
-  duration: number; // en secondes, affiché en MM:SS (ex: 02:42)
+  artworkType?: ArtworkType;
+  ambientPrimary?: string;
+  ambientSecondary?: string;
+  notes?: number[];
+  lyrics?: LyricLine[];
+  duration: number; // en secondes (ex: 180 = 3:00)
   dropStart: number;
   dropDuration: number;
   baseFreq: number;
   bpm: number;
   audioUrl?: string;
   externalStreamId?: string;
-  // Métriques calculées silencieusement en arrière-plan
-  realPlays: number;
+  // Métriques ECG calculées silencieusement en arrière-plan
+  realPlays: number; // Volume certifié en ECG (Écoutes Certifiées Gabon)
+  displayPlaysFormatted?: string; // ex: "580K ECG"
+  lastActivityAgo: string; // ex: "il y a 5 min"
   totalListenSeconds: number;
   listenSessions: number;
   avgRetentionPct: number;
+  retention30sPct: number;
   algoPoints: number;
   likesCount: number;
   loopPlaysCount: number;
+  recommendationsCount: number;
+  lyricsOpensCount: number;
+  lyricsSharesCount: number;
+  longevityDays: number;
   consecutiveLoops: number;
-  baselineRank: number; // Rang précédent pour calculer l'évolution (+4, -1, -8...)
+  baselineRank: number;
+  artistBaselinePlays?: number;
+  downloadedOffline?: boolean;
+  inPlaylist?: boolean;
   autoDetectedChorus?: boolean;
 }
 
@@ -115,268 +168,830 @@ export interface AppUser {
 }
 
 const DEFAULT_CATEGORIES = [
-  'Synthwave',
-  'Ambient',
-  'Electronic',
-  'Techno',
-  'House',
-  'Hip-Hop',
-  'Afro-Futurism',
-  'Expérimental',
+  'Ntcham',
+  'Rap Gabonais',
+  'Afrobeats / Afro-Pop',
+  'Rumba Gabonaise',
+  'Gospel',
+  'Tradimoderne',
 ];
 
-// --- Initial Catalogue Data ---
-// baselineRank permet d'afficher immédiatement les mouvements (+1, +4, -1, -8...) par rapport au classement actuel
+// --- Initial Catalogue Data (Calibré aux Seuils ECG du Marché Gabonais : 100K Or, 250K Platine, 500K Diamant) ---
 const INITIAL_CATALOGUE: AlbumNode[] = [
   {
-    id: 'alb-1',
-    artist: 'Klang & Kosh',
-    albumTitle: 'Architecture Infinie',
-    category: 'Synthwave',
+    id: 'alb-0',
+    artist: "L'Oiseau Rare",
+    albumTitle: 'Bantou Ntcham Vol. 2',
+    category: 'Ntcham',
     year: '2025',
     tracks: [
       {
         id: 't-101',
-        title: 'Néon Brutaliste',
-        artist: 'Klang & Kosh',
-        album: 'Architecture Infinie',
-        category: 'Synthwave',
-        labelName: 'Monolith Records',
-        beatmakerName: 'Kosh Beats',
-        soundEngineerName: 'Soren Vance',
-        cover: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        duration: 194,
-        dropStart: 52,
-        dropDuration: 30,
+        title: 'Souverain du Komo',
+        artist: "L'Oiseau Rare",
+        featuringArtists: ['Ng Bling'],
+        featuringSplitMode: '70_30',
+        album: 'Bantou Ntcham Vol. 2',
+        category: 'Ntcham',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Movaizhaleine & Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 91,
+        weeksInTop10: 6,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 94,
+        halfLifeRetentionJ90Pct: 68,
+        creditHandshake: {
+          status: 'VERIFIED',
+          confirmedByBeatmaker: true,
+          confirmedByEngineer: true,
+          confirmedByLyricist: true,
+          confirmedByLabel: true,
+          escrowFrozen: false,
+          audit72hCompleted: true,
+          dawAuditRequired: false,
+          qrCertificateHash: 'GABON-ECG-SHA256-9F8A21C0E4',
+        },
+        cover: '',
+        artworkType: 'crimson_bloom',
+        ambientPrimary: '#e11d48',
+        ambientSecondary: '#4c0519',
+        notes: [220, 261.63, 329.63, 392.0],
+        lyrics: [
+          { time: 0, text: 'Depuis PK8 jusqu’au port d’Owendo, la Ntcham résonne' },
+          { time: 35, text: 'Les tambours d’Iboga croisent les basses 808 dans la nuit' },
+          { time: 75, text: '[DROP] Souverain du Komo, Libreville ne dort jamais' },
+          { time: 120, text: 'Chaque quartier lève la main sous les étoiles de l’Estuaire' },
+          { time: 165, text: 'La couronne reste gravée dans l’or du Gabon' },
+        ],
+        duration: 214,
+        dropStart: 75,
+        dropDuration: 42,
         baseFreq: 110,
-        bpm: 124,
-        realPlays: 48,
-        totalListenSeconds: 7850,
-        listenSessions: 48,
-        avgRetentionPct: 84,
-        algoPoints: 18.5,
-        likesCount: 19,
-        loopPlaysCount: 14,
+        bpm: 116,
+        realPlays: 540000, // Single de Diamant (>= 500K ECG)
+        displayPlaysFormatted: '540K',
+        lastActivityAgo: 'il y a 4 min',
+        totalListenSeconds: 984000,
+        listenSessions: 6420,
+        avgRetentionPct: 91,
+        retention30sPct: 95,
+        algoPoints: 28.5,
+        likesCount: 16190,
+        loopPlaysCount: 4740,
+        recommendationsCount: 3420,
+        lyricsOpensCount: 28900,
+        lyricsSharesCount: 5640,
+        longevityDays: 96,
         consecutiveLoops: 0,
-        baselineRank: 7, // Actuellement #3 -> +4 places
+        baselineRank: 4,
+        artistBaselinePlays: 220000,
+        downloadedOffline: false,
+        inPlaylist: true,
       },
       {
-        id: 't-102',
-        title: 'Béton Nocturne',
-        artist: 'Klang & Kosh',
-        album: 'Architecture Infinie',
-        category: 'Synthwave',
-        labelName: 'Monolith Records',
-        beatmakerName: 'Kosh Beats',
-        soundEngineerName: 'Soren Vance',
-        cover: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
-        duration: 162, // 02:42
-        dropStart: 42,
-        dropDuration: 30,
+        id: 't-203',
+        title: "Écho d'Akanda",
+        artist: "L'Oiseau Rare",
+        featuringArtists: [' Donzer'],
+        featuringSplitMode: '70_30',
+        album: 'Bantou Ntcham Vol. 2',
+        category: 'Ntcham',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Tchatcho Prod',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: "L'Oiseau Rare",
+        isExternalLyricist: false,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 88,
+        weeksInTop10: 3,
+        lufsMasterLevel: -14.1,
+        acousticClippingDetected: false,
+        retention45sPct: 89,
+        halfLifeRetentionJ90Pct: 54,
+        creditHandshake: {
+          status: 'DISPUTED',
+          confirmedByBeatmaker: false,
+          confirmedByEngineer: true,
+          confirmedByLyricist: true,
+          confirmedByLabel: true,
+          disputeReason:
+            'Réclamation de co-production instrumentale (Stems 808) déposée par Kvnz Beats — Points gelés sous séquestre',
+          disputeOpenedAt: 'Il y a 18h',
+          escrowFrozen: true,
+          audit72hCompleted: true,
+          dawAuditRequired: false,
+          qrCertificateHash: 'GABON-ECG-SHA256-4D7B12A99C',
+        },
+        cover: '',
+        artworkType: 'crimson_bloom',
+        ambientPrimary: '#e11d48',
+        ambientSecondary: '#4c0519',
+        notes: [220, 246.94, 293.66, 349.23],
+        lyrics: [
+          { time: 0, text: 'Cap Esterias sous la brume, le flow découpe le silence' },
+          { time: 60, text: '[DROP] Les basses traversent la voie express d’Akanda' },
+          { time: 130, text: 'Plus rien ne freine l’ascension de la nouvelle garde' },
+        ],
+        duration: 202,
+        dropStart: 60,
+        dropDuration: 36,
         baseFreq: 98,
-        bpm: 122,
-        realPlays: 34,
-        totalListenSeconds: 4320,
-        listenSessions: 34,
-        avgRetentionPct: 78,
-        algoPoints: 13.25,
-        likesCount: 12,
-        loopPlaysCount: 9,
+        bpm: 118,
+        realPlays: 265000, // Single de Platine (>= 250K ECG)
+        displayPlaysFormatted: '265K',
+        lastActivityAgo: 'il y a 18 min',
+        totalListenSeconds: 449800,
+        listenSessions: 3150,
+        avgRetentionPct: 86,
+        retention30sPct: 91,
+        algoPoints: 19.0,
+        likesCount: 8410,
+        loopPlaysCount: 2142,
+        recommendationsCount: 1680,
+        lyricsOpensCount: 14100,
+        lyricsSharesCount: 2620,
+        longevityDays: 64,
         consecutiveLoops: 0,
-        baselineRank: 4, // Actuellement #5 -> -1 place
+        baselineRank: 5,
+        artistBaselinePlays: 220000,
+        downloadedOffline: false,
+        inPlaylist: false,
       },
       {
-        id: 't-103',
-        title: 'Verre Froid',
-        artist: 'Klang & Kosh',
-        album: 'Architecture Infinie',
-        category: 'Synthwave',
-        labelName: 'Monolith Records',
-        beatmakerName: 'Klang Studio',
-        soundEngineerName: 'Soren Vance',
-        cover: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80',
-        duration: 178,
-        dropStart: 64,
-        dropDuration: 30,
-        baseFreq: 130.81,
-        bpm: 126,
-        realPlays: 19,
-        totalListenSeconds: 1850,
-        listenSessions: 19,
-        avgRetentionPct: 55,
-        algoPoints: 6.75,
-        likesCount: 6,
-        loopPlaysCount: 3,
+        id: 't-104',
+        title: 'Nuit à Nzeng-Ayong',
+        artist: "L'Oiseau Rare",
+        featuringArtists: [],
+        featuringSplitMode: '70_30',
+        album: 'Bantou Ntcham Vol. 2',
+        category: 'Ntcham',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 93,
+        weeksInTop10: 2,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 91,
+        halfLifeRetentionJ90Pct: 61,
+        cover: '',
+        artworkType: 'crimson_bloom',
+        ambientPrimary: '#e11d48',
+        ambientSecondary: '#4c0519',
+        notes: [220, 261.63, 329.63, 392.0],
+        lyrics: [
+          { time: 0, text: 'Les lampadaires de Nzeng éclairent nos rêves d’enfants' },
+          { time: 58, text: '[DROP] La cadence du quartier fait vibrer tout l’Estuaire' },
+          { time: 130, text: 'On avance ensemble sans jamais oublier nos racines' },
+        ],
+        duration: 196,
+        dropStart: 58,
+        dropDuration: 38,
+        baseFreq: 108,
+        bpm: 117,
+        realPlays: 145000, // Single d'Or (>= 100K ECG)
+        displayPlaysFormatted: '145K',
+        lastActivityAgo: 'il y a 25 min',
+        totalListenSeconds: 264000,
+        listenSessions: 1940,
+        avgRetentionPct: 88,
+        retention30sPct: 92,
+        algoPoints: 14.8,
+        likesCount: 5120,
+        loopPlaysCount: 1380,
+        recommendationsCount: 980,
+        lyricsOpensCount: 9400,
+        lyricsSharesCount: 1840,
+        longevityDays: 48,
         consecutiveLoops: 0,
-        baselineRank: 9, // Actuellement #8 -> +1 place
+        baselineRank: 7,
+        artistBaselinePlays: 220000,
+        downloadedOffline: false,
+        inPlaylist: false,
+      },
+    ],
+  },
+  {
+    id: 'alb-main',
+    artist: "Emma'a",
+    albumTitle: 'Lumières de Libreville',
+    category: 'Afrobeats / Afro-Pop',
+    year: '2025',
+    tracks: [
+      {
+        id: 't-main-1',
+        title: 'Lumières du Bord de Mer',
+        artist: "Emma'a",
+        featuringArtists: ['Eboloko'],
+        featuringSplitMode: '50_50', // Co-Lead / Duo
+        album: 'Lumières de Libreville',
+        category: 'Afrobeats / Afro-Pop',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema & Movaizhaleine',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 89,
+        weeksInTop10: 7,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 96,
+        halfLifeRetentionJ90Pct: 74,
+        creditHandshake: {
+          status: 'VERIFIED',
+          confirmedByBeatmaker: true,
+          confirmedByEngineer: true,
+          confirmedByLyricist: true,
+          confirmedByLabel: true,
+          escrowFrozen: false,
+          audit72hCompleted: true,
+          dawAuditRequired: false,
+          qrCertificateHash: 'GABON-ECG-SHA256-77E1C4B802',
+        },
+        cover: '',
+        artworkType: 'creative_yellow',
+        ambientPrimary: '#eab308',
+        ambientSecondary: '#78350f',
+        notes: [261.63, 329.63, 392.0, 523.25],
+        lyrics: [
+          {
+            time: 0,
+            text: "Le vent de l'Estuaire caresse les palmiers de la Sablière",
+          },
+          {
+            time: 38,
+            text: 'Nos voix se mêlent aux vagues sous la lune équatoriale',
+          },
+          {
+            time: 76,
+            text: '[DROP] Lumières du Bord de Mer, garde mon cœur jusqu’à l’aube',
+          },
+          {
+            time: 116,
+            text: 'On roule toute la nuit de Glass jusqu’au Cap Esterias',
+          },
+          {
+            time: 150,
+            text: 'Une mélodie d’or qui unit tout le Gabon',
+          },
+        ],
+        duration: 180,
+        dropStart: 76,
+        dropDuration: 40,
+        baseFreq: 130.81,
+        bpm: 118,
+        realPlays: 580000, // Single de Diamant (>= 500K ECG)
+        displayPlaysFormatted: '580K',
+        lastActivityAgo: 'il y a 2 min',
+        totalListenSeconds: 1142000,
+        listenSessions: 8200,
+        avgRetentionPct: 94,
+        retention30sPct: 97,
+        algoPoints: 32.5,
+        likesCount: 19420,
+        loopPlaysCount: 5640,
+        recommendationsCount: 4340,
+        lyricsOpensCount: 34800,
+        lyricsSharesCount: 7120,
+        longevityDays: 105,
+        consecutiveLoops: 0,
+        baselineRank: 5,
+        artistBaselinePlays: 210000,
+        downloadedOffline: false,
+        inPlaylist: true,
+      },
+      {
+        id: 't-main-2',
+        title: "Pluie d'Équateur",
+        artist: "Emma'a",
+        featuringArtists: ['Shan’L'],
+        featuringSplitMode: '70_30',
+        album: 'Lumières de Libreville',
+        category: 'Afrobeats / Afro-Pop',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 86,
+        weeksInTop10: 4,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 92,
+        halfLifeRetentionJ90Pct: 65,
+        cover: '',
+        artworkType: 'creative_yellow',
+        ambientPrimary: '#f59e0b',
+        ambientSecondary: '#78350f',
+        notes: [293.66, 369.99, 440.0, 587.33],
+        lyrics: [
+          { time: 0, text: 'Quand l’orage tropical danse sur les toits de Libreville' },
+          {
+            time: 64,
+            text: '[DROP] Même sous la pluie d’Équateur, notre flamme reste intacte',
+          },
+          { time: 140, text: 'Les guitares afro-pop réchauffent toute la capitale' },
+        ],
+        duration: 242,
+        dropStart: 64,
+        dropDuration: 38,
+        baseFreq: 110,
+        bpm: 114,
+        realPlays: 295000, // Single de Platine (>= 250K ECG)
+        displayPlaysFormatted: '295K',
+        lastActivityAgo: 'il y a 6 min',
+        totalListenSeconds: 582400,
+        listenSessions: 4540,
+        avgRetentionPct: 89,
+        retention30sPct: 93,
+        algoPoints: 23.25,
+        likesCount: 11890,
+        loopPlaysCount: 3410,
+        recommendationsCount: 2580,
+        lyricsOpensCount: 19600,
+        lyricsSharesCount: 3890,
+        longevityDays: 88,
+        consecutiveLoops: 0,
+        baselineRank: 4,
+        artistBaselinePlays: 210000,
+        downloadedOffline: false,
+        inPlaylist: false,
+      },
+      {
+        id: 't-main-3',
+        title: "Traverse l'Ogooué",
+        artist: "Emma'a",
+        featuringArtists: [],
+        featuringSplitMode: '70_30',
+        album: 'Lumières de Libreville',
+        category: 'Afrobeats / Afro-Pop',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 92,
+        weeksInTop10: 2,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 88,
+        halfLifeRetentionJ90Pct: 58,
+        cover: '',
+        artworkType: 'creative_yellow',
+        ambientPrimary: '#d97706',
+        ambientSecondary: '#451a03',
+        notes: [246.94, 329.63, 392.0, 493.88],
+        lyrics: [
+          { time: 0, text: 'De Lambaréné jusqu’à Port-Gentil, le fleuve raconte notre histoire' },
+          {
+            time: 54,
+            text: '[DROP] Traverse l’Ogooué, porte ma voix vers l’océan',
+          },
+          { time: 135, text: 'Les harmonies du terroir embrassent la modernité' },
+        ],
+        duration: 221,
+        dropStart: 54,
+        dropDuration: 35,
+        baseFreq: 123.47,
+        bpm: 120,
+        realPlays: 138000, // Single d'Or (>= 100K ECG)
+        displayPlaysFormatted: '138K',
+        lastActivityAgo: 'il y a 32 min',
+        totalListenSeconds: 294000,
+        listenSessions: 2100,
+        avgRetentionPct: 85,
+        retention30sPct: 90,
+        algoPoints: 14.5,
+        likesCount: 4920,
+        loopPlaysCount: 1115,
+        recommendationsCount: 910,
+        lyricsOpensCount: 11800,
+        lyricsSharesCount: 1980,
+        longevityDays: 72,
+        consecutiveLoops: 0,
+        baselineRank: 8,
+        artistBaselinePlays: 210000,
+        downloadedOffline: false,
+        inPlaylist: false,
       },
     ],
   },
   {
     id: 'alb-2',
-    artist: 'Aether Pulse',
-    albumTitle: 'Mémoire Magnétique',
-    category: 'Ambient',
-    year: '2024',
+    artist: "Ba'ponga",
+    albumTitle: "Légende de l'Estuaire",
+    category: 'Rap Gabonais',
+    year: '2025',
     tracks: [
       {
-        id: 't-201',
-        title: 'Onde Stationnaire',
-        artist: 'Aether Pulse',
-        album: 'Mémoire Magnétique',
-        category: 'Ambient',
-        labelName: 'SubZero Audio',
-        beatmakerName: 'Aether Lab',
-        soundEngineerName: 'Elena Rostova',
-        cover: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&auto=format&fit=crop&q=80',
-        duration: 205,
-        dropStart: 48,
-        dropDuration: 30,
+        id: 't-301',
+        title: "Couronne d'Okoumé",
+        artist: "Ba'ponga",
+        featuringArtists: ['Movaizhaleine', 'Kôba Building'],
+        featuringSplitMode: '50_50',
+        album: "Légende de l'Estuaire",
+        category: 'Rap Gabonais',
+        labelName: 'Eben Entertainment',
+        copyrightText: 'Copyright 2026 Eben Entertainment Gabon. Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Movaizhaleine & Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 94,
+        weeksInTop10: 9,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 97,
+        halfLifeRetentionJ90Pct: 81,
+        cover: '',
+        artworkType: 'pastel_heart',
+        ambientPrimary: '#60a5fa',
+        ambientSecondary: '#1e3a8a',
+        notes: [293.66, 349.23, 440.0, 523.25],
+        lyrics: [
+          { time: 0, text: "L'Okoumé ne plie pas sous la tempête équatoriale" },
+          { time: 40, text: '[DROP] Trois décennies de plume gravées dans le marbre de Libreville' },
+          { time: 85, text: 'Chaque rime porte la mémoire des anciens et le feu des jeunes' },
+          { time: 135, text: "Le Rap Gabonais règne avec noblesse et conscience" },
+        ],
+        duration: 198,
+        dropStart: 42,
+        dropDuration: 38,
         baseFreq: 146.83,
-        bpm: 118,
-        realPlays: 64,
-        totalListenSeconds: 11920,
-        listenSessions: 64,
-        avgRetentionPct: 91,
-        algoPoints: 26.75,
-        likesCount: 28,
-        loopPlaysCount: 22,
+        bpm: 96,
+        realPlays: 620000, // Single de Diamant (>= 500K ECG)
+        displayPlaysFormatted: '620K',
+        lastActivityAgo: 'il y a 1 min',
+        totalListenSeconds: 1286800,
+        listenSessions: 9120,
+        avgRetentionPct: 96,
+        retention30sPct: 98,
+        algoPoints: 36.5,
+        likesCount: 24400,
+        loopPlaysCount: 6930,
+        recommendationsCount: 5890,
+        lyricsOpensCount: 42400,
+        lyricsSharesCount: 9750,
+        longevityDays: 118,
         consecutiveLoops: 0,
-        baselineRank: 3, // Actuellement #2 -> +1 place
+        baselineRank: 3,
+        artistBaselinePlays: 260000,
+        downloadedOffline: true,
+        inPlaylist: true,
       },
       {
-        id: 't-202',
-        title: 'Spectre Solaire',
-        artist: 'Aether Pulse',
-        album: 'Mémoire Magnétique',
-        category: 'Ambient',
-        labelName: 'SubZero Audio',
-        beatmakerName: 'Aether Lab',
-        soundEngineerName: 'Elena Rostova',
-        cover: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&auto=format&fit=crop&q=80',
-        duration: 188,
-        dropStart: 55,
-        dropDuration: 30,
-        baseFreq: 123.47,
-        bpm: 120,
-        realPlays: 27,
-        totalListenSeconds: 3610,
-        listenSessions: 27,
-        avgRetentionPct: 71,
-        algoPoints: 10.25,
-        likesCount: 9,
-        loopPlaysCount: 6,
+        id: 't-304',
+        title: 'Verbe de Libreville',
+        artist: "Ba'ponga",
+        featuringArtists: ['Vicky R'],
+        featuringSplitMode: '70_30',
+        album: "Légende de l'Estuaire",
+        category: 'Rap Gabonais',
+        labelName: 'Eben Entertainment',
+        copyrightText: 'Copyright 2026 Eben Entertainment Gabon. Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Movaizhaleine',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 91,
+        weeksInTop10: 5,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 93,
+        halfLifeRetentionJ90Pct: 72,
+        cover: '',
+        artworkType: 'pastel_heart',
+        ambientPrimary: '#60a5fa',
+        ambientSecondary: '#1e3a8a',
+        notes: [293.66, 349.23, 440.0, 523.25],
+        lyrics: [
+          { time: 0, text: 'La plume tranche avec précision, chaque syllabe pèse l’or' },
+          { time: 45, text: '[DROP] Le Verbe de Libreville résonne de Mont-Bouët à Mindoubé' },
+          { time: 110, text: 'Un héritage transmis aux nouvelles plumes du pays' },
+        ],
+        duration: 192,
+        dropStart: 45,
+        dropDuration: 36,
+        baseFreq: 138,
+        bpm: 94,
+        realPlays: 280000, // Single de Platine (>= 250K ECG)
+        displayPlaysFormatted: '280K',
+        lastActivityAgo: 'il y a 14 min',
+        totalListenSeconds: 512000,
+        listenSessions: 3640,
+        avgRetentionPct: 92,
+        retention30sPct: 95,
+        algoPoints: 21.8,
+        likesCount: 9800,
+        loopPlaysCount: 2840,
+        recommendationsCount: 2190,
+        lyricsOpensCount: 23400,
+        lyricsSharesCount: 5120,
+        longevityDays: 94,
         consecutiveLoops: 0,
-        baselineRank: 6, // Actuellement #7 -> -1 place
-      },
-      {
-        id: 't-203',
-        title: 'Echo Abyssal',
-        artist: 'Aether Pulse',
-        album: 'Mémoire Magnétique',
-        category: 'Ambient',
-        labelName: 'SubZero Audio',
-        beatmakerName: 'Nox_Wave',
-        soundEngineerName: 'Elena Rostova',
-        cover: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&auto=format&fit=crop&q=80',
-        duration: 242,
-        dropStart: 78,
-        dropDuration: 30,
-        baseFreq: 87.31,
-        bpm: 115,
-        realPlays: 15,
-        totalListenSeconds: 980,
-        listenSessions: 15,
-        avgRetentionPct: 27,
-        algoPoints: 3.5,
-        likesCount: 4,
-        loopPlaysCount: 2,
-        consecutiveLoops: 0,
-        baselineRank: 1, // Actuellement #9 -> -8 places
+        baselineRank: 6,
+        artistBaselinePlays: 260000,
+        downloadedOffline: false,
+        inPlaylist: true,
       },
     ],
   },
   {
     id: 'alb-3',
-    artist: 'Sora V',
-    albumTitle: 'Hyperbole Dynamique',
-    category: 'Electronic',
+    artist: "Shan'L",
+    albumTitle: 'Reines de la Sablière',
+    category: 'Rumba Gabonaise',
     year: '2025',
     tracks: [
       {
-        id: 't-301',
-        title: 'Vitesse Lumière',
-        artist: 'Sora V',
-        album: 'Hyperbole Dynamique',
-        category: 'Electronic',
-        labelName: 'Kinetic Tokyo',
-        beatmakerName: 'Sora V',
-        soundEngineerName: 'Kenji Takahashi',
-        cover: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800&auto=format&fit=crop&q=80',
-        duration: 175,
-        dropStart: 36,
-        dropDuration: 30,
-        baseFreq: 164.81,
-        bpm: 132,
-        realPlays: 82,
-        totalListenSeconds: 13680,
-        listenSessions: 82,
-        avgRetentionPct: 95,
-        algoPoints: 34.5,
-        likesCount: 37,
-        loopPlaysCount: 31,
+        id: 't-201',
+        title: 'Coeur de Pointe-Denis',
+        artist: "Shan'L",
+        featuringArtists: ['Creol', 'Arielle T'],
+        featuringSplitMode: '50_50',
+        album: 'Reines de la Sablière',
+        category: 'Rumba Gabonaise',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 87,
+        weeksInTop10: 6,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 95,
+        halfLifeRetentionJ90Pct: 70,
+        cover: '',
+        artworkType: 'emerald_matrix',
+        ambientPrimary: '#10b981',
+        ambientSecondary: '#064e3b',
+        notes: [196.0, 246.94, 293.66, 369.99],
+        lyrics: [
+          { time: 0, text: 'Guitares sébéné dorées sur le sable blanc de Pointe-Denis' },
+          { time: 55, text: '[DROP] La Rumba Gabonaise fait chavirer les cœurs ce soir' },
+          { time: 115, text: 'Les voix de nos reines illuminent la lagune' },
+          { time: 170, text: 'On danse jusqu’au premier bateau du matin' },
+        ],
+        duration: 225,
+        dropStart: 55,
+        dropDuration: 40,
+        baseFreq: 98,
+        bpm: 112,
+        realPlays: 340000, // Single de Platine (>= 250K ECG)
+        displayPlaysFormatted: '340K',
+        lastActivityAgo: 'il y a 9 min',
+        totalListenSeconds: 719200,
+        listenSessions: 4830,
+        avgRetentionPct: 91,
+        retention30sPct: 95,
+        algoPoints: 26.75,
+        likesCount: 15280,
+        loopPlaysCount: 3620,
+        recommendationsCount: 3150,
+        lyricsOpensCount: 21200,
+        lyricsSharesCount: 4040,
+        longevityDays: 84,
         consecutiveLoops: 0,
-        baselineRank: 2, // Actuellement #1 -> +1 place
+        baselineRank: 3,
+        artistBaselinePlays: 185000,
+        downloadedOffline: false,
+        inPlaylist: false,
       },
+      {
+        id: 't-205',
+        title: 'Soirée Quartier Louis',
+        artist: "Shan'L",
+        featuringArtists: ['Fetty Ndoss'],
+        featuringSplitMode: '70_30',
+        album: 'Reines de la Sablière',
+        category: 'Rumba Gabonaise',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 90,
+        weeksInTop10: 3,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 90,
+        halfLifeRetentionJ90Pct: 62,
+        cover: '',
+        artworkType: 'emerald_matrix',
+        ambientPrimary: '#10b981',
+        ambientSecondary: '#064e3b',
+        notes: [196.0, 246.94, 293.66, 369.99],
+        lyrics: [
+          { time: 0, text: 'Les lumières de Quartier Louis s’allument dès le crépuscule' },
+          { time: 50, text: '[DROP] Une rumba suave qui traverse toutes les générations' },
+          { time: 120, text: 'Libreville chante d’une seule voix' },
+        ],
+        duration: 210,
+        dropStart: 50,
+        dropDuration: 36,
+        baseFreq: 104,
+        bpm: 110,
+        realPlays: 165000, // Single d'Or (>= 100K ECG)
+        displayPlaysFormatted: '165K',
+        lastActivityAgo: 'il y a 21 min',
+        totalListenSeconds: 342000,
+        listenSessions: 2410,
+        avgRetentionPct: 89,
+        retention30sPct: 93,
+        algoPoints: 16.4,
+        likesCount: 6820,
+        loopPlaysCount: 1790,
+        recommendationsCount: 1240,
+        lyricsOpensCount: 12900,
+        lyricsSharesCount: 2310,
+        longevityDays: 67,
+        consecutiveLoops: 0,
+        baselineRank: 6,
+        artistBaselinePlays: 185000,
+        downloadedOffline: false,
+        inPlaylist: false,
+      },
+    ],
+  },
+  {
+    id: 'alb-4',
+    artist: 'Pierre Akendengué',
+    albumTitle: 'Racines & Sacré du Gabon',
+    category: 'Tradimoderne',
+    year: '2025',
+    tracks: [
       {
         id: 't-302',
-        title: 'Horizon Digital',
-        artist: 'Sora V',
-        album: 'Hyperbole Dynamique',
-        category: 'Electronic',
-        labelName: 'Kinetic Tokyo',
-        beatmakerName: 'Sora V',
-        soundEngineerName: 'Kenji Takahashi',
-        cover: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
-        duration: 199,
-        dropStart: 62,
-        dropDuration: 30,
-        baseFreq: 138.59,
-        bpm: 128,
-        realPlays: 41,
-        totalListenSeconds: 6510,
-        listenSessions: 41,
-        avgRetentionPct: 80,
-        algoPoints: 16.0,
-        likesCount: 15,
-        loopPlaysCount: 11,
+        title: 'Chant de la Ngounié',
+        artist: 'Pierre Akendengué',
+        featuringArtists: ['Annie Flore Batchiellilys', 'Hilarion Nguema'],
+        featuringSplitMode: '50_50',
+        album: 'Racines & Sacré du Gabon',
+        category: 'Tradimoderne',
+        labelName: 'Eben Entertainment',
+        copyrightText: 'Copyright 2026 Eben Entertainment Gabon. Tous droits réservés',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Movaizhaleine & Pierre Akendengué',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 95,
+        weeksInTop10: 5,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 96,
+        halfLifeRetentionJ90Pct: 84,
+        cover: '',
+        artworkType: 'violet_odyssey',
+        ambientPrimary: '#a855f7',
+        ambientSecondary: '#3b0764',
+        notes: [246.94, 311.13, 369.99, 493.88],
+        lyrics: [
+          { time: 0, text: 'Les harpes sacrées Ngombi rencontrent les cordes acoustiques' },
+          { time: 50, text: '[DROP] Chant de la Ngounié, sagesse éternelle de nos ancêtres' },
+          { time: 110, text: 'De Mouila à Oyem, l’âme du Gabon s’élève en harmonie' },
+          { time: 160, text: 'Un patrimoine vivant pour les siècles à venir' },
+        ],
+        duration: 205,
+        dropStart: 50,
+        dropDuration: 36,
+        baseFreq: 123.47,
+        bpm: 104,
+        realPlays: 275000, // Single de Platine (>= 250K ECG)
+        displayPlaysFormatted: '275K',
+        lastActivityAgo: 'il y a 11 min',
+        totalListenSeconds: 565100,
+        listenSessions: 3910,
+        avgRetentionPct: 93,
+        retention30sPct: 96,
+        algoPoints: 24.25,
+        likesCount: 12500,
+        loopPlaysCount: 3380,
+        recommendationsCount: 2820,
+        lyricsOpensCount: 27400,
+        lyricsSharesCount: 6310,
+        longevityDays: 112,
         consecutiveLoops: 0,
-        baselineRank: 8, // Actuellement #4 -> +4 places
+        baselineRank: 6,
+        artistBaselinePlays: 95000, // Fort Delta d'Impact (de 95K habituels à 275K ECG !)
+        downloadedOffline: false,
+        inPlaylist: true,
       },
       {
-        id: 't-303',
-        title: 'Fragment Zéro',
-        artist: 'Sora V',
-        album: 'Hyperbole Dynamique',
-        category: 'Electronic',
-        labelName: 'Kinetic Tokyo',
-        beatmakerName: 'Yuki Bass',
-        soundEngineerName: 'Kenji Takahashi',
-        cover: 'https://images.unsplash.com/photo-1604871000636-074fa5117945?w=800&auto=format&fit=crop&q=80',
-        duration: 168,
-        dropStart: 45,
-        dropDuration: 30,
-        baseFreq: 116.54,
-        bpm: 130,
-        realPlays: 29,
-        totalListenSeconds: 3890,
-        listenSessions: 29,
-        avgRetentionPct: 79,
-        algoPoints: 11.25,
-        likesCount: 11,
-        loopPlaysCount: 7,
+        id: 't-305',
+        title: 'Lumière de Franceville',
+        artist: 'Pierre Akendengué',
+        featuringArtists: ['Bussine'],
+        featuringSplitMode: '70_30',
+        album: 'Racines & Sacré du Gabon',
+        category: 'Gospel',
+        labelName: 'Eben Entertainment',
+        copyrightText: 'Copyright 2026 Eben Entertainment Gabon. Tous droits réservés',
+        beatmakerName: 'Tchatcho Prod',
+        soundEngineerName: 'Samy Master LBV',
+        recordingEngineerName: 'Junior Nzeng',
+        mixingEngineerName: 'Samy Master LBV',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Edgar Nguema',
+        isExternalLyricist: true,
+        hasSynchronizedLyrics: true,
+        gabonTerritoryPct: 93,
+        weeksInTop10: 4,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 92,
+        halfLifeRetentionJ90Pct: 76,
+        cover: '',
+        artworkType: 'violet_odyssey',
+        ambientPrimary: '#a855f7',
+        ambientSecondary: '#3b0764',
+        notes: [246.94, 311.13, 369.99, 493.88],
+        lyrics: [
+          { time: 0, text: 'Les chœurs du Haut-Ogooué s’élèvent dans la clarté du matin' },
+          { time: 48, text: '[DROP] Lumière de Franceville, espoir et bénédiction sur la terre' },
+          { time: 118, text: 'La paix descend dans chaque foyer du Gabon' },
+        ],
+        duration: 200,
+        dropStart: 48,
+        dropDuration: 36,
+        baseFreq: 120,
+        bpm: 102,
+        realPlays: 185000, // Single d'Or (>= 100K ECG)
+        displayPlaysFormatted: '185K',
+        lastActivityAgo: 'il y a 19 min',
+        totalListenSeconds: 382000,
+        listenSessions: 2680,
+        avgRetentionPct: 91,
+        retention30sPct: 94,
+        algoPoints: 18.2,
+        likesCount: 8400,
+        loopPlaysCount: 2150,
+        recommendationsCount: 1790,
+        lyricsOpensCount: 16800,
+        lyricsSharesCount: 3920,
+        longevityDays: 95,
         consecutiveLoops: 0,
-        baselineRank: 5, // Actuellement #6 -> -1 place
+        baselineRank: 7,
+        artistBaselinePlays: 95000,
+        downloadedOffline: false,
+        inPlaylist: false,
       },
     ],
   },
@@ -385,35 +1000,35 @@ const INITIAL_CATALOGUE: AlbumNode[] = [
 const INITIAL_USERS: AppUser[] = [
   {
     id: 'u-1',
-    name: 'Camille Laurent',
-    email: 'camille@aura2d.io',
+    name: 'Camille Ndong (+241)',
+    email: 'camille.ndong@drop.ga',
     role: 'ADMIN',
     joinedAt: '12 Jan 2025',
-    avatar: 'CL',
-    totalLikes: 18,
-    totalListenSeconds: 14820,
-    totalValidatedPlays: 68,
-    totalLoops: 27,
+    avatar: 'CN',
+    totalLikes: 28,
+    totalListenSeconds: 18820,
+    totalValidatedPlays: 84,
+    totalLoops: 34,
     trackStats: {
-      't-301': {
-        trackId: 't-301',
+      't-main-1': {
+        trackId: 't-main-1',
         listenSeconds: 6125,
         playsCount: 31,
         loopsCount: 15,
         maxConsecutiveLoops: 10,
         liked: true,
         pointsContributed: 12.25,
-        lastListenedAt: 'Il y a 14 min',
+        lastListenedAt: 'il y a 5 min',
       },
-      't-201': {
-        trackId: 't-201',
+      't-301': {
+        trackId: 't-301',
         listenSeconds: 5120,
         playsCount: 22,
         loopsCount: 8,
         maxConsecutiveLoops: 5,
         liked: true,
         pointsContributed: 7.75,
-        lastListenedAt: 'Il y a 2 h',
+        lastListenedAt: 'il y a 2 h',
       },
       't-101': {
         trackId: 't-101',
@@ -429,11 +1044,11 @@ const INITIAL_USERS: AppUser[] = [
   },
   {
     id: 'u-2',
-    name: 'Lucas Moreau',
-    email: 'lucas.m@studio.fr',
+    name: 'Marc-Arthur Obiang',
+    email: 'marc.obiang@studio.ga',
     role: 'USER',
     joinedAt: '03 Fév 2025',
-    avatar: 'LM',
+    avatar: 'MO',
     totalLikes: 24,
     totalListenSeconds: 21450,
     totalValidatedPlays: 96,
@@ -447,111 +1062,57 @@ const INITIAL_USERS: AppUser[] = [
         maxConsecutiveLoops: 12,
         liked: true,
         pointsContributed: 17.5,
-        lastListenedAt: 'Il y a 5 min',
+        lastListenedAt: 'il y a 4 min',
       },
-      't-102': {
-        trackId: 't-102',
+      't-main-1': {
+        trackId: 't-main-1',
         listenSeconds: 6480,
         playsCount: 32,
         loopsCount: 12,
         maxConsecutiveLoops: 8,
         liked: true,
         pointsContributed: 11.25,
-        lastListenedAt: 'Il y a 1 h',
-      },
-      't-302': {
-        trackId: 't-302',
-        listenSeconds: 5270,
-        playsCount: 20,
-        loopsCount: 8,
-        maxConsecutiveLoops: 4,
-        liked: false,
-        pointsContributed: 7.0,
-        lastListenedAt: 'Hier',
+        lastListenedAt: 'il y a 1 h',
       },
     },
   },
   {
     id: 'u-3',
-    name: 'Inès Benali',
-    email: 'ines.b@design.co',
+    name: 'Inès Mba-Mintsa',
+    email: 'ines.mba@design.ga',
     role: 'USER',
     joinedAt: '19 Fév 2025',
-    avatar: 'IB',
+    avatar: 'IM',
     totalLikes: 31,
     totalListenSeconds: 18340,
     totalValidatedPlays: 81,
     totalLoops: 35,
     trackStats: {
-      't-201': {
-        trackId: 't-201',
+      't-301': {
+        trackId: 't-301',
         listenSeconds: 10250,
         playsCount: 42,
         loopsCount: 21,
         maxConsecutiveLoops: 11,
         liked: true,
         pointsContributed: 16.25,
-        lastListenedAt: 'En écoute',
+        lastListenedAt: 'il y a 2 min',
       },
-      't-301': {
-        trackId: 't-301',
+      't-201': {
+        trackId: 't-201',
         listenSeconds: 4900,
         playsCount: 24,
         loopsCount: 9,
         maxConsecutiveLoops: 6,
         liked: true,
         pointsContributed: 8.5,
-        lastListenedAt: 'Il y a 3 h',
-      },
-      't-202': {
-        trackId: 't-202',
-        listenSeconds: 3190,
-        playsCount: 15,
-        loopsCount: 5,
-        maxConsecutiveLoops: 3,
-        liked: true,
-        pointsContributed: 5.25,
-        lastListenedAt: 'Il y a 2 j',
-      },
-    },
-  },
-  {
-    id: 'u-4',
-    name: 'Hugo Vasseur',
-    email: 'hugo@synth.net',
-    role: 'USER',
-    joinedAt: '04 Mar 2025',
-    avatar: 'HV',
-    totalLikes: 9,
-    totalListenSeconds: 6420,
-    totalValidatedPlays: 34,
-    totalLoops: 19,
-    trackStats: {
-      't-303': {
-        trackId: 't-303',
-        listenSeconds: 4200,
-        playsCount: 21,
-        loopsCount: 15,
-        maxConsecutiveLoops: 14,
-        liked: true,
-        pointsContributed: 6.75,
-        lastListenedAt: 'Il y a 45 min',
-      },
-      't-103': {
-        trackId: 't-103',
-        listenSeconds: 2220,
-        playsCount: 13,
-        loopsCount: 4,
-        maxConsecutiveLoops: 2,
-        liked: false,
-        pointsContributed: 4.25,
-        lastListenedAt: 'Il y a 4 j',
+        lastListenedAt: 'il y a 3 h',
       },
     },
   },
 ];
 
-// Formatage strict en MM:SS (ex: 02:42)
+// Formatage en MM:SS (02:42) pour les formulaires et fiches Admin
 function formatTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
   const m = Math.floor(s / 60);
@@ -569,6 +1130,13 @@ function formatLongDuration(sec: number): string {
   return `${m}m`;
 }
 
+function formatCompactCount(n: number, custom?: string): string {
+  if (custom) return custom;
+  if (n >= 1000000) return `${(n / 1000000).toFixed(2).replace('.00', '')}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}K`;
+  return `${Math.round(n)}`;
+}
+
 function parseDurationInput(str: string): number {
   const clean = str.trim();
   if (clean.includes(':')) {
@@ -578,7 +1146,7 @@ function parseDurationInput(str: string): number {
     return Math.max(30, mins * 60 + secs);
   }
   const num = parseInt(clean, 10);
-  return Number.isNaN(num) ? 162 : Math.max(30, num);
+  return Number.isNaN(num) ? 180 : Math.max(30, num);
 }
 
 function extractExternalStreamId(url: string): string | null {
@@ -589,13 +1157,26 @@ function extractExternalStreamId(url: string): string | null {
   return null;
 }
 
-// --- Composant Badge de Rang (#1👑, #2🥈, #3🥉) + Variation (+4 vert / -8 rouge) ---
+interface AdminDrmVaultRecord {
+  key: CryptoKey | null;
+  iv: Uint8Array;
+  cipherBytes: Uint8Array;
+  corrupted: boolean;
+  timestamp: string;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes.slice(0, 48))
+    .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+    .join(' ');
+}
+
+// --- Composant Badge de Rang 100% Vectoriel SVG pour les listes Admin ---
 function RankBadge({ rank, delta }: { rank: number; delta: number }) {
-  const medal = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
   return (
     <div className="flex items-center gap-1.5 shrink-0 font-mono">
       <span
-        className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs font-bold border ${
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border ${
           rank === 1
             ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
             : rank === 2
@@ -606,18 +1187,27 @@ function RankBadge({ rank, delta }: { rank: number; delta: number }) {
         }`}
       >
         <span>#{rank}</span>
-        {medal && <span>{medal}</span>}
+        <RankMedalSvg rank={rank} className="w-3.5 h-3.5" />
       </span>
 
       {delta !== 0 && (
         <span
-          className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold ${
             delta > 0
-              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+              ? 'bg-emerald-500/15 text-[#00D25B] border border-emerald-500/30'
+              : 'bg-rose-500/15 text-[#FF3B30] border border-rose-500/30'
           }`}
         >
-          {delta > 0 ? `+${delta}` : `${delta}`}
+          {delta > 0 ? (
+            <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 12 12">
+              <path d="M6 2L11 10H1L6 2Z" />
+            </svg>
+          ) : (
+            <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 12 12">
+              <path d="M6 10L1 2H11L6 10Z" />
+            </svg>
+          )}
+          <span>{delta > 0 ? `+${delta}` : `${delta}`}</span>
         </span>
       )}
     </div>
@@ -626,11 +1216,22 @@ function RankBadge({ rank, delta }: { rank: number; delta: number }) {
 
 export function App() {
   // --- Navigation & Auth State ---
-  const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('AUTH');
+  const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('PLAYER');
   const [catalogue, setCatalogue] = useState<AlbumNode[]>(INITIAL_CATALOGUE);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<AppUser>(INITIAL_USERS[0]);
+
+  // --- Gabon Mobile Money Pass & Anti-Fraud Shield State ---
+  const [subscriptionPass, setSubscriptionPass] = useState<GabonSubscriptionPass>(
+    'PASS_MENSUEL_MOOV_AIRTEL'
+  );
+  const [networkOperator, setNetworkOperator] =
+    useState<GabonNetworkOperator>('AIRTEL_GABON_4G');
+  const [lastEcgValidationMsg, setLastEcgValidationMsg] = useState<string>(
+    'Bouclier ECG Gabon (+241) actif • Seuil 30s • Anti-Mute 0% • Plafond 5/24h (Airtel/Moov 1.0 ECG)'
+  );
+  const dailyUserTrackPlaysRef = useRef<Record<string, number>>({});
 
   // --- Offline-First Stream Tracker Snapshot ---
   const [syncSnapshot, setSyncSnapshot] = useState<SyncStatusSnapshot>(() =>
@@ -644,24 +1245,105 @@ export function App() {
   }, []);
 
   // --- Player 2D Coordinates ---
-  const [albumIdx, setAlbumIdx] = useState<number>(0); // Axe X
-  const [trackIdx, setTrackIdx] = useState<number>(0); // Axe Y
+  const [albumIdx, setAlbumIdx] = useState<number>(1); // Index 1 = "Lumières du Bord de Mer" au centre par défaut
+  const [trackIdx, setTrackIdx] = useState<number>(0); // Axe Y (Swipe Haut/Bas & Suivant/Précédent au sein d'un album)
 
-  // --- Playback State ---
+  // --- Playback & 5-Band Web Audio Equalizer State ---
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isDropMode, setIsDropMode] = useState<boolean>(true);
-  const [currentTime, setCurrentTime] = useState<number>(
-    INITIAL_CATALOGUE[0].tracks[0].dropStart
-  );
+  const [currentTime, setCurrentTime] = useState<number>(116); // 1:56 par défaut
   const [likedTrackIds, setLikedTrackIds] = useState<Record<string, boolean>>({
+    't-main-1': true,
     't-101': true,
     't-201': true,
     't-301': true,
   });
+  const [recommendedTrackIds, setRecommendedTrackIds] = useState<Record<string, boolean>>({
+    't-301': true,
+    't-main-1': true,
+  });
+  const [subscribedArtists, setSubscribedArtists] = useState<Record<string, boolean>>({
+    "Emma'a": true,
+    "Ba'ponga": true,
+    "L'Oiseau Rare": true,
+  });
+  const [artistSubscribers, setArtistSubscribers] = useState<Record<string, number>>({
+    "Emma'a": 48200,
+    "Ba'ponga": 62400,
+    "L'Oiseau Rare": 54800,
+    "Shan'L": 51500,
+    'Pierre Akendengué': 36900,
+    Eboloko: 29400,
+    'Ng Bling': 31200,
+    Movaizhaleine: 44900,
+    'Kôba Building': 38800,
+    Creol: 34700,
+    'Arielle T': 28200,
+    'Annie Flore Batchiellilys': 33400,
+    'Vicky R': 24100,
+  });
+  const [communityRecommendations, setCommunityRecommendations] = useState<
+    CommunityRecommendationItem[]
+  >([
+    {
+      id: 'rec-init-1',
+      trackId: 't-301',
+      trackTitle: "Couronne d'Okoumé",
+      trackArtist: "Ba'ponga feat. Movaizhaleine, Kôba Building",
+      trackCategory: 'Rap Gabonais',
+      cover: '',
+      artworkType: 'pastel_heart',
+      userId: 'u-3',
+      userName: 'Inès Mba-Mintsa',
+      userAvatar: 'IM',
+      commentOrLyricExcerpt:
+        '« [DROP] Trois décennies de plume gravées dans le marbre de Libreville » — Plume Externe x1.25 & Mix -14 LUFS !',
+      isLyricExcerpt: true,
+      lyricistName: 'Movaizhaleine & Edgar Nguema',
+      createdAt: 'il y a 3 min',
+      boostPoints: 0.45,
+    },
+    {
+      id: 'rec-init-2',
+      trackId: 't-main-1',
+      trackTitle: 'Lumières du Bord de Mer',
+      trackArtist: "Emma'a feat. Eboloko",
+      trackCategory: 'Afrobeats / Afro-Pop',
+      cover: '',
+      artworkType: 'creative_yellow',
+      userId: 'u-1',
+      userName: 'Camille Ndong (+241)',
+      userAvatar: 'CN',
+      commentOrLyricExcerpt:
+        'Duo Co-Lead 50/50 certifié Single de Diamant (580K ECG) ! Le refrain à 1:16 est magique.',
+      isLyricExcerpt: false,
+      createdAt: 'il y a 11 min',
+      boostPoints: 0.35,
+    },
+    {
+      id: 'rec-init-3',
+      trackId: 't-101',
+      trackTitle: 'Souverain du Komo',
+      trackArtist: "L'Oiseau Rare feat. Ng Bling",
+      trackCategory: 'Ntcham',
+      cover: '',
+      artworkType: 'crimson_bloom',
+      userId: 'u-2',
+      userName: 'Marc-Arthur Obiang',
+      userAvatar: 'MO',
+      commentOrLyricExcerpt:
+        'Énorme Delta d’Impact sur la prod Ntcham de Kvnz Beats et le mix Studio K de Maître Boussengui !',
+      isLyricExcerpt: false,
+      createdAt: 'il y a 24 min',
+      boostPoints: 0.35,
+    },
+  ]);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
-  const [isRepeat, setIsRepeat] = useState<boolean>(false);
-  const [axisLock, setAxisLock] = useState<'NONE' | 'X' | 'Y'>('NONE');
-  const [gestureDelta, setGestureDelta] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [repeatMode, setRepeatMode] = useState<number>(0); // 0: Off, 1: All, 2: One
+  const isRepeat = repeatMode > 0;
+  const [masterVolume, setMasterVolume] = useState<number>(85);
+  const [eqGains, setEqGains] = useState<number[]>([6, 3, -1, 2.5, 4.5]);
+  const [userPlan, setUserPlan] = useState<'BASIC' | 'PRO'>('PRO');
 
   // --- Silent Real Play & Retention Session Tracking ---
   const manualSessionRef = useRef<{
@@ -669,25 +1351,33 @@ export function App() {
     active: boolean;
     listenedSeconds: number;
     playCountedAtOneSec: boolean;
+    ecgValidatedAt30Sec: boolean;
     sessionPointsEarned: number;
   }>({
-    trackId: INITIAL_CATALOGUE[0].tracks[0].id,
+    trackId: INITIAL_CATALOGUE[1].tracks[0].id,
     active: false,
     listenedSeconds: 0,
     playCountedAtOneSec: false,
+    ecgValidatedAt30Sec: false,
     sessionPointsEarned: 0,
   });
 
   // --- Auth Form State ---
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [authName, setAuthName] = useState<string>('');
-  const [authEmail, setAuthEmail] = useState<string>('camille@aura2d.io');
+  const [authEmail, setAuthEmail] = useState<string>('camille.ndong@drop.ga');
 
   // --- Admin Navigation & Sub-tabs ---
   const [adminMainTab, setAdminMainTab] = useState<'CATALOGUE' | 'UPLOAD' | 'USERS'>('CATALOGUE');
   const [catalogueSubTab, setCatalogueSubTab] = useState<'REPERTOIRE' | 'ALGO' | 'RULES'>(
     'REPERTOIRE'
   );
+
+  // --- Admin Exclusive DRM Sandbox State (Web Crypto API AES-256-GCM) ---
+  const [adminDrmVault, setAdminDrmVault] = useState<Record<string, AdminDrmVaultRecord>>({});
+  const [adminDrmTargetTrackId, setAdminDrmTargetTrackId] = useState<string>('t-main-1');
+  const [adminDrmStatusMsg, setAdminDrmStatusMsg] = useState<string | null>(null);
+  const [isEncryptingAdminDrm, setIsEncryptingAdminDrm] = useState<boolean>(false);
 
   // --- Full-Screen Detail Sheets (Track, Artist, Consumer User) ---
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -696,7 +1386,14 @@ export function App() {
 
   // --- Algorithm Filter Dimension ---
   const [algoDimension, setAlgoDimension] = useState<
-    'GENERAL' | 'CATEGORY' | 'ARTIST' | 'LABEL' | 'BEATMAKER' | 'ENGINEER'
+    | 'GENERAL'
+    | 'CATEGORY'
+    | 'ARTIST'
+    | 'LABEL'
+    | 'BEATMAKER'
+    | 'ENGINEER'
+    | 'LYRICIST'
+    | 'AWARDS'
   >('GENERAL');
   const [algoFilterValue, setAlgoFilterValue] = useState<string>('ALL');
 
@@ -705,17 +1402,26 @@ export function App() {
   const [uploadSourceType, setUploadSourceType] = useState<'FILE' | 'STREAM'>('FILE');
   const [newTitle, setNewTitle] = useState<string>('');
   const [newArtist, setNewArtist] = useState<string>('');
+  const [newFeaturingInput, setNewFeaturingInput] = useState<string>('');
+  const [newFeaturingSplitMode, setNewFeaturingSplitMode] =
+    useState<FeaturingSplitMode>('70_30');
   const [newAlbum, setNewAlbum] = useState<string>('');
-  const [newCategory, setNewCategory] = useState<string>('Synthwave');
+  const [newCategory, setNewCategory] = useState<string>('Ntcham');
   const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
   const [newLabelName, setNewLabelName] = useState<string>('');
   const [newBeatmakerName, setNewBeatmakerName] = useState<string>('');
   const [newSoundEngineerName, setNewSoundEngineerName] = useState<string>('');
+  const [newRecordingEngineerName, setNewRecordingEngineerName] = useState<string>('');
+  const [newMixingEngineerName, setNewMixingEngineerName] = useState<string>('');
+  const [newMasteringEngineerName, setNewMasteringEngineerName] = useState<string>('');
+  const [newLyricistName, setNewLyricistName] = useState<string>('');
+  const [newIsExternalLyricist, setNewIsExternalLyricist] = useState<boolean>(true);
+  const [newGabonTerritoryPct, setNewGabonTerritoryPct] = useState<number>(88);
   const [newCoverFileUrl, setNewCoverFileUrl] = useState<string>('');
   const [newCoverFileName, setNewCoverFileName] = useState<string>('');
-  const [newDurationFormatted, setNewDurationFormatted] = useState<string>('02:42');
-  const [newDropStart, setNewDropStart] = useState<number>(42);
-  const [newDropDuration, setNewDropDuration] = useState<number>(30);
+  const [newDurationFormatted, setNewDurationFormatted] = useState<string>('03:00');
+  const [newDropStart, setNewDropStart] = useState<number>(76);
+  const [newDropDuration, setNewDropDuration] = useState<number>(40);
   const [newAudioUrl, setNewAudioUrl] = useState<string>('');
   const [newAudioFileName, setNewAudioFileName] = useState<string>('');
   const [newExternalUrl, setNewExternalUrl] = useState<string>('');
@@ -727,19 +1433,22 @@ export function App() {
   const [waveformPeaks, setWaveformPeaks] = useState<number[]>([]);
   const [detectedHotspotStart, setDetectedHotspotStart] = useState<number | null>(null);
   const [isPreviewingUploadDrop, setIsPreviewingUploadDrop] = useState<boolean>(false);
-  const [uploadPreviewTime, setUploadPreviewTime] = useState<number>(42);
+  const [uploadPreviewTime, setUploadPreviewTime] = useState<number>(76);
 
-  // --- Admin Edit ModalState ---
+  // --- Admin Edit Modal State ---
   const [editingTrack, setEditingTrack] = useState<{
     albumId: string;
     track: Track;
     durationFormatted: string;
+    featuringInput?: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // --- Refs ---
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const eqFiltersRef = useRef<BiquadFilterNode[]>([]);
+  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const isPlayingRef = useRef<boolean>(false);
   const stepCounterRef = useRef<number>(0);
   const synthIntervalRef = useRef<number | null>(null);
@@ -751,7 +1460,8 @@ export function App() {
   const safeAlbumIdx = Math.min(albumIdx, Math.max(0, catalogue.length - 1));
   const currentAlbum = catalogue[safeAlbumIdx] || catalogue[0];
   const safeTrackIdx = Math.min(trackIdx, Math.max(0, (currentAlbum?.tracks.length || 1) - 1));
-  const currentTrack = currentAlbum?.tracks[safeTrackIdx] || INITIAL_CATALOGUE[0].tracks[0];
+  const currentTrack = currentAlbum?.tracks[safeTrackIdx] || INITIAL_CATALOGUE[1].tracks[0];
+
   const parsedNewDuration = useMemo(
     () => parseDurationInput(newDurationFormatted),
     [newDurationFormatted]
@@ -770,7 +1480,7 @@ export function App() {
     sorted.forEach((t, idx) => {
       const currentRank = idx + 1;
       const base = t.baselineRank || currentRank;
-      const delta = base - currentRank; // ex: était #7, maintenant #3 => +4
+      const delta = base - currentRank;
       map[t.id] = { rank: currentRank, delta };
     });
     return map;
@@ -792,13 +1502,14 @@ export function App() {
     }
   }, [currentTrack]);
 
-  // --- Helper: Silent Background Recording of User & Track Metrics ---
+  // --- Silent Background Recording of User & Track Metrics (Calibrated in ECG) ---
   const recordUserAndTrackStats = useCallback(
     (
       trackId: string,
       updates: {
         addListenSeconds?: number;
         addValidatedPlay?: boolean;
+        addValidatedEcgWeight?: number;
         addLoop?: boolean;
         currentConsecutiveLoop?: number;
         pointsDelta?: number;
@@ -806,12 +1517,19 @@ export function App() {
         resetConsecutiveLoops?: boolean;
       }
     ) => {
+      const ecgDelta =
+        updates.addValidatedEcgWeight !== undefined
+          ? updates.addValidatedEcgWeight
+          : updates.addValidatedPlay
+            ? GABON_PASS_SPECS[subscriptionPass].ecgWeight
+            : 0;
+
       setCatalogue((prev) =>
         prev.map((alb) => ({
           ...alb,
           tracks: alb.tracks.map((t) => {
             if (t.id !== trackId) return t;
-            const nextRealPlays = t.realPlays + (updates.addValidatedPlay ? 1 : 0);
+            const nextRealPlays = Math.round((t.realPlays + ecgDelta) * 10) / 10;
             const nextListenSeconds = t.totalListenSeconds + (updates.addListenSeconds || 0);
             const nextLoopPlays = t.loopPlaysCount + (updates.addLoop ? 1 : 0);
             const nextConsecutiveLoops = updates.resetConsecutiveLoops
@@ -836,6 +1554,8 @@ export function App() {
             return {
               ...t,
               realPlays: nextRealPlays,
+              displayPlaysFormatted: undefined, // Permet l'affichage dynamique du compteur ECG mis à jour
+              lastActivityAgo: ecgDelta > 0 ? 'à l’instant' : t.lastActivityAgo,
               totalListenSeconds: nextListenSeconds,
               loopPlaysCount: nextLoopPlays,
               consecutiveLoops: nextConsecutiveLoops,
@@ -858,7 +1578,7 @@ export function App() {
             maxConsecutiveLoops: 0,
             liked: !!likedTrackIds[trackId],
             pointsContributed: 0,
-            lastListenedAt: 'À l’instant',
+            lastListenedAt: 'il y a 1 m.',
           };
 
           const updatedConsec =
@@ -869,18 +1589,18 @@ export function App() {
           const nextStat: UserTrackStat = {
             ...prevStat,
             listenSeconds: prevStat.listenSeconds + (updates.addListenSeconds || 0),
-            playsCount: prevStat.playsCount + (updates.addValidatedPlay ? 1 : 0),
+            playsCount: prevStat.playsCount + (ecgDelta > 0 ? 1 : 0),
             loopsCount: prevStat.loopsCount + (updates.addLoop ? 1 : 0),
             maxConsecutiveLoops: updatedConsec,
             pointsContributed:
               Math.round((prevStat.pointsContributed + (updates.pointsDelta || 0)) * 100) / 100,
-            lastListenedAt: 'À l’instant',
+            lastListenedAt: 'il y a 1 m.',
           };
 
           return {
             ...u,
             totalListenSeconds: u.totalListenSeconds + (updates.addListenSeconds || 0),
-            totalValidatedPlays: u.totalValidatedPlays + (updates.addValidatedPlay ? 1 : 0),
+            totalValidatedPlays: u.totalValidatedPlays + (ecgDelta > 0 ? 1 : 0),
             totalLoops: u.totalLoops + (updates.addLoop ? 1 : 0),
             trackStats: {
               ...u.trackStats,
@@ -890,7 +1610,7 @@ export function App() {
         })
       );
     },
-    [currentUser.id, likedTrackIds]
+    [currentUser.id, likedTrackIds, subscriptionPass]
   );
 
   // --- Silent Session Finalization on Track Switch (Zapping) ---
@@ -926,6 +1646,9 @@ export function App() {
         durationPlayedSeconds: listened,
         pointsDelta: deltaPoints,
         retentionPct,
+        subscriptionPass,
+        networkOperator,
+        masterVolumePct: masterVolume,
       });
 
       recordUserAndTrackStats(prevTrackId, {
@@ -945,9 +1668,18 @@ export function App() {
       active: false,
       listenedSeconds: 0,
       playCountedAtOneSec: false,
+      ecgValidatedAt30Sec: false,
       sessionPointsEarned: 0,
     };
-  }, [catalogue, currentTrack.id, currentUser.id, recordUserAndTrackStats]);
+  }, [
+    catalogue,
+    currentTrack.id,
+    currentUser.id,
+    recordUserAndTrackStats,
+    subscriptionPass,
+    networkOperator,
+    masterVolume,
+  ]);
 
   // --- Load External Audio Stream API ---
   useEffect(() => {
@@ -965,49 +1697,155 @@ export function App() {
     };
   }, []);
 
-  // --- Web Audio API Synthesizer Fallback ---
+  // --- Web Audio API Synthesizer + 5-Band Equalizer Engine (Real-Time) ---
   const initAudioContext = useCallback(() => {
     if (!audioCtxRef.current) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      audioCtxRef.current = new AudioCtx();
+      const ctx: AudioContext = new AudioCtx();
+      audioCtxRef.current = ctx;
+
+      const master = ctx.createGain();
+      master.gain.value = (masterVolume / 100) * 0.28;
+      master.connect(ctx.destination);
+      masterGainRef.current = master;
+
+      const freqs = [60, 250, 1000, 4000, 12000];
+      const filters = freqs.map((f, i) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = i === 0 ? 'lowshelf' : i === freqs.length - 1 ? 'highshelf' : 'peaking';
+        filter.frequency.value = f;
+        filter.Q.value = 1.1;
+        filter.gain.value = eqGains[i] ?? 0;
+        return filter;
+      });
+
+      for (let i = 0; i < filters.length - 1; i++) {
+        filters[i].connect(filters[i + 1]);
+      }
+      filters[filters.length - 1].connect(master);
+      eqFiltersRef.current = filters;
+
+      if (htmlAudioRef.current && !mediaSourceRef.current) {
+        try {
+          const source = ctx.createMediaElementSource(htmlAudioRef.current);
+          source.connect(filters[0]);
+          mediaSourceRef.current = source;
+        } catch {
+          // Fallback if media element already attached
+        }
+      }
     }
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume();
     }
+  }, [masterVolume, eqGains]);
+
+  const handleChangeMasterVolume = useCallback((vol: number) => {
+    const clamped = Math.max(0, Math.min(100, vol));
+    setMasterVolume(clamped);
+    if (masterGainRef.current && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      masterGainRef.current.gain.cancelScheduledValues(now);
+      masterGainRef.current.gain.setTargetAtTime((clamped / 100) * 0.28, now, 0.01);
+    }
+    if (htmlAudioRef.current) {
+      htmlAudioRef.current.volume = clamped / 100;
+    }
+    if (externalPlayerRef.current?.setVolume) {
+      externalPlayerRef.current.setVolume(Math.round(clamped));
+    }
   }, []);
 
-  const triggerSynthNote = useCallback((freq: number, step: number, dropActive: boolean) => {
-    const ctx = audioCtxRef.current;
-    if (!ctx || ctx.state !== 'running') return;
-
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    const scaleMultipliers = [1, 1.2, 1.333, 1.5, 1.6, 2];
-    const mult = scaleMultipliers[step % scaleMultipliers.length];
-    osc.type = dropActive ? 'sawtooth' : 'triangle';
-    osc.frequency.setValueAtTime(freq * mult * (step % 4 === 0 ? 0.5 : 1), now);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(dropActive ? 1650 : 850, now);
-    filter.Q.setValueAtTime(dropActive ? 5 : 2, now);
-
-    const peakGain = 0.08;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.26);
+  const handleChangeEqBand = useCallback((bandIdx: number, dbVal: number) => {
+    const clampedDb = Math.max(-12, Math.min(12, Math.round(dbVal * 2) / 2));
+    setEqGains((prev) => {
+      const next = [...prev];
+      next[bandIdx] = clampedDb;
+      return next;
+    });
+    const filter = eqFiltersRef.current[bandIdx];
+    if (filter && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      filter.gain.cancelScheduledValues(now);
+      filter.gain.setTargetAtTime(clampedDb, now, 0.015);
+    }
   }, []);
 
-  // --- Synchronize Active Audio Engine (Maintained in Background Across All Views) ---
+  const handleApplyEqPreset = useCallback((gains: number[]) => {
+    const cleanGains = gains.map((g) => Math.max(-12, Math.min(12, Math.round(g * 2) / 2)));
+    setEqGains(cleanGains);
+    cleanGains.forEach((val, idx) => {
+      const filter = eqFiltersRef.current[idx];
+      if (filter && audioCtxRef.current) {
+        const now = audioCtxRef.current.currentTime;
+        filter.gain.cancelScheduledValues(now);
+        filter.gain.setTargetAtTime(val, now, 0.02);
+      }
+    });
+  }, []);
+
+  const handleResetEq = useCallback(() => {
+    const flat = [0, 0, 0, 0, 0];
+    setEqGains(flat);
+    flat.forEach((val, idx) => {
+      const filter = eqFiltersRef.current[idx];
+      if (filter && audioCtxRef.current) {
+        const now = audioCtxRef.current.currentTime;
+        filter.gain.cancelScheduledValues(now);
+        filter.gain.setTargetAtTime(val, now, 0.02);
+      }
+    });
+  }, []);
+
+  const triggerSynthNote = useCallback(
+    (freq: number, step: number, dropActive: boolean, customNotes?: number[]) => {
+      const ctx = audioCtxRef.current;
+      if (!ctx || ctx.state !== 'running') return;
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const subOsc = ctx.createOscillator();
+      const noteGain = ctx.createGain();
+
+      let targetFreq = freq;
+      if (customNotes && customNotes.length > 0) {
+        targetFreq = customNotes[step % customNotes.length];
+      } else {
+        const scaleMultipliers = [1, 1.2, 1.333, 1.5, 1.6, 2];
+        const mult = scaleMultipliers[step % scaleMultipliers.length];
+        targetFreq = freq * mult * (step % 4 === 0 ? 0.5 : 1);
+      }
+
+      osc.type = dropActive ? 'sawtooth' : 'triangle';
+      subOsc.type = 'sine';
+      osc.frequency.setValueAtTime(targetFreq, now);
+      subOsc.frequency.setValueAtTime(targetFreq * 0.5, now);
+
+      const peakGain = dropActive ? 0.24 : 0.18;
+      noteGain.gain.setValueAtTime(0.001, now);
+      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.04);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+
+      osc.connect(noteGain);
+      subOsc.connect(noteGain);
+
+      if (eqFiltersRef.current.length > 0) {
+        noteGain.connect(eqFiltersRef.current[0]);
+      } else if (masterGainRef.current) {
+        noteGain.connect(masterGainRef.current);
+      } else {
+        noteGain.connect(ctx.destination);
+      }
+
+      osc.start(now);
+      subOsc.start(now);
+      osc.stop(now + 0.38);
+      subOsc.stop(now + 0.38);
+    },
+    []
+  );
+
+  // --- Synchronize Active Audio Engine ---
   useEffect(() => {
     const hasAudioFile = Boolean(currentTrack.audioUrl);
     const hasExternalStream = Boolean(currentTrack.externalStreamId);
@@ -1026,7 +1864,7 @@ export function App() {
         audio.src = currentTrack.audioUrl!;
         audio.currentTime = currentTime;
       }
-      audio.volume = 0.85;
+      audio.volume = masterVolume / 100;
       if (isPlaying && !isPreviewingUploadDrop) {
         audio.play().catch(() => {});
       } else {
@@ -1055,7 +1893,7 @@ export function App() {
           },
           events: {
             onReady: (event: any) => {
-              event.target.setVolume(85);
+              event.target.setVolume(masterVolume);
               event.target.seekTo(currentTime, true);
               if (isPlayingRef.current) {
                 event.target.playVideo();
@@ -1071,7 +1909,7 @@ export function App() {
             startSeconds: Math.floor(currentTime),
           });
         }
-        externalPlayerRef.current.setVolume?.(85);
+        externalPlayerRef.current.setVolume?.(masterVolume);
         if (isPlaying && !isPreviewingUploadDrop) {
           externalPlayerRef.current.playVideo?.();
         } else {
@@ -1089,7 +1927,12 @@ export function App() {
       synthIntervalRef.current = window.setInterval(() => {
         if (!isPlayingRef.current) return;
         stepCounterRef.current += 1;
-        triggerSynthNote(currentTrack.baseFreq, stepCounterRef.current, isDropMode);
+        triggerSynthNote(
+          currentTrack.baseFreq,
+          stepCounterRef.current,
+          isDropMode,
+          currentTrack.notes
+        );
       }, stepMs);
     }
 
@@ -1102,6 +1945,7 @@ export function App() {
     isPlaying,
     currentTrack,
     isDropMode,
+    masterVolume,
     isPreviewingUploadDrop,
     initAudioContext,
     triggerSynthNote,
@@ -1120,105 +1964,209 @@ export function App() {
     [currentTrack]
   );
 
-  // --- Navigate Track (Axe Y) ---
+  // --- Select Specific Track Index within Active Album ---
+  const handleSelectTrackIndex = useCallback(
+    (nextT: number) => {
+      const tracksLen = currentAlbum.tracks.length;
+      if (tracksLen === 0) return;
+      const clampedT = ((nextT % tracksLen) + tracksLen) % tracksLen;
+      const targetTrack = currentAlbum.tracks[clampedT];
+      if (!targetTrack) return;
+
+      initAudioContext();
+      finalizeListeningSessionOnZap();
+
+      setTrackIdx(clampedT);
+      setIsDropMode(true);
+      setCurrentTime(targetTrack.dropStart);
+
+      manualSessionRef.current = {
+        trackId: targetTrack.id,
+        active: false,
+        listenedSeconds: 0,
+        playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
+        sessionPointsEarned: 0,
+      };
+
+      if (targetTrack.audioUrl && htmlAudioRef.current) {
+        htmlAudioRef.current.src = targetTrack.audioUrl;
+        htmlAudioRef.current.currentTime = targetTrack.dropStart;
+      }
+      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
+        externalPlayerRef.current.loadVideoById({
+          videoId: targetTrack.externalStreamId,
+          startSeconds: targetTrack.dropStart,
+        });
+      }
+      setIsPlaying(true);
+    },
+    [currentAlbum, initAudioContext, finalizeListeningSessionOnZap]
+  );
+
+  // --- Select Specific Album Index in 3D Cover Flow or Central Hub ---
+  const handleSelectAlbumIndex = useCallback(
+    (nextA: number, specificTrackIdx = 0, startFullPlay = false) => {
+      const albumsLen = catalogue.length;
+      if (albumsLen === 0) return;
+      const clampedA = ((nextA % albumsLen) + albumsLen) % albumsLen;
+      const targetAlbum = catalogue[clampedA];
+      if (!targetAlbum || targetAlbum.tracks.length === 0) return;
+      const clampedT = Math.min(specificTrackIdx, targetAlbum.tracks.length - 1);
+      const targetTrack = targetAlbum.tracks[clampedT];
+
+      initAudioContext();
+      finalizeListeningSessionOnZap();
+
+      const startSec = startFullPlay ? 0 : targetTrack.dropStart;
+
+      setAlbumIdx(clampedA);
+      setTrackIdx(clampedT);
+      setIsDropMode(!startFullPlay);
+      setCurrentTime(startSec);
+
+      manualSessionRef.current = {
+        trackId: targetTrack.id,
+        active: startFullPlay,
+        listenedSeconds: 0,
+        playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
+        sessionPointsEarned: 0,
+      };
+
+      if (targetTrack.audioUrl && htmlAudioRef.current) {
+        htmlAudioRef.current.src = targetTrack.audioUrl;
+        htmlAudioRef.current.currentTime = startSec;
+      }
+      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
+        externalPlayerRef.current.loadVideoById({
+          videoId: targetTrack.externalStreamId,
+          startSeconds: startSec,
+        });
+      }
+      setIsPlaying(true);
+    },
+    [catalogue, initAudioContext, finalizeListeningSessionOnZap]
+  );
+
+  // --- Navigate Track (Axe Y : Swipe Vertical Haut/Bas ET Boutons Suivant/Précédent dans l'album actif en boucle) ---
   const navigateTrack = useCallback(
     (dir: 1 | -1) => {
-      finalizeListeningSessionOnZap();
-
       const tracksLen = currentAlbum.tracks.length;
-      const nextT = isShuffle
-        ? Math.floor(Math.random() * tracksLen)
-        : (safeTrackIdx + dir + tracksLen) % tracksLen;
-      const targetTrack = currentAlbum.tracks[nextT];
+      if (tracksLen === 0) return;
 
-      setTrackIdx(nextT);
-      setIsDropMode(true);
-      setCurrentTime(targetTrack.dropStart);
-
-      manualSessionRef.current = {
-        trackId: targetTrack.id,
-        active: false,
-        listenedSeconds: 0,
-        playCountedAtOneSec: false,
-        sessionPointsEarned: 0,
-      };
-
-      if (targetTrack.audioUrl && htmlAudioRef.current) {
-        htmlAudioRef.current.src = targetTrack.audioUrl;
-        htmlAudioRef.current.currentTime = targetTrack.dropStart;
+      if (tracksLen === 1) {
+        const albumsLen = catalogue.length;
+        if (albumsLen <= 1) return;
+        let nextA = (safeAlbumIdx + dir + albumsLen) % albumsLen;
+        if (isShuffle && albumsLen > 1) {
+          const candidates = catalogue.map((_, idx) => idx).filter((idx) => idx !== safeAlbumIdx);
+          nextA = candidates[Math.floor(Math.random() * candidates.length)];
+        }
+        handleSelectAlbumIndex(nextA, 0);
+        return;
       }
-      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
-        externalPlayerRef.current.loadVideoById({
-          videoId: targetTrack.externalStreamId,
-          startSeconds: targetTrack.dropStart,
-        });
+
+      let nextT = (safeTrackIdx + dir + tracksLen) % tracksLen;
+      if (isShuffle && tracksLen > 1) {
+        const candidates = currentAlbum.tracks
+          .map((_, idx) => idx)
+          .filter((idx) => idx !== safeTrackIdx);
+        nextT = candidates[Math.floor(Math.random() * candidates.length)];
       }
-      setIsPlaying(true);
+      handleSelectTrackIndex(nextT);
     },
-    [currentAlbum, safeTrackIdx, isShuffle, finalizeListeningSessionOnZap]
+    [
+      currentAlbum,
+      catalogue,
+      safeAlbumIdx,
+      safeTrackIdx,
+      isShuffle,
+      handleSelectAlbumIndex,
+      handleSelectTrackIndex,
+    ]
   );
 
-  // --- Navigate Album (Axe X) ---
+  // --- Navigate Album (Axe X : Swipe Horizontal 3D Cover Flow Gauche/Droite entre les projets principaux) ---
   const navigateAlbum = useCallback(
     (dir: 1 | -1) => {
-      finalizeListeningSessionOnZap();
-
       const albumsLen = catalogue.length;
-      const nextA = isShuffle
-        ? Math.floor(Math.random() * albumsLen)
-        : (safeAlbumIdx + dir + albumsLen) % albumsLen;
-      const targetTrack = catalogue[nextA].tracks[0];
+      if (albumsLen === 0) return;
 
-      setAlbumIdx(nextA);
-      setTrackIdx(0);
-      setIsDropMode(true);
-      setCurrentTime(targetTrack.dropStart);
-
-      manualSessionRef.current = {
-        trackId: targetTrack.id,
-        active: false,
-        listenedSeconds: 0,
-        playCountedAtOneSec: false,
-        sessionPointsEarned: 0,
-      };
-
-      if (targetTrack.audioUrl && htmlAudioRef.current) {
-        htmlAudioRef.current.src = targetTrack.audioUrl;
-        htmlAudioRef.current.currentTime = targetTrack.dropStart;
+      let nextA = (safeAlbumIdx + dir + albumsLen) % albumsLen;
+      if (isShuffle && albumsLen > 1) {
+        const candidates = catalogue.map((_, idx) => idx).filter((idx) => idx !== safeAlbumIdx);
+        nextA = candidates[Math.floor(Math.random() * candidates.length)];
       }
-      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
-        externalPlayerRef.current.loadVideoById({
-          videoId: targetTrack.externalStreamId,
-          startSeconds: targetTrack.dropStart,
-        });
-      }
-      setIsPlaying(true);
+      handleSelectAlbumIndex(nextA, 0);
     },
-    [catalogue, safeAlbumIdx, isShuffle, finalizeListeningSessionOnZap]
+    [catalogue, safeAlbumIdx, isShuffle, handleSelectAlbumIndex]
   );
 
-  // --- Silent Playback Timer, 0:01 Real Play Validation & Exact Loop Rules ---
+  // --- Silent Playback Timer, 30s ECG Validation & Anti-Fraud Shield ---
   useEffect(() => {
     if (!isPlaying || isPreviewingUploadDrop) return;
     const timer = window.setInterval(() => {
       if (!isDropMode && manualSessionRef.current.active) {
         manualSessionRef.current.listenedSeconds += 1;
+        const listenedSec = manualSessionRef.current.listenedSeconds;
+        const requiredSec =
+          currentTrack.duration < 60
+            ? Math.ceil(currentTrack.duration * 0.75)
+            : 30;
+
+        if (listenedSec < requiredSec && !manualSessionRef.current.ecgValidatedAt30Sec) {
+          if (masterVolume <= 0) {
+            setLastEcgValidationMsg(
+              `REJET MUTE STREAMING (Volume 0%) : L'écoute en cours (${listenedSec}s) vaudra 0.0 ECG.`
+            );
+          } else {
+            setLastEcgValidationMsg(
+              `Audit ECG en cours : ${listenedSec}s / ${requiredSec}s consécutives (${GABON_PASS_SPECS[subscriptionPass].shortLabel})`
+            );
+          }
+        }
 
         if (
-          manualSessionRef.current.listenedSeconds >= 1 &&
-          !manualSessionRef.current.playCountedAtOneSec
+          listenedSec >= requiredSec &&
+          !manualSessionRef.current.ecgValidatedAt30Sec
         ) {
+          manualSessionRef.current.ecgValidatedAt30Sec = true;
           manualSessionRef.current.playCountedAtOneSec = true;
           const trackId = currentTrack.id;
+          const prevDailyCount = dailyUserTrackPlaysRef.current[trackId] || 0;
 
-          streamTracker.trackAction('play', trackId, {
-            userId: currentUser.id,
-            durationPlayedSeconds: 1,
+          const ecgAudit = evaluateEcgStreamValidation({
+            listenedSeconds: listenedSec,
+            trackDurationSeconds: currentTrack.duration,
+            masterVolumePct: masterVolume,
+            subscriptionPass,
+            playsBySameUserLast24h: prevDailyCount,
+            continuousNoInteractionSeconds: listenedSec,
+            offlineCachedDays: 0,
+            isGabonOtpVerified: true,
           });
 
-          recordUserAndTrackStats(trackId, {
-            addValidatedPlay: true,
-          });
+          setLastEcgValidationMsg(ecgAudit.reason);
+
+          if (ecgAudit.isValidEcg && ecgAudit.ecgPointsEarned > 0) {
+            dailyUserTrackPlaysRef.current[trackId] = prevDailyCount + 1;
+
+            streamTracker.trackAction('play', trackId, {
+              userId: currentUser.id,
+              durationPlayedSeconds: listenedSec,
+              ecgWeight: ecgAudit.ecgPointsEarned,
+              subscriptionPass,
+              networkOperator,
+              masterVolumePct: masterVolume,
+            });
+
+            recordUserAndTrackStats(trackId, {
+              addValidatedPlay: true,
+              addValidatedEcgWeight: ecgAudit.ecgPointsEarned,
+              pointsDelta: ecgAudit.ecgPointsEarned * 0.35,
+            });
+          }
         }
       }
 
@@ -1260,6 +2208,9 @@ export function App() {
               durationPlayedSeconds: currentTrack.duration,
               pointsDelta: loopPointsDelta,
               retentionPct: 100,
+              subscriptionPass,
+              networkOperator,
+              masterVolumePct: masterVolume,
             });
 
             recordUserAndTrackStats(trackId, {
@@ -1274,7 +2225,8 @@ export function App() {
               trackId,
               active: true,
               listenedSeconds: 0,
-              playCountedAtOneSec: true,
+              playCountedAtOneSec: false,
+              ecgValidatedAt30Sec: false,
               sessionPointsEarned: session.sessionPointsEarned,
             };
             seekAllEngines(0);
@@ -1291,6 +2243,9 @@ export function App() {
               durationPlayedSeconds: currentTrack.duration,
               pointsDelta: earn,
               retentionPct: 100,
+              subscriptionPass,
+              networkOperator,
+              masterVolumePct: masterVolume,
             });
 
             recordUserAndTrackStats(trackId, {
@@ -1316,6 +2271,9 @@ export function App() {
     currentTrack,
     currentUser.id,
     isPreviewingUploadDrop,
+    masterVolume,
+    subscriptionPass,
+    networkOperator,
     seekAllEngines,
     navigateTrack,
     recordUserAndTrackStats,
@@ -1324,37 +2282,25 @@ export function App() {
   const handleCentralPlayToggle = () => {
     initAudioContext();
 
-    if (isDropMode) {
-      setIsDropMode(false);
-      seekAllEngines(0);
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+
+    if (!manualSessionRef.current.active) {
+      if (currentTime >= currentTrack.duration - 2) {
+        seekAllEngines(0);
+      }
       manualSessionRef.current = {
         trackId: currentTrack.id,
         active: true,
         listenedSeconds: 0,
         playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
         sessionPointsEarned: 0,
       };
-      setIsPlaying(true);
-      return;
     }
-
-    if (!isPlaying) {
-      if (!manualSessionRef.current.active) {
-        if (currentTime > 5) {
-          seekAllEngines(0);
-        }
-        manualSessionRef.current = {
-          trackId: currentTrack.id,
-          active: true,
-          listenedSeconds: 0,
-          playCountedAtOneSec: false,
-          sessionPointsEarned: 0,
-        };
-      }
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(false);
-    }
+    setIsPlaying(true);
   };
 
   // --- Silent Like Toggle (+0.25 pt counted silently in background + Offline-First) ---
@@ -1407,7 +2353,7 @@ export function App() {
           maxConsecutiveLoops: 0,
           liked: false,
           pointsContributed: 0,
-          lastListenedAt: 'À l’instant',
+          lastListenedAt: 'il y a 1 m.',
         };
         return {
           ...u,
@@ -1428,49 +2374,339 @@ export function App() {
     );
   };
 
-  // --- 2D Pointer Gesture Handlers ---
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button, input')) return;
-    pointerStartRef.current = { x: e.clientX, y: e.clientY };
-    setAxisLock('NONE');
-    setGestureDelta({ x: 0, y: 0 });
+  // --- Toggle Offline Download Cache on Bottom-Right Button ---
+  const handleToggleOfflineDownload = () => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) =>
+          t.id === currentTrack.id ? { ...t, downloadedOffline: !t.downloadedOffline } : t
+        ),
+      }))
+    );
+    streamTracker.sync();
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pointerStartRef.current) return;
-    const dx = e.clientX - pointerStartRef.current.x;
-    const dy = e.clientY - pointerStartRef.current.y;
+  // --- Recommend Track / Share Lyric Excerpt into Community Feed ---
+  const handleRecommendTrack = (
+    trackId: string,
+    commentOrExcerpt?: string,
+    isLyricExcerpt?: boolean
+  ) => {
+    const targetTrack = allTracksFlat.find((t) => t.id === trackId);
+    if (!targetTrack) return;
 
-    let currentLock = axisLock;
-    if (currentLock === 'NONE') {
-      if (Math.abs(dx) > 14 || Math.abs(dy) > 14) {
-        currentLock = Math.abs(dx) >= Math.abs(dy) ? 'X' : 'Y';
-        setAxisLock(currentLock);
+    const alreadyRec = !!recommendedTrackIds[trackId] && !isLyricExcerpt;
+    setRecommendedTrackIds((prev) => ({
+      ...prev,
+      [trackId]: true,
+    }));
+
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) => {
+          if (t.id !== trackId) return t;
+          const nextRecs = alreadyRec ? t.recommendationsCount : t.recommendationsCount + 1;
+          const nextLyricsShares = isLyricExcerpt ? t.lyricsSharesCount + 1 : t.lyricsSharesCount;
+          const nextPoints =
+            Math.round((t.algoPoints + (isLyricExcerpt ? 0.45 : 0.35)) * 100) / 100;
+          return {
+            ...t,
+            recommendationsCount: nextRecs,
+            lyricsSharesCount: nextLyricsShares,
+            algoPoints: nextPoints,
+            lastActivityAgo: 'à l’instant',
+          };
+        }),
+      }))
+    );
+
+    const recItem: CommunityRecommendationItem = {
+      id: `rec-${Date.now()}`,
+      trackId: targetTrack.id,
+      trackTitle: targetTrack.title,
+      trackArtist:
+        targetTrack.featuringArtists && targetTrack.featuringArtists.length > 0
+          ? `${targetTrack.artist} feat. ${targetTrack.featuringArtists.join(', ')}`
+          : targetTrack.artist,
+      trackCategory: targetTrack.category,
+      cover: targetTrack.cover,
+      artworkType: targetTrack.artworkType,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatar,
+      commentOrLyricExcerpt:
+        commentOrExcerpt ||
+        (isLyricExcerpt
+          ? `Extrait de paroles partagé (${targetTrack.lyricistName})`
+          : 'Recommandé à la communauté DROP'),
+      isLyricExcerpt: Boolean(isLyricExcerpt),
+      lyricistName: targetTrack.lyricistName,
+      createdAt: 'à l’instant',
+      boostPoints: isLyricExcerpt ? 0.45 : 0.35,
+    };
+
+    setCommunityRecommendations((prev) => [recItem, ...prev.slice(0, 29)]);
+  };
+
+  // --- Subscribe / Unsubscribe to Artist ("+ S'abonner") ---
+  const handleToggleSubscribeArtist = (artistName: string) => {
+    const cleanName = artistName.trim();
+    if (!cleanName) return;
+    const isSub = !!subscribedArtists[cleanName];
+    setSubscribedArtists((prev) => ({
+      ...prev,
+      [cleanName]: !isSub,
+    }));
+    setArtistSubscribers((prev) => {
+      const currentCount = prev[cleanName] ?? 950;
+      return {
+        ...prev,
+        [cleanName]: isSub ? Math.max(0, currentCount - 1) : currentCount + 1,
+      };
+    });
+  };
+
+  // --- Record Lyrics Open Engagement (Boosts Parolier Ranking) ---
+  const handleRecordLyricsOpen = (trackId: string) => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) =>
+          t.id === trackId
+            ? {
+                ...t,
+                lyricsOpensCount: t.lyricsOpensCount + 1,
+              }
+            : t
+        ),
+      }))
+    );
+  };
+
+  // --- Governance: Handshake Protocol & Escrow Dispute Resolution (Retroactive Recalculation) ---
+  const handleConfirmCreditHandshake = useCallback((trackId: string) => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) => {
+          if (t.id !== trackId) return t;
+          const prevHs = t.creditHandshake;
+          return {
+            ...t,
+            creditHandshake: {
+              status: 'VERIFIED',
+              confirmedByBeatmaker: true,
+              confirmedByEngineer: true,
+              confirmedByLyricist: true,
+              confirmedByLabel: true,
+              escrowFrozen: false,
+              audit72hCompleted: true,
+              dawAuditRequired: prevHs?.dawAuditRequired ?? false,
+              qrCertificateHash:
+                prevHs?.qrCertificateHash ||
+                `GABON-ECG-SHA256-${trackId.toUpperCase()}-VERIFIED`,
+            },
+          };
+        }),
+      }))
+    );
+  }, []);
+
+  const handleOpenCreditDispute = useCallback((trackId: string, reason: string) => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) => {
+          if (t.id !== trackId) return t;
+          const prevHs = t.creditHandshake;
+          return {
+            ...t,
+            creditHandshake: {
+              status: 'DISPUTED',
+              confirmedByBeatmaker: prevHs?.confirmedByBeatmaker ?? true,
+              confirmedByEngineer: prevHs?.confirmedByEngineer ?? true,
+              confirmedByLyricist: prevHs?.confirmedByLyricist ?? true,
+              confirmedByLabel: prevHs?.confirmedByLabel ?? true,
+              disputeReason: reason,
+              disputeOpenedAt: "À l'instant",
+              escrowFrozen: true,
+              audit72hCompleted: prevHs?.audit72hCompleted ?? true,
+              dawAuditRequired: prevHs?.dawAuditRequired ?? false,
+              qrCertificateHash:
+                prevHs?.qrCertificateHash || `GABON-ECG-SHA256-${trackId.toUpperCase()}`,
+            },
+          };
+        }),
+      }))
+    );
+  }, []);
+
+  const handleResolveCreditDispute = useCallback(
+    (trackId: string, winnerName: string, roleUpdated: 'BEATMAKER' | 'ENGINEER' | 'LYRICIST') => {
+      const cleanWinner = winnerName.trim();
+      if (!cleanWinner) return;
+
+      setCatalogue((prev) =>
+        prev.map((alb) => ({
+          ...alb,
+          tracks: alb.tracks.map((t) => {
+            if (t.id !== trackId) return t;
+            const prevHs = t.creditHandshake;
+            return {
+              ...t,
+              beatmakerName: roleUpdated === 'BEATMAKER' ? cleanWinner : t.beatmakerName,
+              soundEngineerName:
+                roleUpdated === 'ENGINEER' ? cleanWinner : t.soundEngineerName,
+              mixingEngineerName:
+                roleUpdated === 'ENGINEER' ? cleanWinner : t.mixingEngineerName,
+              lyricistName: roleUpdated === 'LYRICIST' ? cleanWinner : t.lyricistName,
+              creditHandshake: {
+                status: 'RESOLVED',
+                confirmedByBeatmaker: true,
+                confirmedByEngineer: true,
+                confirmedByLyricist: true,
+                confirmedByLabel: true,
+                disputeReason: undefined,
+                escrowFrozen: false,
+                audit72hCompleted: true,
+                dawAuditRequired: false,
+                qrCertificateHash:
+                  prevHs?.qrCertificateHash ||
+                  `GABON-ECG-SHA256-${trackId.toUpperCase()}-RESOLVED`,
+              },
+            };
+          }),
+        }))
+      );
+    },
+    []
+  );
+
+  // --- Admin Exclusive DRM Sandbox Functions (AES-256-GCM + Self-Destruct) ---
+  const encryptTrackToAdminSandbox = useCallback(
+    async (track: Track) => {
+      if (isEncryptingAdminDrm) return;
+      setIsEncryptingAdminDrm(true);
+      setAdminDrmStatusMsg('Découpage en chunks & Chiffrement AES-256-GCM en cours...');
+
+      try {
+        const key = await window.crypto.subtle.generateKey(
+          { name: 'AES-GCM', length: 256 },
+          false, // Non-extractible (extractable: false)
+          ['encrypt', 'decrypt']
+        );
+
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encoder = new TextEncoder();
+        const rawAudioPayload = encoder.encode(
+          `DROP_AUDIO_PCM_FRAME::${track.id}::${track.title}::${Date.now()}::PROTECTED_MASTER`
+        );
+
+        const cipherBuffer = await window.crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv },
+          key,
+          rawAudioPayload
+        );
+
+        setAdminDrmVault((prev) => ({
+          ...prev,
+          [track.id]: {
+            key,
+            iv,
+            cipherBytes: new Uint8Array(cipherBuffer),
+            corrupted: false,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        }));
+
+        setAdminDrmStatusMsg(
+          `Conteneur "${track.title}" chiffré en AES-256-GCM (Clé CryptoKey non-extractible).`
+        );
+      } catch {
+        setAdminDrmStatusMsg('Erreur lors du chiffrement Web Crypto API.');
+      } finally {
+        setIsEncryptingAdminDrm(false);
       }
-    }
+    },
+    [isEncryptingAdminDrm]
+  );
 
-    if (currentLock === 'X') {
-      setGestureDelta({ x: Math.max(-90, Math.min(90, dx)), y: 0 });
-    } else if (currentLock === 'Y') {
-      setGestureDelta({ x: 0, y: Math.max(-90, Math.min(90, dy)) });
+  const handleAdminTestRamDecrypt = async (trackId: string) => {
+    const rec = adminDrmVault[trackId];
+    if (!rec || rec.corrupted || !rec.key) {
+      setAdminDrmStatusMsg(
+        'Échec du déchiffrement RAM : Clé révoquée et conteneur binaire autodétruit !'
+      );
+      return;
+    }
+    try {
+      const ivBuffer = new Uint8Array(rec.iv).buffer;
+      const cipherArrayBuffer = new Uint8Array(rec.cipherBytes).buffer;
+      const plainBuffer = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(ivBuffer) },
+        rec.key,
+        cipherArrayBuffer
+      );
+      const text = new TextDecoder().decode(plainBuffer);
+      setAdminDrmStatusMsg(`Déchiffré en mémoire vive (RAM) : ${text.slice(0, 44)}...`);
+    } catch {
+      setAdminDrmStatusMsg('Erreur cryptographique fatale lors du test RAM.');
     }
   };
 
-  const handlePointerUp = () => {
-    if (!pointerStartRef.current) return;
-    const THRESHOLD = 44;
+  const handleAdminSimulateExfiltrationSelfDestruct = (trackId: string) => {
+    const rec = adminDrmVault[trackId];
+    if (!rec) return;
 
-    if (axisLock === 'X') {
-      if (gestureDelta.x <= -THRESHOLD) navigateAlbum(1);
-      else if (gestureDelta.x >= THRESHOLD) navigateAlbum(-1);
-    } else if (axisLock === 'Y') {
-      if (gestureDelta.y <= -THRESHOLD) navigateTrack(1);
-      else if (gestureDelta.y >= THRESHOLD) navigateTrack(-1);
+    const wipedIv = new Uint8Array(rec.iv.length);
+    wipedIv.fill(0);
+    const wipedCipher = new Uint8Array(rec.cipherBytes.length);
+    wipedCipher.fill(0);
+
+    setAdminDrmVault((prev) => ({
+      ...prev,
+      [trackId]: {
+        key: null,
+        iv: wipedIv,
+        cipherBytes: wipedCipher,
+        corrupted: true,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    }));
+
+    setAdminDrmStatusMsg(
+      'VIOLATION SANDBOX DÉTECTÉE : Clé AES-256 révoquée et octets écrasés par 0x00 (Autodestruction).'
+    );
+  };
+
+  // --- Toggle Track in Playlist ---
+  const handleToggleInPlaylist = () => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) =>
+          t.id === currentTrack.id ? { ...t, inPlaylist: !t.inPlaylist } : t
+        ),
+      }))
+    );
+  };
+
+  const handleSeekFromPlayer = (targetSec: number) => {
+    initAudioContext();
+    setIsDropMode(false);
+    if (!manualSessionRef.current.active) {
+      manualSessionRef.current = {
+        trackId: currentTrack.id,
+        active: true,
+        listenedSeconds: 0,
+        playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
+        sessionPointsEarned: 0,
+      };
     }
-
-    pointerStartRef.current = null;
-    setAxisLock('NONE');
-    setGestureDelta({ x: 0, y: 0 });
+    seekAllEngines(targetSec);
   };
 
   // --- Auth Handlers ---
@@ -1687,17 +2923,68 @@ export function App() {
     const streamId =
       uploadSourceType === 'STREAM' ? extractExternalStreamId(newExternalUrl) : undefined;
     const albumName = newAlbum.trim() || `${newArtist.trim()} — Studio Session`;
+    const labelStr = newLabelName.trim() || 'Direct Prod Gabon';
+    const parsedFeaturings = newFeaturingInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const artistClean = newArtist.trim();
+    const beatmakerClean = newBeatmakerName.trim() || artistClean;
+    const mixClean =
+      newMixingEngineerName.trim() ||
+      newSoundEngineerName.trim() ||
+      'Maître Boussengui (Studio K)';
+    const recClean = newRecordingEngineerName.trim() || mixClean;
+    const masterClean = newMasteringEngineerName.trim() || mixClean;
+    const lyricistClean = newLyricistName.trim() || artistClean;
+
+    const dawAuditFlag =
+      artistClean.toLowerCase() === beatmakerClean.toLowerCase() &&
+      artistClean.toLowerCase() === mixClean.toLowerCase() &&
+      artistClean.toLowerCase() === lyricistClean.toLowerCase();
 
     const createdTrack: Track = {
       id: `t-${Date.now()}`,
       title: newTitle.trim(),
-      artist: newArtist.trim(),
+      artist: artistClean,
+      featuringArtists: parsedFeaturings.length > 0 ? parsedFeaturings : undefined,
+      featuringSplitMode: newFeaturingSplitMode,
       album: albumName,
       category: newCategory,
-      labelName: newLabelName.trim() || 'Indépendant',
-      beatmakerName: newBeatmakerName.trim() || newArtist.trim(),
-      soundEngineerName: newSoundEngineerName.trim() || 'Mastering Studio',
+      labelName: labelStr,
+      copyrightText: `Copyright 2026 ${labelStr} (+241). Tous droits réservés`,
+      beatmakerName: beatmakerClean,
+      soundEngineerName: mixClean,
+      recordingEngineerName: recClean,
+      mixingEngineerName: mixClean,
+      masteringEngineerName: masterClean,
+      lyricistName: lyricistClean,
+      isExternalLyricist:
+        newIsExternalLyricist &&
+        lyricistClean.toLowerCase() !== artistClean.toLowerCase(),
+      hasSynchronizedLyrics: true,
+      gabonTerritoryPct: newGabonTerritoryPct,
+      weeksInTop10: 1,
+      lufsMasterLevel: -14.0,
+      acousticClippingDetected: false,
+      retention45sPct: 91,
+      halfLifeRetentionJ90Pct: 65,
+      creditHandshake: {
+        status: dawAuditFlag ? 'PENDING_HANDSHAKE' : 'VERIFIED',
+        confirmedByBeatmaker: !dawAuditFlag,
+        confirmedByEngineer: !dawAuditFlag,
+        confirmedByLyricist: !dawAuditFlag,
+        confirmedByLabel: true,
+        escrowFrozen: false,
+        audit72hCompleted: true,
+        dawAuditRequired: dawAuditFlag,
+        qrCertificateHash: `GABON-ECG-SHA256-${Date.now().toString(16).toUpperCase()}`,
+      },
       cover: newCoverFileUrl.trim(),
+      artworkType: 'creative_yellow',
+      ambientPrimary: 'rgba(245, 166, 15, 0.52)',
+      ambientSecondary: 'rgba(135, 78, 12, 0.42)',
       duration: parsedNewDuration,
       dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 15)),
       dropDuration: Math.min(newDropDuration, parsedNewDuration),
@@ -1705,14 +2992,20 @@ export function App() {
       bpm: 120 + Math.floor(Math.random() * 14),
       audioUrl: uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined,
       externalStreamId: streamId || undefined,
-      realPlays: 0,
-      totalListenSeconds: 0,
-      listenSessions: 0,
-      avgRetentionPct: 75,
-      algoPoints: 2.0,
-      likesCount: 0,
-      loopPlaysCount: 0,
+      realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
+      lastActivityAgo: 'à l’instant',
+      totalListenSeconds: 180000,
+      listenSessions: 1200,
+      avgRetentionPct: 89,
+      retention30sPct: 93,
+      algoPoints: 14.0,
+      likesCount: 3400,
+      recommendationsCount: 640,
+      loopPlaysCount: 820,
       consecutiveLoops: 0,
+      lyricsOpensCount: 6400,
+      lyricsSharesCount: 1250,
+      longevityDays: 35,
       baselineRank: allTracksFlat.length + 1,
       autoDetectedChorus: detectedHotspotStart !== null,
     };
@@ -1744,8 +3037,12 @@ export function App() {
       ];
     });
 
-    setUploadSuccess(`« ${createdTrack.title} » publié.`);
+    setUploadSuccess(
+      `« ${createdTrack.title} » publié avec Handshake & Registre ECG (+241).`
+    );
     setNewTitle('');
+    setNewFeaturingInput('');
+    setNewLyricistName('');
     setNewAudioFileName('');
     setNewAudioUrl('');
     setNewExternalUrl('');
@@ -1785,7 +3082,6 @@ export function App() {
   };
 
   const handleAutoReorderByAlgo = () => {
-    // Capture current ranks as new baseline before sorting
     setCatalogue((prev) => {
       const sortedAlbums = prev.map((alb) => {
         const sortedTracks = [...alb.tracks].sort((a, b) => b.algoPoints - a.algoPoints);
@@ -1805,8 +3101,15 @@ export function App() {
   const handleSaveEditedTrack = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTrack) return;
-    const { albumId, track, durationFormatted } = editingTrack;
+    const { albumId, track, durationFormatted, featuringInput } = editingTrack;
     const updatedDuration = parseDurationInput(durationFormatted);
+    const parsedFeaturings =
+      featuringInput !== undefined
+        ? featuringInput
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : track.featuringArtists;
 
     setCatalogue((prev) =>
       prev.map((alb) => {
@@ -1818,6 +3121,9 @@ export function App() {
             t.id === track.id
               ? {
                   ...track,
+                  featuringArtists:
+                    parsedFeaturings && parsedFeaturings.length > 0 ? parsedFeaturings : undefined,
+                  copyrightText: `Copyright 2028 ${track.labelName}. All rights reserved`,
                   duration: updatedDuration,
                   dropStart: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
                 }
@@ -1829,13 +3135,25 @@ export function App() {
     setEditingTrack(null);
   };
 
-  // --- Computed Analytics & Rankings ---
+  // --- Computed Analytics & Decoupled Anti-Halo Rankings ---
+  const decoupledStudioRankings = useMemo(
+    () => computeAllDecoupledStudioRankings(allTracksFlat, artistSubscribers),
+    [allTracksFlat, artistSubscribers]
+  );
+
+  const dropAwardsList = useMemo(
+    () => computeDropAwardsCategories(allTracksFlat, decoupledStudioRankings, categories),
+    [allTracksFlat, decoupledStudioRankings, categories]
+  );
+
   const algoFilterOptions = useMemo(() => {
     if (algoDimension === 'CATEGORY') {
-      return Array.from(new Set(allTracksFlat.map((t) => t.category)));
+      return categories;
     }
     if (algoDimension === 'ARTIST') {
-      return Array.from(new Set(allTracksFlat.map((t) => t.artist)));
+      return Array.from(
+        new Set(allTracksFlat.flatMap((t) => [t.artist, ...(t.featuringArtists || [])]))
+      );
     }
     if (algoDimension === 'LABEL') {
       return Array.from(new Set(allTracksFlat.map((t) => t.labelName)));
@@ -1846,42 +3164,81 @@ export function App() {
     if (algoDimension === 'ENGINEER') {
       return Array.from(new Set(allTracksFlat.map((t) => t.soundEngineerName)));
     }
+    if (algoDimension === 'LYRICIST') {
+      return Array.from(new Set(allTracksFlat.map((t) => t.lyricistName)));
+    }
     return [];
-  }, [algoDimension, allTracksFlat]);
+  }, [algoDimension, allTracksFlat, categories]);
 
   const rankedFilteredTracks = useMemo(() => {
     let list = [...allTracksFlat];
-    if (algoDimension !== 'GENERAL' && algoFilterValue !== 'ALL') {
+    if (algoDimension !== 'GENERAL' && algoDimension !== 'AWARDS' && algoFilterValue !== 'ALL') {
       list = list.filter((t) => {
         if (algoDimension === 'CATEGORY') return t.category === algoFilterValue;
-        if (algoDimension === 'ARTIST') return t.artist === algoFilterValue;
+        if (algoDimension === 'ARTIST') {
+          return (
+            t.artist === algoFilterValue ||
+            (t.featuringArtists || []).includes(algoFilterValue)
+          );
+        }
         if (algoDimension === 'LABEL') return t.labelName === algoFilterValue;
         if (algoDimension === 'BEATMAKER') return t.beatmakerName === algoFilterValue;
         if (algoDimension === 'ENGINEER') return t.soundEngineerName === algoFilterValue;
+        if (algoDimension === 'LYRICIST') return t.lyricistName === algoFilterValue;
         return true;
       });
     }
-    return list.sort((a, b) => b.algoPoints - a.algoPoints);
+    return list.sort(
+      (a, b) =>
+        computeTrackExplosionScore(b).explosionScore -
+        computeTrackExplosionScore(a).explosionScore
+    );
   }, [allTracksFlat, algoDimension, algoFilterValue]);
 
   const groupedDimensionRankings = useMemo(() => {
+    if (
+      algoDimension === 'ARTIST' ||
+      algoDimension === 'LABEL' ||
+      algoDimension === 'BEATMAKER' ||
+      algoDimension === 'ENGINEER' ||
+      algoDimension === 'LYRICIST'
+    ) {
+      return decoupledStudioRankings
+        .filter((e) => e.role === algoDimension)
+        .map((e) => ({
+          name: e.name,
+          tracksCount: e.tracksCount,
+          totalPoints: e.decoupledScore,
+          primaryMetricLabel: `${e.primaryMetricLabel} : ${e.primaryMetricValue}`,
+          deltaImpactFactor: e.avgDeltaImpactRatio,
+          versatilityMultiplier: e.versatilityMultiplier,
+          maxSingleTrackSharePct: e.maxSingleTrackSharePct,
+        }));
+    }
+
     const groups: Record<
       string,
       {
         name: string;
         tracksCount: number;
         totalPoints: number;
+        primaryMetricLabel?: string;
+        deltaImpactFactor?: number;
+        versatilityMultiplier?: number;
+        maxSingleTrackSharePct?: number;
       }
     > = {};
 
-    for (const t of allTracksFlat) {
-      let key = t.category;
-      if (algoDimension === 'ARTIST') key = t.artist;
-      else if (algoDimension === 'LABEL') key = t.labelName;
-      else if (algoDimension === 'BEATMAKER') key = t.beatmakerName;
-      else if (algoDimension === 'ENGINEER') key = t.soundEngineerName;
-      else if (algoDimension === 'CATEGORY') key = t.category;
+    for (const cat of categories) {
+      groups[cat] = {
+        name: cat,
+        tracksCount: 0,
+        totalPoints: 0,
+      };
+    }
 
+    for (const t of allTracksFlat) {
+      const key = t.category;
       if (!groups[key]) {
         groups[key] = {
           name: key,
@@ -1890,11 +3247,14 @@ export function App() {
         };
       }
       groups[key].tracksCount += 1;
-      groups[key].totalPoints = Math.round((groups[key].totalPoints + t.algoPoints) * 100) / 100;
+      groups[key].totalPoints =
+        Math.round(
+          (groups[key].totalPoints + computeTrackExplosionScore(t).explosionScore) * 10
+        ) / 10;
     }
 
     return Object.values(groups).sort((a, b) => b.totalPoints - a.totalPoints);
-  }, [allTracksFlat, algoDimension]);
+  }, [allTracksFlat, algoDimension, decoupledStudioRankings, categories]);
 
   // Selected Full-Screen Track Detail
   const selectedTrackDetail = useMemo(() => {
@@ -1952,12 +3312,21 @@ export function App() {
     };
   }, [selectedConsumerUser, allTracksFlat]);
 
-  // Selected Full-Screen Artist Detail
+  // Selected Full-Screen Artist Detail (Includes Solo + Featuring Tracks)
   const selectedArtistAnalytics = useMemo(() => {
     if (!selectedArtistName) return null;
+    const lowerTarget = selectedArtistName.toLowerCase();
     const artistTracks = allTracksFlat
-      .filter((t) => t.artist.toLowerCase() === selectedArtistName.toLowerCase())
-      .sort((a, b) => b.algoPoints - a.algoPoints);
+      .filter(
+        (t) =>
+          t.artist.toLowerCase() === lowerTarget ||
+          (t.featuringArtists || []).some((f) => f.toLowerCase() === lowerTarget)
+      )
+      .sort(
+        (a, b) =>
+          computeTrackExplosionScore(b).explosionScore -
+          computeTrackExplosionScore(a).explosionScore
+      );
 
     if (artistTracks.length === 0) return null;
 
@@ -1980,6 +3349,10 @@ export function App() {
     const engineersMap = new Map<
       string,
       { name: string; role: 'ENGINEER'; tracksCount: number; plays: number; loops: number }
+    >();
+    const lyricistsMap = new Map<
+      string,
+      { name: string; role: 'LYRICIST'; tracksCount: number; plays: number; loops: number }
     >();
 
     for (const t of artistTracks) {
@@ -2018,6 +3391,18 @@ export function App() {
       e.plays += t.realPlays;
       e.loops += t.loopPlaysCount;
       engineersMap.set(t.soundEngineerName, e);
+
+      const lyr = lyricistsMap.get(t.lyricistName) || {
+        name: t.lyricistName,
+        role: 'LYRICIST' as const,
+        tracksCount: 0,
+        plays: 0,
+        loops: 0,
+      };
+      lyr.tracksCount += 1;
+      lyr.plays += t.realPlays;
+      lyr.loops += t.loopPlaysCount;
+      lyricistsMap.set(t.lyricistName, lyr);
     }
 
     const artistTrackIds = new Set(artistTracks.map((t) => t.id));
@@ -2046,9 +3431,10 @@ export function App() {
       .sort((a, b) => b.listenSeconds - a.listenSeconds);
 
     return {
-      artistName: artistTracks[0].artist,
+      artistName: selectedArtistName,
       primaryCategory: artistTracks[0].category,
       cover: artistTracks[0].cover,
+      artworkType: artistTracks[0].artworkType,
       tracks: artistTracks,
       totalPlays,
       totalLoops,
@@ -2059,19 +3445,17 @@ export function App() {
         labels: Array.from(labelsMap.values()),
         beatmakers: Array.from(beatmakersMap.values()),
         engineers: Array.from(engineersMap.values()),
+        lyricists: Array.from(lyricistsMap.values()),
       },
       topListeners,
     };
   }, [selectedArtistName, allTracksFlat, users]);
 
-  const dropStartPct = (currentTrack.dropStart / currentTrack.duration) * 100;
-  const dropWidthPct = (currentTrack.dropDuration / currentTrack.duration) * 100;
-  const playheadPct = Math.min(100, (currentTime / currentTrack.duration) * 100);
   const isCurrentLiked = !!likedTrackIds[currentTrack.id];
-  const currentRankInfo = trackRankMap[currentTrack.id] || { rank: 1, delta: 0 };
+  const currentRankInfo = trackRankMap[currentTrack.id] || { rank: 4, delta: 3 };
 
   return (
-    <div className="relative h-[100dvh] w-full max-w-full bg-[#07080C] text-[#F5F2EB] overflow-hidden select-none flex flex-col">
+    <div className="relative h-[100dvh] w-full max-w-full bg-[#090607] text-[#F5F2EB] overflow-hidden select-none flex flex-col">
       {/* Persistent Background Audio Engines (Never Unmounted) */}
       <audio ref={htmlAudioRef} className="hidden" preload="auto" />
       <audio ref={uploadPreviewAudioRef} className="hidden" preload="auto" />
@@ -2080,113 +3464,164 @@ export function App() {
         className="fixed -top-[9999px] -left-[9999px] w-px h-px opacity-0 pointer-events-none"
       />
 
-      {/* Ambient Atmospheric Tint */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-20 transition-all duration-700"
-        style={{
-          background:
-            appView === 'ADMIN'
-              ? 'radial-gradient(circle at 80% 15%, rgba(16, 185, 129, 0.14), transparent 60%)'
-              : 'radial-gradient(circle at 50% 28%, rgba(255, 85, 0, 0.18), transparent 62%)',
-        }}
-      />
-
-      {/* Global Top Bar — Strictly Contained Within Mobile Safe Zone */}
-      <header className="relative z-30 w-full flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 border-b border-white/[0.07] bg-[#0B0D13]/90 backdrop-blur-xl shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-[#FF5500]/15 border border-[#FF5500]/40 flex items-center justify-center shrink-0">
-            <Compass className="w-3.5 h-3.5 text-[#FF5500]" />
-          </div>
-          <span className="font-bold tracking-tight text-sm text-[#F5F2EB] truncate">Aura2d</span>
-
-          {appView !== 'PLAYER' && isPlaying && (
-            <button
-              onClick={() => setAppView('PLAYER')}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#FF5500]/15 border border-[#FF5500]/30 text-[11px] text-[#FF5500] font-mono shrink-0"
-              title="Retourner au lecteur"
-            >
-              <Volume2 className="w-3 h-3 animate-pulse shrink-0" />
-              <span className="hidden sm:inline truncate max-w-[100px]">{currentTrack.title}</span>
-            </button>
-          )}
-        </div>
-
-        {/* Right Controls — Compact Icon-First Safe Zone */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)}
-            title={
-              syncSnapshot.isOnline
-                ? 'En ligne — Simuler Hors-Ligne'
-                : 'Mode Avion actif — Reconnecter'
+      {/* ===================================================================== */}
+      {/* VIEW 1: 3D IMMERSIVE COVER FLOW PLAYER + DROP ZONE + SPATIAL 2D       */}
+      {/* ===================================================================== */}
+      {appView === 'PLAYER' && (
+        <main className="relative z-10 h-full w-full flex items-center justify-center bg-[#060608] overflow-hidden">
+          <Immersive3DPlayer
+            catalogue={catalogue}
+            albumIdx={safeAlbumIdx}
+            trackIdx={safeTrackIdx}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            isDropMode={isDropMode}
+            currentTime={currentTime}
+            isShuffle={isShuffle}
+            repeatMode={repeatMode}
+            isCurrentLiked={isCurrentLiked}
+            likedTrackIds={likedTrackIds}
+            recommendedTrackIds={recommendedTrackIds}
+            subscribedArtists={subscribedArtists}
+            artistSubscribers={artistSubscribers}
+            communityRecommendations={communityRecommendations}
+            rankInfo={currentRankInfo}
+            currentRankInfo={currentRankInfo}
+            trackRankMap={trackRankMap}
+            users={users}
+            currentUser={currentUser}
+            categories={categories}
+            syncSnapshot={syncSnapshot}
+            masterVolume={masterVolume}
+            eqGains={eqGains}
+            userPlan={userPlan}
+            onToggleUserPlan={() =>
+              setUserPlan((prev) => (prev === 'PRO' ? 'BASIC' : 'PRO'))
             }
-            className={`h-7 px-2 rounded-lg text-[11px] font-mono transition-colors flex items-center gap-1 border ${
-              syncSnapshot.isOnline
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-            }`}
-          >
-            {syncSnapshot.isOnline ? (
-              <Wifi className="w-3.5 h-3.5" />
-            ) : (
-              <WifiOff className="w-3.5 h-3.5" />
-            )}
-            {syncSnapshot.queue.length > 0 && (
-              <span className="text-[10px] font-bold">{syncSnapshot.queue.length}</span>
-            )}
-          </button>
-
-          <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-lg border border-white/[0.07]">
-            <button
-              onClick={() => setAppView('PLAYER')}
-              title="Lecteur"
-              className={`h-6 px-2.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
-                appView === 'PLAYER'
-                  ? 'bg-[#FF5500] text-[#07080C] font-semibold'
-                  : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-              }`}
-            >
-              <Music className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Lecteur</span>
-            </button>
-            <button
-              onClick={() => setAppView('ADMIN')}
-              title="Admin"
-              className={`h-6 px-2.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
-                appView === 'ADMIN'
-                  ? 'bg-emerald-500 text-[#07080C] font-semibold'
-                  : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Admin</span>
-            </button>
-            <button
-              onClick={() => setAppView('AUTH')}
-              title="Connexion"
-              className={`h-6 px-2 rounded-md text-xs font-medium transition-colors flex items-center ${
-                appView === 'AUTH'
-                  ? 'bg-white/15 text-[#F5F2EB]'
-                  : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-              }`}
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </header>
+            onNavigateAlbum={navigateAlbum}
+            onSelectAlbumIndex={handleSelectAlbumIndex}
+            onNavigateTrack={navigateTrack}
+            onSelectTrackIndex={handleSelectTrackIndex}
+            onTogglePlay={handleCentralPlayToggle}
+            onForceStopPlay={() => setIsPlaying(false)}
+            onSeek={handleSeekFromPlayer}
+            onToggleShuffle={() => setIsShuffle(!isShuffle)}
+            onCycleRepeat={() => setRepeatMode((prev) => (prev + 1) % 3)}
+            onToggleLike={(trackId, e) => toggleLike(trackId, e)}
+            onRecommendTrack={handleRecommendTrack}
+            onToggleSubscribeArtist={handleToggleSubscribeArtist}
+            onRecordLyricsOpen={handleRecordLyricsOpen}
+            onToggleDownload={() => handleToggleOfflineDownload()}
+            onOpenAdminStudio={() => setAppView('ADMIN')}
+            onToggleOfflineSim={() =>
+              streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)
+            }
+            onChangeMasterVolume={handleChangeMasterVolume}
+            onChangeEqBand={handleChangeEqBand}
+            onApplyEqPreset={handleApplyEqPreset}
+            onResetEq={handleResetEq}
+            subscriptionPass={subscriptionPass}
+            onChangeSubscriptionPass={setSubscriptionPass}
+            networkOperator={networkOperator}
+            onChangeNetworkOperator={setNetworkOperator}
+            lastEcgValidationMsg={lastEcgValidationMsg}
+            onConfirmCreditHandshake={handleConfirmCreditHandshake}
+            onOpenCreditDispute={handleOpenCreditDispute}
+            onResolveCreditDispute={handleResolveCreditDispute}
+          />
+        </main>
+      )}
 
       {/* ===================================================================== */}
-      {/* VIEW 1: AUTHENTICATION PORTAL                                         */}
+      {/* TOP HEADER FOR AUTH & ADMIN VIEWS                                     */}
+      {/* ===================================================================== */}
+      {appView !== 'PLAYER' && (
+        <header className="relative z-30 w-full flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 border-b border-white/[0.07] bg-[#0B0D13]/90 backdrop-blur-xl shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setAppView('PLAYER')}
+              className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
+              title="Retour au lecteur DROP"
+            >
+              <DropOfficialLogo className="h-4 w-auto" />
+            </button>
+
+            {isPlaying && (
+              <button
+                onClick={() => setAppView('PLAYER')}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#DE1B34]/15 border border-[#DE1B34]/30 text-[11px] text-[#DE1B34] font-mono shrink-0"
+              >
+                <Volume2 className="w-3 h-3 animate-pulse shrink-0" />
+                <span className="hidden sm:inline truncate max-w-[100px]">
+                  {currentTrack.title}
+                </span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)}
+              className={`h-7 px-2 rounded-lg text-[11px] font-mono transition-colors flex items-center gap-1 border ${
+                syncSnapshot.isOnline
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+              }`}
+            >
+              {syncSnapshot.isOnline ? (
+                <Wifi className="w-3.5 h-3.5" />
+              ) : (
+                <WifiOff className="w-3.5 h-3.5" />
+              )}
+              {syncSnapshot.queue.length > 0 && (
+                <span className="text-[10px] font-bold">{syncSnapshot.queue.length}</span>
+              )}
+            </button>
+
+            <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-lg border border-white/[0.07]">
+              <button
+                onClick={() => setAppView('PLAYER')}
+                className="h-6 px-2.5 rounded-md text-xs font-medium text-[#8E93A4] hover:text-[#F5F2EB] flex items-center gap-1"
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span>Lecteur</span>
+              </button>
+              <button
+                onClick={() => setAppView('ADMIN')}
+                className={`h-6 px-2.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
+                  appView === 'ADMIN'
+                    ? 'bg-emerald-500 text-[#07080C] font-semibold'
+                    : 'text-[#8E93A4] hover:text-[#F5F2EB]'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+              <button
+                onClick={() => setAppView('AUTH')}
+                className={`h-6 px-2 rounded-md text-xs font-medium transition-colors flex items-center ${
+                  appView === 'AUTH'
+                    ? 'bg-white/15 text-[#F5F2EB]'
+                    : 'text-[#8E93A4] hover:text-[#F5F2EB]'
+                }`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* ===================================================================== */}
+      {/* VIEW 2: AUTHENTICATION PORTAL                                         */}
       {/* ===================================================================== */}
       {appView === 'AUTH' && (
         <main className="relative z-10 flex-1 w-full flex items-center justify-center p-4 overflow-hidden">
           <div className="w-full max-w-sm bg-[#0E1118] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF5500] block truncate">
-                  Aura2d
-                </span>
+                <DropOfficialLogo className="h-4 w-auto mb-1.5" />
                 <h1 className="text-lg font-bold tracking-tight truncate">
                   {authMode === 'LOGIN' ? 'Connexion' : 'Inscription'}
                 </h1>
@@ -2220,7 +3655,7 @@ export function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="Alex Rivera"
-                    className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-[#F5F2EB] focus:outline-none focus:border-[#FF5500]"
+                    className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
                   />
                 </div>
               )}
@@ -2230,272 +3665,61 @@ export function App() {
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="nom@aura2d.io"
-                  className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-[#F5F2EB] focus:outline-none focus:border-[#FF5500]"
+                  placeholder="nom@drop.io"
+                  className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                onClick={() => handleQuickEnter('PLAYER', 'USER')}
-                className="flex flex-col items-start justify-between p-3.5 rounded-xl bg-[#FF5500]/10 border border-[#FF5500]/30 hover:bg-[#FF5500]/20 transition-colors text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#FF5500] text-[#07080C] flex items-center justify-center mb-2">
-                  <Music className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 w-full">
-                  <div className="text-sm font-semibold text-[#F5F2EB] truncate">Lecteur 2D</div>
-                  <div className="text-[11px] text-[#8E93A4] truncate">Interface joueur</div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleQuickEnter('ADMIN', 'ADMIN')}
-                className="flex flex-col items-start justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500 text-[#07080C] flex items-center justify-center mb-2">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 w-full">
-                  <div className="text-sm font-semibold text-[#F5F2EB] truncate">Studio Admin</div>
-                  <div className="text-[11px] text-[#8E93A4] truncate">Gestion & Rangs</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        </main>
-      )}
-
-      {/* ===================================================================== */}
-      {/* VIEW 2: NATIVE 2D PLAYER — ULTRA-CLEAN MOBILE SAFE ZONE               */}
-      {/* ONLY RANK (#1👑, #2🥈, #3🥉) + DELTA (+4 / -1), ZERO POINTS VISIBLE    */}
-      {/* ===================================================================== */}
-      {appView === 'PLAYER' && (
-        <main className="relative z-10 flex-1 w-full max-w-sm mx-auto px-4 py-3 flex flex-col justify-between overflow-hidden">
-          {/* Top Bar Inside Safe Zone: Rank Badge + Drop/Play Mode Pill */}
-          <div className="w-full flex items-center justify-between gap-2 shrink-0">
-            <RankBadge rank={currentRankInfo.rank} delta={currentRankInfo.delta} />
-
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[11px] text-[#8E93A4] truncate max-w-[110px]">
-                {currentTrack.category}
-              </span>
+            <div className="grid grid-cols-3 gap-2 pt-1">
               <button
                 onClick={() => {
-                  const nextDrop = !isDropMode;
-                  setIsDropMode(nextDrop);
-                  if (nextDrop) {
-                    seekAllEngines(currentTrack.dropStart);
-                  }
+                  setUserPlan('BASIC');
+                  handleQuickEnter('PLAYER', 'USER');
                 }}
-                className={`px-2.5 py-0.5 rounded text-[11px] font-mono border transition-colors shrink-0 ${
-                  isDropMode
-                    ? 'bg-[#FF5500]/15 text-[#FF5500] border-[#FF5500]/40'
-                    : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
-                }`}
+                className="flex flex-col items-start justify-between p-3 rounded-xl bg-white/[0.04] border border-white/[0.12] hover:bg-white/[0.08] transition-colors text-left"
               >
-                {isDropMode ? 'DROP' : 'PLAY'}
-              </button>
-            </div>
-          </div>
-
-          {/* Center 2D Interactive Cover — Strictly Contained */}
-          <div
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            className="relative my-auto w-full flex flex-col items-center justify-center touch-none cursor-grab active:cursor-grabbing py-1"
-          >
-            {/* Cover Card with Beveled 3D Borders, Glossy Sheen & Cover-Only Drop Shadow */}
-            <div
-              style={{
-                transform: `translate3d(${gestureDelta.x * 0.3}px, ${gestureDelta.y * 0.3}px, 0)`,
-              }}
-              className="cover-card-bevel cover-gloss-sheen relative w-full max-w-[268px] sm:max-w-[284px] aspect-square rounded-2xl overflow-hidden bg-[#12151F] transition-transform duration-150"
-            >
-              {currentTrack.cover ? (
-                <img
-                  src={currentTrack.cover}
-                  alt={currentTrack.title}
-                  draggable={false}
-                  className="w-full h-full object-cover select-none pointer-events-none"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#181C29] to-[#0B0D14] text-[#8E93A4]">
-                  <Disc className="w-12 h-12 text-[#FF5500]/60 mb-2" />
-                  <span className="text-xs font-mono uppercase tracking-widest px-3 truncate">
-                    {currentTrack.artist}
-                  </span>
+                <div className="w-7 h-7 rounded-lg bg-zinc-700 text-white flex items-center justify-center mb-2">
+                  <Music className="w-3.5 h-3.5" />
                 </div>
-              )}
-
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-
-              {/* Top-left Compact Time/Drop Indicator */}
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md border border-white/15 text-[10px] font-mono">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isPlaying
-                      ? isDropMode
-                        ? 'bg-[#FF5500] animate-pulse'
-                        : 'bg-emerald-400 animate-pulse'
-                      : 'bg-white/40'
-                  }`}
-                />
-                <span>
-                  {isDropMode
-                    ? `DROP ${formatTime(currentTrack.dropStart)}`
-                    : formatTime(currentTrack.duration)}
-                </span>
-              </div>
-
-              {/* Bottom Inside Cover: Track Title, Artist & Small Like Heart at Bottom-Right */}
-              <div className="absolute bottom-3 inset-x-3 z-20 flex items-end justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold text-[#F5F2EB] truncate leading-tight">
-                    {currentTrack.title}
-                  </h2>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedArtistName(currentTrack.artist);
-                      setAppView('ADMIN');
-                    }}
-                    className="text-xs text-[#D5D8E2] hover:text-[#FF5500] transition-colors truncate flex items-center gap-0.5 max-w-full"
-                  >
-                    <span className="truncate">{currentTrack.artist}</span>
-                    <ChevronRight className="w-3 h-3 shrink-0 opacity-75" />
-                  </button>
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold text-[#F5F2EB] truncate">DROP Basic</div>
+                  <div className="text-[10px] text-[#8E93A4] truncate">Fonctions grisées</div>
                 </div>
-
-                {/* Small Like Button on Cover Bottom-Right (No counter displayed) */}
-                <button
-                  onClick={(e) => toggleLike(currentTrack.id, e)}
-                  aria-label="Aimer ce titre"
-                  className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors shrink-0 ${
-                    isCurrentLiked
-                      ? 'bg-[#FF5500] border-[#FF5500] text-[#07080C]'
-                      : 'bg-black/60 border-white/20 text-[#F5F2EB] hover:border-white/40'
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 ${isCurrentLiked ? 'fill-current' : ''}`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Track Depth Dots (Axe Y) */}
-            <div className="flex items-center justify-center gap-1.5 mt-3 max-w-full overflow-hidden px-2">
-              {currentAlbum.tracks.map((t, idx) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    finalizeListeningSessionOnZap();
-                    setTrackIdx(idx);
-                    setIsDropMode(true);
-                    seekAllEngines(t.dropStart);
-                    setIsPlaying(true);
-                  }}
-                  className={`h-1.5 rounded-full transition-all shrink-0 ${
-                    idx === safeTrackIdx ? 'w-5 bg-[#FF5500]' : 'w-1.5 bg-white/20'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Scrubber & Clean Time Labels */}
-          <div className="w-full flex flex-col gap-1.5 shrink-0">
-            <div
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const nextSec = Math.floor(ratio * currentTrack.duration);
-                setIsDropMode(false);
-                if (!manualSessionRef.current.active) {
-                  manualSessionRef.current = {
-                    trackId: currentTrack.id,
-                    active: true,
-                    listenedSeconds: 0,
-                    playCountedAtOneSec: false,
-                    sessionPointsEarned: 0,
-                  };
-                }
-                seekAllEngines(nextSec);
-              }}
-              className="relative h-2 w-full rounded-full bg-white/[0.08] cursor-pointer overflow-hidden"
-            >
-              <div
-                style={{ left: `${dropStartPct}%`, width: `${dropWidthPct}%` }}
-                className="absolute inset-y-0 bg-[#FF5500]/30 border-x border-[#FF5500]/70"
-              />
-              <div
-                style={{ width: `${playheadPct}%` }}
-                className="absolute inset-y-0 left-0 bg-[#F5F2EB] transition-all duration-150"
-              />
-            </div>
-
-            <div className="w-full flex items-center justify-between text-[11px] font-mono text-[#8E93A4]">
-              <span>{formatTime(currentTime)}</span>
-              <span className="text-[10px] text-[#FF5500]">
-                DROP {formatTime(currentTrack.dropStart)}
-              </span>
-              <span>{formatTime(currentTrack.duration)}</span>
-            </div>
-          </div>
-
-          {/* Spotify-Proportioned Transport Bar */}
-          <div className="w-full flex items-center justify-between px-1 pt-2 pb-1 shrink-0">
-            <button
-              onClick={() => setIsShuffle(!isShuffle)}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                isShuffle ? 'text-[#FF5500]' : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-              }`}
-            >
-              <Shuffle className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-5">
-              <button
-                onClick={() => navigateTrack(-1)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[#F5F2EB] hover:text-[#FF5500] transition-colors"
-              >
-                <SkipBack className="w-4 h-4 fill-current" />
               </button>
 
               <button
-                onClick={handleCentralPlayToggle}
-                className="w-10 h-10 rounded-full bg-[#F5F2EB] text-[#07080C] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+                onClick={() => {
+                  setUserPlan('PRO');
+                  handleQuickEnter('PLAYER', 'USER');
+                }}
+                className="flex flex-col items-start justify-between p-3 rounded-xl bg-[#DE1B34]/15 border border-[#DE1B34]/40 hover:bg-[#DE1B34]/25 transition-colors text-left"
               >
-                {isPlaying && !isDropMode ? (
-                  <Pause className="w-4 h-4 fill-current" />
-                ) : (
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
-                )}
+                <div className="w-7 h-7 rounded-lg bg-[#DE1B34] text-white flex items-center justify-center mb-2">
+                  <Sliders className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold text-[#F5F2EB] truncate">DROP Pro</div>
+                  <div className="text-[10px] text-[#8E93A4] truncate">Accès complet</div>
+                </div>
               </button>
 
               <button
-                onClick={() => navigateTrack(1)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[#F5F2EB] hover:text-[#FF5500] transition-colors"
+                onClick={() => {
+                  setUserPlan('PRO');
+                  handleQuickEnter('ADMIN', 'ADMIN');
+                }}
+                className="flex flex-col items-start justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors text-left"
               >
-                <SkipForward className="w-4 h-4 fill-current" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-500 text-[#07080C] flex items-center justify-center mb-2">
+                  <Shield className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold text-[#F5F2EB] truncate">Studio Admin</div>
+                  <div className="text-[10px] text-[#8E93A4] truncate">Gestion &amp; DRM</div>
+                </div>
               </button>
             </div>
-
-            <button
-              onClick={() => setIsRepeat(!isRepeat)}
-              className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                isRepeat
-                  ? 'text-[#FF5500] bg-[#FF5500]/10 border border-[#FF5500]/30'
-                  : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-              }`}
-            >
-              <Repeat className="w-4 h-4" />
-              {isRepeat && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF5500]" />
-              )}
-            </button>
           </div>
         </main>
       )}
@@ -2505,12 +3729,8 @@ export function App() {
       {/* ===================================================================== */}
       {appView === 'ADMIN' && (
         <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-3 sm:px-5 py-3 flex flex-col overflow-hidden gap-3">
-          {/* ================================================================= */}
-          {/* SHEET A: FULL-SCREEN TRACK DETAIL (FICHE TITRE PLEINE PAGE)       */}
-          {/* ================================================================= */}
           {selectedTrackDetail ? (
             <div className="flex-1 w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-hidden gap-4">
-              {/* Top Navigation Bar */}
               <div className="w-full flex items-center justify-between gap-2 pb-3 border-b border-white/[0.07] shrink-0">
                 <button
                   onClick={() => setSelectedTrackId(null)}
@@ -2520,52 +3740,64 @@ export function App() {
                   <span>Retour</span>
                 </button>
 
-                <RankBadge
-                  rank={selectedTrackDetail.rankInfo.rank}
-                  delta={selectedTrackDetail.rankInfo.delta}
-                />
+                <div className="flex items-center gap-2">
+                  <CertificationBadgeSvg
+                    cert={getTrackCertification(selectedTrackDetail.track.realPlays)}
+                  />
+                  <RankBadge
+                    rank={selectedTrackDetail.rankInfo.rank}
+                    delta={selectedTrackDetail.rankInfo.delta}
+                  />
+                </div>
               </div>
 
-              {/* Scrollable Track Full Details */}
               <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-0.5">
-                {/* Track Identity Card */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#07080C] border border-white/[0.07] rounded-xl p-4">
                   <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
                     <div className="w-16 h-16 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
-                      {selectedTrackDetail.track.cover ? (
-                        <img
-                          src={selectedTrackDetail.track.cover}
-                          alt={selectedTrackDetail.track.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#151926] flex items-center justify-center">
-                          <Disc className="w-6 h-6 text-[#FF5500]" />
-                        </div>
-                      )}
+                      <CoverArtwork
+                        artworkType={selectedTrackDetail.track.artworkType}
+                        coverUrl={selectedTrackDetail.track.cover}
+                        title={selectedTrackDetail.track.title}
+                        artist={selectedTrackDetail.track.artist}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="px-2 py-0.5 rounded bg-[#FF5500]/15 text-[#FF5500] text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-[#DE1B34]/15 text-[#DE1B34] text-[10px] font-mono">
                         {selectedTrackDetail.track.category}
                       </span>
                       <h2 className="text-base font-bold text-[#F5F2EB] truncate mt-1">
                         {selectedTrackDetail.track.title}
                       </h2>
-                      <button
-                        onClick={() => {
-                          const artist = selectedTrackDetail.track.artist;
-                          setSelectedTrackId(null);
-                          setSelectedArtistName(artist);
-                        }}
-                        className="text-xs text-[#8E93A4] hover:text-[#FF5500] flex items-center gap-1 truncate mt-0.5"
-                      >
-                        <span className="truncate">{selectedTrackDetail.track.artist}</span>
-                        <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[#FF5500]" />
-                      </button>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <button
+                          onClick={() => {
+                            const artist = selectedTrackDetail.track.artist;
+                            setSelectedTrackId(null);
+                            setSelectedArtistName(artist);
+                          }}
+                          className="text-xs text-[#8E93A4] hover:text-white flex items-center gap-1 truncate"
+                        >
+                          <span className="truncate">{selectedTrackDetail.track.artist}</span>
+                          <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[#DE1B34]" />
+                        </button>
+                        {selectedTrackDetail.track.featuringArtists &&
+                          selectedTrackDetail.track.featuringArtists.map((feat) => (
+                            <button
+                              key={feat}
+                              onClick={() => {
+                                setSelectedTrackId(null);
+                                setSelectedArtistName(feat);
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-[10px] font-mono text-violet-300 hover:bg-violet-500/25"
+                            >
+                              feat. {feat}
+                            </button>
+                          ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Quick Actions on Track */}
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
                     <button
                       onClick={() => {
@@ -2584,7 +3816,7 @@ export function App() {
                         setIsPlaying(true);
                         setAppView('PLAYER');
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-[#FF5500] text-[#07080C] font-bold text-xs flex items-center gap-1.5"
+                      className="px-3.5 py-2 rounded-xl bg-[#DE1B34] text-white font-bold text-xs flex items-center gap-1.5"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>Lire</span>
@@ -2595,6 +3827,9 @@ export function App() {
                           albumId: selectedTrackDetail.album.id,
                           track: { ...selectedTrackDetail.track },
                           durationFormatted: formatTime(selectedTrackDetail.track.duration),
+                          featuringInput: (
+                            selectedTrackDetail.track.featuringArtists || []
+                          ).join(', '),
                         })
                       }
                       className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[#F5F2EB]"
@@ -2617,12 +3852,14 @@ export function App() {
                   </div>
                 </div>
 
-                {/* Deep Metrics Grid (Icon-First) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex items-center justify-between">
-                    <Play className="w-4 h-4 fill-current text-[#FF5500]" />
+                    <Play className="w-4 h-4 fill-current text-[#DE1B34]" />
                     <span className="font-mono text-sm font-bold text-[#F5F2EB]">
-                      {selectedTrackDetail.track.realPlays}
+                      {formatCompactCount(
+                        selectedTrackDetail.track.realPlays,
+                        selectedTrackDetail.track.displayPlaysFormatted
+                      )}
                     </span>
                   </div>
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex items-center justify-between">
@@ -2634,26 +3871,27 @@ export function App() {
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex items-center justify-between">
                     <Heart className="w-4 h-4 fill-current text-rose-400" />
                     <span className="font-mono text-sm font-bold text-rose-400">
-                      {selectedTrackDetail.track.likesCount}
+                      {selectedTrackDetail.track.likesCount} •{' '}
+                      {selectedTrackDetail.track.recommendationsCount} recos
                     </span>
                   </div>
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex items-center justify-between">
                     <Zap className="w-4 h-4 text-emerald-400" />
                     <span className="font-mono text-sm font-bold text-emerald-400">
+                      30s: {selectedTrackDetail.track.retention30sPct}% / Fin:{' '}
                       {selectedTrackDetail.track.avgRetentionPct}%
                     </span>
                   </div>
                 </div>
 
-                {/* Studio Credits & Timing */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-4 flex flex-col gap-2.5">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
-                      Crédits Studio
+                      Crédits Studio &amp; Plume
                     </span>
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5 text-[#8E93A4]">
-                        <Building2 className="w-3.5 h-3.5 text-[#FF5500]" />
+                        <Building2 className="w-3.5 h-3.5 text-[#DE1B34]" />
                         Label
                       </span>
                       <span className="font-semibold text-[#F5F2EB] truncate max-w-[160px]">
@@ -2678,11 +3916,20 @@ export function App() {
                         {selectedTrackDetail.track.soundEngineerName}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 text-[#8E93A4]">
+                        <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                        Parolier (Plume)
+                      </span>
+                      <span className="font-semibold text-sky-300 truncate max-w-[160px]">
+                        {selectedTrackDetail.track.lyricistName}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-4 flex flex-col gap-2.5">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
-                      Paramètres Audio
+                      Paramètres Audio &amp; Impact Texte
                     </span>
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="text-[#8E93A4]">Durée totale</span>
@@ -2692,7 +3939,7 @@ export function App() {
                     </div>
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="text-[#8E93A4]">Zone de Drop</span>
-                      <span className="text-[#FF5500] font-bold">
+                      <span className="text-[#F59E0B] font-bold">
                         {formatTime(selectedTrackDetail.track.dropStart)} →{' '}
                         {formatTime(
                           Math.min(
@@ -2701,6 +3948,13 @@ export function App() {
                               selectedTrackDetail.track.dropDuration
                           )
                         )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-[#8E93A4]">Ouvertures / Partages Paroles</span>
+                      <span className="text-sky-300 font-bold">
+                        {selectedTrackDetail.track.lyricsOpensCount} vues •{' '}
+                        {selectedTrackDetail.track.lyricsSharesCount} extraits
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs font-mono">
@@ -2714,9 +3968,6 @@ export function App() {
               </div>
             </div>
           ) : selectedArtistAnalytics ? (
-            /* ================================================================= */
-            /* SHEET B: FULL-SCREEN ARTIST PROFILE (FICHE ARTISTE PLEINE PAGE)   */
-            /* ================================================================= */
             <div className="flex-1 w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-hidden gap-4">
               <div className="w-full flex items-center justify-between gap-2 pb-3 border-b border-white/[0.07] shrink-0">
                 <button
@@ -2726,55 +3977,77 @@ export function App() {
                   <ChevronLeft className="w-4 h-4" />
                   <span>Retour</span>
                 </button>
-                <span className="px-2.5 py-1 rounded-lg text-xs font-mono bg-[#FF5500]/15 text-[#FF5500] border border-[#FF5500]/30 truncate">
-                  {selectedArtistAnalytics.primaryCategory}
-                </span>
+                <div className="flex items-center gap-2">
+                  <CertificationBadgeSvg
+                    cert={getAlbumCertification(selectedArtistAnalytics.totalPlays)}
+                  />
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-mono bg-[#DE1B34]/15 text-[#DE1B34] border border-[#DE1B34]/30 truncate">
+                    {selectedArtistAnalytics.primaryCategory}
+                  </span>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-0.5">
-                {/* Artist Header */}
-                <div className="flex items-center gap-3.5 bg-[#07080C] border border-white/[0.07] rounded-xl p-4">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
-                    {selectedArtistAnalytics.cover ? (
-                      <img
-                        src={selectedArtistAnalytics.cover}
-                        alt={selectedArtistAnalytics.artistName}
-                        className="w-full h-full object-cover"
+                <div className="flex flex-wrap items-center justify-between gap-3.5 bg-[#07080C] border border-white/[0.07] rounded-xl p-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
+                      <CoverArtwork
+                        artworkType={selectedArtistAnalytics.artworkType}
+                        coverUrl={selectedArtistAnalytics.cover}
+                        title={selectedArtistAnalytics.artistName}
+                        artist={selectedArtistAnalytics.artistName}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-[#151926] flex items-center justify-center">
-                        <Disc className="w-5 h-5 text-[#FF5500]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base font-bold text-[#F5F2EB] truncate">
+                        {selectedArtistAnalytics.artistName}
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#8E93A4] mt-1">
+                        <span className="flex items-center gap-1 text-[#F5F2EB]">
+                          <Play className="w-3 h-3 fill-current text-[#DE1B34]" />
+                          {formatCompactCount(selectedArtistAnalytics.totalPlays)}
+                        </span>
+                        <span className="flex items-center gap-1 text-violet-300">
+                          <Users className="w-3 h-3" />
+                          {formatCompactCount(
+                            artistSubscribers[selectedArtistAnalytics.artistName] ?? 1200
+                          )}{' '}
+                          fans
+                        </span>
+                        <span className="flex items-center gap-1 text-amber-300">
+                          <Repeat className="w-3 h-3" />
+                          {selectedArtistAnalytics.totalLoops}
+                        </span>
+                        <span className="flex items-center gap-1 text-emerald-400">
+                          <Zap className="w-3 h-3" />
+                          {selectedArtistAnalytics.avgRetention}%
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-base font-bold text-[#F5F2EB] truncate">
-                      {selectedArtistAnalytics.artistName}
-                    </h2>
-                    <div className="flex items-center gap-3 text-xs font-mono text-[#8E93A4] mt-1">
-                      <span className="flex items-center gap-1 text-[#F5F2EB]">
-                        <Play className="w-3 h-3 fill-current text-[#FF5500]" />
-                        {selectedArtistAnalytics.totalPlays}
-                      </span>
-                      <span className="flex items-center gap-1 text-amber-300">
-                        <Repeat className="w-3 h-3" />
-                        {selectedArtistAnalytics.totalLoops}
-                      </span>
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <Zap className="w-3 h-3" />
-                        {selectedArtistAnalytics.avgRetention}%
-                      </span>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSubscribeArtist(selectedArtistAnalytics.artistName)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border shrink-0 ${
+                      subscribedArtists[selectedArtistAnalytics.artistName]
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                        : 'bg-[#DE1B34] border-[#DE1B34] text-white'
+                    }`}
+                  >
+                    {subscribedArtists[selectedArtistAnalytics.artistName]
+                      ? '✓ Abonné'
+                      : "+ S'abonner"}
+                  </button>
                 </div>
 
-                {/* Discography List (Clean Rank + Title + Click for Track Sheet) */}
                 <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2.5">
                   <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
-                    Discographie ({selectedArtistAnalytics.tracks.length})
+                    Discographie &amp; Featurings ({selectedArtistAnalytics.tracks.length})
                   </span>
                   {selectedArtistAnalytics.tracks.map((t) => {
                     const rInfo = trackRankMap[t.id] || { rank: 1, delta: 0 };
+                    const cert = getTrackCertification(t.realPlays);
                     return (
                       <div
                         key={t.id}
@@ -2786,24 +4059,26 @@ export function App() {
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div className="w-10 h-10 rounded-lg overflow-hidden cover-card-bevel shrink-0">
-                            {t.cover ? (
-                              <img
-                                src={t.cover}
-                                alt={t.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-[#151926] flex items-center justify-center">
-                                <Disc className="w-4 h-4 text-[#FF5500]" />
-                              </div>
-                            )}
+                            <CoverArtwork
+                              artworkType={t.artworkType}
+                              coverUrl={t.cover}
+                              title={t.title}
+                              artist={t.artist}
+                            />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-[#F5F2EB] truncate">
-                              {t.title}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                                {t.title}
+                              </span>
+                              <CertificationBadgeSvg cert={cert} compact />
                             </div>
                             <div className="text-[11px] font-mono text-[#8E93A4] truncate">
-                              {formatTime(t.duration)}
+                              {t.artist}
+                              {t.featuringArtists && t.featuringArtists.length > 0
+                                ? ` feat. ${t.featuringArtists.join(', ')}`
+                                : ''}{' '}
+                              • {formatTime(t.duration)}
                             </div>
                           </div>
                         </div>
@@ -2817,16 +4092,16 @@ export function App() {
                   })}
                 </div>
 
-                {/* Studio Team & Top Listeners */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
-                      Équipe Studio
+                      Équipe Studio &amp; Plumes
                     </span>
                     {[
                       ...selectedArtistAnalytics.studioTeam.labels,
                       ...selectedArtistAnalytics.studioTeam.beatmakers,
                       ...selectedArtistAnalytics.studioTeam.engineers,
+                      ...selectedArtistAnalytics.studioTeam.lyricists,
                     ].map((member) => (
                       <div
                         key={`${member.role}-${member.name}`}
@@ -2834,13 +4109,16 @@ export function App() {
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           {member.role === 'LABEL' && (
-                            <Building2 className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
+                            <Building2 className="w-3.5 h-3.5 text-[#DE1B34] shrink-0" />
                           )}
                           {member.role === 'BEATMAKER' && (
                             <Sliders className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           )}
                           {member.role === 'ENGINEER' && (
                             <Mic2 className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                          )}
+                          {member.role === 'LYRICIST' && (
+                            <Edit3 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                           )}
                           <span className="font-semibold text-[#F5F2EB] truncate">
                             {member.name}
@@ -2883,9 +4161,6 @@ export function App() {
               </div>
             </div>
           ) : selectedConsumerUser && consumerAnalytics ? (
-            /* ================================================================= */
-            /* SHEET C: FULL-SCREEN CONSUMER USER PROFILE                        */
-            /* ================================================================= */
             <div className="flex-1 w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-hidden gap-4">
               <div className="w-full flex items-center justify-between gap-2 pb-3 border-b border-white/[0.07] shrink-0">
                 <button
@@ -2906,7 +4181,6 @@ export function App() {
               </div>
 
               <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-0.5">
-                {/* User Identity */}
                 <div className="flex items-center justify-between gap-3 bg-[#07080C] border border-white/[0.07] rounded-xl p-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center font-bold text-sm text-emerald-300 shrink-0">
@@ -2924,7 +4198,7 @@ export function App() {
 
                   <div className="flex items-center gap-3 font-mono text-xs shrink-0">
                     <span className="flex items-center gap-1 text-[#F5F2EB]">
-                      <Clock className="w-3.5 h-3.5 text-[#FF5500]" />
+                      <Clock className="w-3.5 h-3.5 text-[#DE1B34]" />
                       {formatLongDuration(selectedConsumerUser.totalListenSeconds)}
                     </span>
                     <span className="flex items-center gap-1 text-emerald-400">
@@ -2934,7 +4208,6 @@ export function App() {
                   </div>
                 </div>
 
-                {/* Top Looped Track & Genres */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[#07080C] border border-amber-500/30 rounded-xl p-3.5 flex flex-col gap-2.5">
                     <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
@@ -2951,10 +4224,11 @@ export function App() {
                         className="flex items-center gap-3 cursor-pointer"
                       >
                         <div className="w-12 h-12 rounded-lg overflow-hidden cover-card-bevel shrink-0">
-                          <img
-                            src={consumerAnalytics.topLoopedItem.track.cover}
-                            alt={consumerAnalytics.topLoopedItem.track.title}
-                            className="w-full h-full object-cover"
+                          <CoverArtwork
+                            artworkType={consumerAnalytics.topLoopedItem.track.artworkType}
+                            coverUrl={consumerAnalytics.topLoopedItem.track.cover}
+                            title={consumerAnalytics.topLoopedItem.track.title}
+                            artist={consumerAnalytics.topLoopedItem.track.artist}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -2976,7 +4250,7 @@ export function App() {
                   </div>
 
                   <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#FF5500] flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#DE1B34] flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5" />
                       Genres favoris
                     </span>
@@ -2994,7 +4268,6 @@ export function App() {
                   </div>
                 </div>
 
-                {/* User Listened Tracks */}
                 <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-[#8E93A4]">
                     Historique par titre
@@ -3012,10 +4285,11 @@ export function App() {
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div className="w-9 h-9 rounded-lg overflow-hidden cover-card-bevel shrink-0">
-                            <img
-                              src={track.cover}
-                              alt={track.title}
-                              className="w-full h-full object-cover"
+                            <CoverArtwork
+                              artworkType={track.artworkType}
+                              coverUrl={track.cover}
+                              title={track.title}
+                              artist={track.artist}
                             />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -3035,90 +4309,81 @@ export function App() {
               </div>
             </div>
           ) : (
-            /* ================================================================= */
-            /* STANDARD ADMIN INTERFACE — STRICT MOBILE SAFE ZONE                */
-            /* ================================================================= */
             <>
-              {/* Main Admin Navigation Bar — 3 Clean Tabs, Zero Overflow */}
-              <div className="w-full grid grid-cols-3 gap-1.5 bg-[#0E1118] p-1 rounded-xl border border-white/[0.07] shrink-0">
+              <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-[#0E1118] p-1 rounded-xl border border-white/[0.07] shrink-0">
                 <button
                   onClick={() => setAdminMainTab('CATALOGUE')}
-                  className={`py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${
+                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'CATALOGUE'
-                      ? 'bg-[#FF5500] text-[#07080C] font-bold'
+                      ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
                   }`}
                 >
                   <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Catalogue</span>
+                  <span>Catalogue</span>
                 </button>
                 <button
                   onClick={() => setAdminMainTab('UPLOAD')}
-                  className={`py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${
+                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'UPLOAD'
-                      ? 'bg-[#FF5500] text-[#07080C] font-bold'
+                      ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
                   }`}
                 >
                   <Upload className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Ajout</span>
+                  <span>Ajout Studio</span>
                 </button>
                 <button
                   onClick={() => setAdminMainTab('USERS')}
-                  className={`py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${
+                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'USERS'
-                      ? 'bg-[#FF5500] text-[#07080C] font-bold'
+                      ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Auditeurs</span>
+                  <span>Auditeurs</span>
                 </button>
               </div>
 
-              {/* =============================================================== */}
-              {/* MAIN TAB 1: CATALOGUE (RÉPERTOIRE | CLASSEMENTS | OFFLINE)      */}
-              {/* =============================================================== */}
               {adminMainTab === 'CATALOGUE' && (
                 <div className="flex-1 w-full flex flex-col overflow-hidden gap-2.5">
-                  {/* Sub-Navigation Inside Catalogue */}
-                  <div className="w-full grid grid-cols-3 gap-1 bg-[#0D1017] p-1 rounded-xl border border-white/[0.07] shrink-0">
+                  <div className="w-full flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#0D1017] p-1 rounded-xl border border-white/[0.07] shrink-0">
                     <button
                       onClick={() => setCatalogueSubTab('REPERTOIRE')}
-                      className={`py-1.5 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1 truncate ${
+                      className={`flex-1 min-w-[95px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
                         catalogueSubTab === 'REPERTOIRE'
                           ? 'bg-white/15 text-[#F5F2EB] font-semibold'
                           : 'text-[#8E93A4]'
                       }`}
                     >
-                      <Disc className="w-3 h-3 text-[#FF5500] shrink-0" />
-                      <span className="truncate">Pistes</span>
+                      <Disc className="w-3 h-3 text-[#DE1B34] shrink-0" />
+                      <span>Pistes &amp; Certifs</span>
                     </button>
                     <button
                       onClick={() => setCatalogueSubTab('ALGO')}
-                      className={`py-1.5 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1 truncate ${
+                      className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
                         catalogueSubTab === 'ALGO'
                           ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
                           : 'text-[#8E93A4]'
                       }`}
                     >
                       <Flame className="w-3 h-3 text-emerald-400 shrink-0" />
-                      <span className="truncate">Rangs</span>
+                      <span>Rangs Anti-Halo &amp; Awards</span>
                     </button>
                     <button
                       onClick={() => setCatalogueSubTab('RULES')}
-                      className={`py-1.5 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1 truncate ${
+                      className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
                         catalogueSubTab === 'RULES'
                           ? 'bg-amber-500/20 text-amber-300 font-semibold'
                           : 'text-[#8E93A4]'
                       }`}
                     >
-                      <Database className="w-3 h-3 text-amber-400 shrink-0" />
-                      <span className="truncate">Offline ({syncSnapshot.queue.length})</span>
+                      <Shield className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>DRM &amp; Offline ({syncSnapshot.queue.length})</span>
                     </button>
                   </div>
 
-                  {/* SUB-TAB 1.1: PISTES — ULTRA-CLEAN CARDS (ONLY RANK #1👑 + DELTA + CLICK FOR FULL SHEET) */}
                   {catalogueSubTab === 'REPERTOIRE' && (
                     <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
                       <div className="w-full flex items-center gap-2">
@@ -3126,13 +4391,12 @@ export function App() {
                           type="text"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Rechercher un titre ou artiste..."
-                          className="flex-1 min-w-0 bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#FF5500]"
+                          placeholder="Rechercher un titre, artiste, featuring, parolier ou genre..."
+                          className="flex-1 min-w-0 bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
                         />
                         <button
                           onClick={handleAutoReorderByAlgo}
                           className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-semibold shrink-0"
-                          title="Trier le flux 2D par rang"
                         >
                           Trier 2D
                         </button>
@@ -3145,28 +4409,33 @@ export function App() {
                           return (
                             t.title.toLowerCase().includes(q) ||
                             t.artist.toLowerCase().includes(q) ||
-                            t.category.toLowerCase().includes(q)
+                            t.category.toLowerCase().includes(q) ||
+                            t.lyricistName.toLowerCase().includes(q) ||
+                            (t.featuringArtists || []).some((f) => f.toLowerCase().includes(q))
                           );
                         });
                         if (filteredTracks.length === 0) return null;
+
+                        const albumPlays = alb.tracks.reduce((acc, tr) => acc + tr.realPlays, 0);
+                        const albCert = getAlbumCertification(albumPlays);
 
                         return (
                           <div
                             key={alb.id}
                             className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3 flex flex-col gap-2"
                           >
-                            {/* Clean Artist / Album Header */}
                             <div className="w-full flex items-center justify-between gap-2 pb-1.5 border-b border-white/[0.06]">
                               <button
                                 onClick={() => setSelectedArtistName(alb.artist)}
                                 className="min-w-0 flex-1 flex items-center gap-2 text-left group"
                               >
-                                <span className="px-1.5 py-0.5 rounded bg-[#FF5500]/15 text-[#FF5500] font-mono text-[10px] shrink-0">
+                                <span className="px-1.5 py-0.5 rounded bg-[#DE1B34]/15 text-[#DE1B34] font-mono text-[10px] shrink-0">
                                   X:{aIdx + 1}
                                 </span>
-                                <span className="text-xs font-bold text-[#F5F2EB] group-hover:text-[#FF5500] truncate">
+                                <span className="text-xs font-bold text-[#F5F2EB] group-hover:text-[#DE1B34] truncate">
                                   {alb.artist}
                                 </span>
+                                <CertificationBadgeSvg cert={albCert} compact />
                                 <ChevronRight className="w-3.5 h-3.5 text-[#8E93A4] shrink-0" />
                               </button>
 
@@ -3188,37 +4457,39 @@ export function App() {
                               </div>
                             </div>
 
-                            {/* Track Rows: Cover + Title/Artist + Rank Badge (#1👑 / #2🥈 / #3🥉 + Delta) ONLY */}
                             <div className="w-full flex flex-col gap-1.5">
                               {filteredTracks.map((t) => {
                                 const rInfo = trackRankMap[t.id] || { rank: 1, delta: 0 };
+                                const tCert = getTrackCertification(t.realPlays);
                                 return (
                                   <div
                                     key={t.id}
                                     onClick={() => setSelectedTrackId(t.id)}
-                                    className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#FF5500]/40 cursor-pointer transition-colors"
+                                    className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/40 cursor-pointer transition-colors"
                                   >
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                       <div className="w-10 h-10 rounded-lg overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
-                                        {t.cover ? (
-                                          <img
-                                            src={t.cover}
-                                            alt={t.title}
-                                            className="w-full h-full object-cover"
-                                          />
-                                        ) : (
-                                          <div className="w-full h-full bg-[#161A26] flex items-center justify-center">
-                                            <Disc className="w-4 h-4 text-[#FF5500]" />
-                                          </div>
-                                        )}
+                                        <CoverArtwork
+                                          artworkType={t.artworkType}
+                                          coverUrl={t.cover}
+                                          title={t.title}
+                                          artist={t.artist}
+                                        />
                                       </div>
 
                                       <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-bold text-[#F5F2EB] truncate">
-                                          {t.title}
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                                            {t.title}
+                                          </span>
+                                          <CertificationBadgeSvg cert={tCert} compact />
                                         </div>
                                         <div className="text-[11px] text-[#8E93A4] truncate">
-                                          {t.artist} • {formatTime(t.duration)}
+                                          {t.artist}
+                                          {t.featuringArtists && t.featuringArtists.length > 0
+                                            ? ` feat. ${t.featuringArtists.join(', ')}`
+                                            : ''}{' '}
+                                          • Plume: {t.lyricistName}
                                         </div>
                                       </div>
                                     </div>
@@ -3237,20 +4508,21 @@ export function App() {
                     </div>
                   )}
 
-                  {/* SUB-TAB 1.2: CLASSEMENTS PAR RANG (#1👑, #2🥈, #3🥉 + VARIATION +4 / -8) */}
                   {catalogueSubTab === 'ALGO' && (
                     <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
-                      {/* Dimension Filter Bar */}
                       <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-2.5 flex flex-col gap-2">
-                        <div className="w-full grid grid-cols-3 sm:grid-cols-6 gap-1">
+                        {/* Sliding tabs to avoid any cropped/cut words on mobile */}
+                        <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                           {(
                             [
-                              { id: 'GENERAL', label: 'Général' },
-                              { id: 'CATEGORY', label: 'Genre' },
-                              { id: 'ARTIST', label: 'Artiste' },
-                              { id: 'LABEL', label: 'Label' },
-                              { id: 'BEATMAKER', label: 'Beatmaker' },
-                              { id: 'ENGINEER', label: 'Ingé Son' },
+                              { id: 'GENERAL', label: 'Chansons (Explosion)' },
+                              { id: 'AWARDS', label: 'DROP Awards' },
+                              { id: 'ARTIST', label: 'Artistes (Communauté)' },
+                              { id: 'LABEL', label: 'Labels (Médiane)' },
+                              { id: 'BEATMAKER', label: 'Beatmakers (Accroche 30s)' },
+                              { id: 'ENGINEER', label: 'Ingés Son (Complétion)' },
+                              { id: 'LYRICIST', label: 'Paroliers (Texte & Longévité)' },
+                              { id: 'CATEGORY', label: 'Genres' },
                             ] as const
                           ).map((dim) => (
                             <button
@@ -3259,10 +4531,10 @@ export function App() {
                                 setAlgoDimension(dim.id);
                                 setAlgoFilterValue('ALL');
                               }}
-                              className={`py-1.5 px-2 rounded-lg text-[11px] font-medium transition-colors truncate ${
+                              className={`py-1.5 px-3 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
                                 algoDimension === dim.id
-                                  ? 'bg-[#FF5500] text-[#07080C] font-bold'
-                                  : 'bg-[#07080C] text-[#8E93A4]'
+                                  ? 'bg-[#DE1B34] text-white font-bold'
+                                  : 'bg-[#07080C] text-[#8E93A4] hover:text-white'
                               }`}
                             >
                               {dim.label}
@@ -3270,7 +4542,7 @@ export function App() {
                           ))}
                         </div>
 
-                        {algoDimension !== 'GENERAL' && (
+                        {algoDimension !== 'GENERAL' && algoDimension !== 'AWARDS' && (
                           <div className="w-full flex items-center gap-2">
                             <Filter className="w-3.5 h-3.5 text-[#8E93A4] shrink-0" />
                             <select
@@ -3289,90 +4561,278 @@ export function App() {
                         )}
                       </div>
 
-                      {/* Group Ranking Cards when Dimension != GENERAL */}
-                      {algoDimension !== 'GENERAL' && (
-                        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {groupedDimensionRankings.map((grp, idx) => (
+                      {algoDimension === 'AWARDS' ? (
+                        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {dropAwardsList.map((award) => (
                             <div
-                              key={grp.name}
-                              onClick={() => {
-                                if (algoDimension === 'ARTIST') {
-                                  setSelectedArtistName(grp.name);
-                                } else {
-                                  setAlgoFilterValue(
-                                    algoFilterValue === grp.name ? 'ALL' : grp.name
-                                  );
-                                }
-                              }}
-                              className="w-full flex items-center justify-between gap-2 p-3 rounded-xl bg-[#0D1017] border border-white/[0.08] hover:border-[#FF5500]/40 cursor-pointer"
+                              key={award.id}
+                              className="p-3.5 rounded-xl bg-[#0D1017] border border-amber-500/25 flex flex-col gap-2"
                             >
-                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <RankBadge rank={idx + 1} delta={0} />
-                                <span className="text-xs font-bold text-[#F5F2EB] truncate">
-                                  {grp.name}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold text-amber-300 truncate">
+                                  {award.title}
                                 </span>
+                                {award.winner.certification && (
+                                  <CertificationBadgeSvg
+                                    cert={award.winner.certification}
+                                    compact
+                                  />
+                                )}
                               </div>
-                              <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#8E93A4] shrink-0">
-                                <span>{grp.tracksCount} titres</span>
-                                <ChevronRight className="w-4 h-4" />
+                              <p className="text-[11px] text-[#8E93A4]">{award.subtitle}</p>
+                              <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-[#F5F2EB] truncate">
+                                    1er • {award.winner.name}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-emerald-400 truncate">
+                                    {award.winner.secondaryName} • {award.winner.metricDetail}
+                                  </div>
+                                </div>
+                                <span className="text-xs font-mono font-bold text-amber-300 shrink-0">
+                                  {award.winner.scoreLabel}
+                                </span>
                               </div>
                             </div>
                           ))}
                         </div>
-                      )}
-
-                      {/* Ranked Tracks List — ONLY Rank (#1👑, #2🥈, #3🥉) + Delta (+4 / -8), Clickable for Full Details */}
-                      <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-2.5 flex flex-col gap-1.5">
-                        {rankedFilteredTracks.map((t, index) => {
-                          const globalRank = trackRankMap[t.id] || { rank: index + 1, delta: 0 };
-                          const displayRank =
-                            algoDimension === 'GENERAL' && algoFilterValue === 'ALL'
-                              ? globalRank.rank
-                              : index + 1;
-                          return (
-                            <div
-                              key={t.id}
-                              onClick={() => setSelectedTrackId(t.id)}
-                              className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#FF5500]/40 cursor-pointer transition-colors"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden cover-card-bevel shrink-0">
-                                  {t.cover ? (
-                                    <img
-                                      src={t.cover}
-                                      alt={t.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-[#151824] flex items-center justify-center">
-                                      <Disc className="w-4 h-4 text-[#FF5500]" />
+                      ) : (
+                        <>
+                          {algoDimension !== 'GENERAL' && (
+                            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {groupedDimensionRankings.map((grp, idx) => (
+                                <div
+                                  key={grp.name}
+                                  onClick={() => {
+                                    if (algoDimension === 'ARTIST') {
+                                      setSelectedArtistName(grp.name);
+                                    } else {
+                                      setAlgoFilterValue(
+                                        algoFilterValue === grp.name ? 'ALL' : grp.name
+                                      );
+                                    }
+                                  }}
+                                  className="w-full flex flex-col gap-1.5 p-3 rounded-xl bg-[#0D1017] border border-white/[0.08] hover:border-[#DE1B34]/40 cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <RankBadge rank={idx + 1} delta={0} />
+                                      <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                                        {grp.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 shrink-0">
+                                      <span>{grp.totalPoints.toFixed(1)} pts</span>
+                                      <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                                    </div>
+                                  </div>
+                                  {grp.primaryMetricLabel && (
+                                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono text-[#8E93A4]">
+                                      <span className="truncate">{grp.primaryMetricLabel}</span>
+                                      <span>
+                                        Δx{grp.deltaImpactFactor?.toFixed(2)} • Poly x
+                                        {grp.versatilityMultiplier?.toFixed(2)} • Plafond{' '}
+                                        {grp.maxSingleTrackSharePct}%
+                                      </span>
                                     </div>
                                   )}
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-bold text-[#F5F2EB] truncate">
-                                    {t.title}
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-2.5 flex flex-col gap-1.5">
+                            {rankedFilteredTracks.map((t, index) => {
+                              const globalRank = trackRankMap[t.id] || {
+                                rank: index + 1,
+                                delta: 0,
+                              };
+                              const displayRank =
+                                algoDimension === 'GENERAL' && algoFilterValue === 'ALL'
+                                  ? globalRank.rank
+                                  : index + 1;
+                              const cert = getTrackCertification(t.realPlays);
+                              return (
+                                <div
+                                  key={t.id}
+                                  onClick={() => setSelectedTrackId(t.id)}
+                                  className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/40 cursor-pointer transition-colors"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden cover-card-bevel shrink-0">
+                                      <CoverArtwork
+                                        artworkType={t.artworkType}
+                                        coverUrl={t.cover}
+                                        title={t.title}
+                                        artist={t.artist}
+                                      />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                                          {t.title}
+                                        </span>
+                                        <CertificationBadgeSvg cert={cert} compact />
+                                      </div>
+                                      <div className="text-[11px] text-[#8E93A4] truncate">
+                                        {t.artist}
+                                        {t.featuringArtists && t.featuringArtists.length > 0
+                                          ? ` feat. ${t.featuringArtists.join(', ')}`
+                                          : ''}{' '}
+                                        • {t.category}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="text-[11px] text-[#8E93A4] truncate">
-                                    {t.artist} • {t.category}
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <RankBadge rank={displayRank} delta={globalRank.delta} />
+                                    <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
                                   </div>
                                 </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <RankBadge rank={displayRank} delta={globalRank.delta} />
-                                <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {/* SUB-TAB 1.3: OFFLINE-FIRST QUEUE & SYNC */}
                   {catalogueSubTab === 'RULES' && (
                     <div className="flex-1 w-full overflow-y-auto flex flex-col gap-3 pr-0.5">
+                      {/* PANNEAU EXCLUSIF ADMIN : COFFRE-FORT DRM SANDBOX (AES-256-GCM) */}
+                      {(() => {
+                        const targetTrack =
+                          allTracksFlat.find((t) => t.id === adminDrmTargetTrackId) ||
+                          currentTrack;
+                        const drmRec = adminDrmVault[targetTrack.id];
+                        return (
+                          <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3.5 flex flex-col gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/[0.07]">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center text-emerald-400 shrink-0">
+                                  <Shield className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h3 className="text-xs font-bold text-[#F5F2EB] truncate">
+                                    Coffre-fort DRM Sandbox (Exclusif Admin)
+                                  </h3>
+                                  <p className="text-[11px] text-[#8E93A4] truncate">
+                                    Web Crypto API • AES-256-GCM (extractable: false) &amp;
+                                    Auto-destruction
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <select
+                                  value={targetTrack.id}
+                                  onChange={(e) => setAdminDrmTargetTrackId(e.target.value)}
+                                  className="bg-[#07080C] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB] focus:outline-none"
+                                >
+                                  {allTracksFlat.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.title} — {t.artist}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => encryptTrackToAdminSandbox(targetTrack)}
+                                  disabled={isEncryptingAdminDrm}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-500 text-[#07080C] text-xs font-bold hover:bg-emerald-400 transition disabled:opacity-50"
+                                >
+                                  {drmRec ? 'Re-chiffrer AES-256' : 'Chiffrer en Sandbox'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {adminDrmStatusMsg && (
+                              <div className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-amber-300">
+                                {adminDrmStatusMsg}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                              <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block">Statut Clé CryptoKey</span>
+                                <span
+                                  className={
+                                    !drmRec
+                                      ? 'font-semibold text-[#8E93A4]'
+                                      : drmRec.corrupted
+                                        ? 'font-bold text-rose-500'
+                                        : 'font-semibold text-emerald-400'
+                                  }
+                                >
+                                  {!drmRec
+                                    ? 'Non initialisée (Cliquer sur Chiffrer)'
+                                    : drmRec.corrupted
+                                      ? 'RÉVOQUÉE & DÉTRUITE'
+                                      : 'Verrouillée RAM (extractable: false)'}
+                                </span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block">Conteneur Audio Local</span>
+                                <span
+                                  className={
+                                    !drmRec
+                                      ? 'font-semibold text-[#8E93A4]'
+                                      : drmRec.corrupted
+                                        ? 'font-bold text-rose-500'
+                                        : 'font-semibold text-amber-300'
+                                  }
+                                >
+                                  {!drmRec
+                                    ? 'En attente de chiffrement'
+                                    : drmRec.corrupted
+                                      ? 'CORROMPU (0x00 WIPED)'
+                                      : `Fragments .drm (${drmRec.timestamp})`}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Inspecteur Binaire Hexadécimal */}
+                            <div className="p-3 rounded-xl bg-[#07080C] border border-white/[0.06] space-y-1.5">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-[#8E93A4] uppercase tracking-wider font-semibold">
+                                  Inspecteur Binaire Stocké (Illisible par VLC / Fichiers)
+                                </span>
+                                <span className="text-emerald-400 font-mono">IV: 96-bit GCM</span>
+                              </div>
+                              <p className="font-mono text-[10px] leading-relaxed text-amber-300/90 break-all select-all bg-black/50 p-2 rounded-lg border border-white/5">
+                                {!drmRec
+                                  ? 'Aucun flux binaire chiffré pour ce titre. Cliquez sur "Chiffrer en Sandbox" pour générer les chunks AES-256-GCM.'
+                                  : drmRec.corrupted
+                                    ? '00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [CONTENEUR AUDIO AUTODÉTRUIT SUITE À UNE TENTATIVE D’EXFILTRATION]'
+                                    : bytesToHex(drmRec.cipherBytes)}
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <button
+                                type="button"
+                                disabled={!drmRec}
+                                onClick={() => handleAdminTestRamDecrypt(targetTrack.id)}
+                                className="py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold transition disabled:opacity-40"
+                              >
+                                Tester le déchiffrement en RAM
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!drmRec || drmRec.corrupted}
+                                onClick={() =>
+                                  handleAdminSimulateExfiltrationSelfDestruct(targetTrack.id)
+                                }
+                                className="py-2 px-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-bold transition disabled:opacity-40"
+                              >
+                                Simuler copie externe → Auto-destruction
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* PANNEAU SYNCHRONISATION OFFLINE-FIRST */}
                       <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3.5 flex flex-col gap-3">
                         <div className="w-full flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/[0.07]">
                           <div className="min-w-0">
@@ -3411,7 +4871,7 @@ export function App() {
                             <button
                               onClick={() => streamTracker.sync()}
                               disabled={!syncSnapshot.isOnline || syncSnapshot.queue.length === 0}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#FF5500] text-[#07080C] text-xs font-bold disabled:opacity-40 flex items-center gap-1"
+                              className="px-2.5 py-1.5 rounded-lg bg-[#DE1B34] text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1"
                             >
                               <RefreshCw
                                 className={`w-3.5 h-3.5 ${
@@ -3484,27 +4944,23 @@ export function App() {
                 </div>
               )}
 
-              {/* =============================================================== */}
-              {/* MAIN TAB 2: 4-STEP ASSISTED UPLOAD WIZARD                       */}
-              {/* =============================================================== */}
               {adminMainTab === 'UPLOAD' && (
                 <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
-                  {/* Compact 4-Step Indicator Fitting Mobile Safe Zone */}
-                  <div className="w-full grid grid-cols-4 gap-1 bg-[#0D1017] border border-white/[0.08] rounded-xl p-1.5 shrink-0">
+                  <div className="w-full flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#0D1017] border border-white/[0.08] rounded-xl p-1.5 shrink-0">
                     {(
                       [
                         { step: 1, title: '1. Fichiers' },
-                        { step: 2, title: '2. Infos' },
-                        { step: 3, title: '3. Crédits' },
-                        { step: 4, title: '4. Drop' },
+                        { step: 2, title: '2. Infos & Feat.' },
+                        { step: 3, title: '3. Crédits & Plume' },
+                        { step: 4, title: '4. Zone Drop' },
                       ] as const
                     ).map((s) => (
                       <button
                         key={s.step}
                         onClick={() => setWizardStep(s.step)}
-                        className={`py-1.5 px-1 rounded-lg text-[11px] font-medium transition-colors truncate ${
+                        className={`flex-1 min-w-[85px] py-1.5 px-2 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
                           wizardStep === s.step
-                            ? 'bg-[#FF5500] text-[#07080C] font-bold'
+                            ? 'bg-[#DE1B34] text-white font-bold'
                             : wizardStep > s.step
                               ? 'bg-emerald-500/15 text-emerald-400'
                               : 'bg-white/[0.03] text-[#8E93A4]'
@@ -3527,14 +4983,14 @@ export function App() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2.5">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#FF5500]">Source Audio</span>
+                            <span className="text-xs font-bold text-[#DE1B34]">Source Audio</span>
                             <div className="flex bg-[#07080C] p-0.5 rounded-lg border border-white/[0.07] text-[11px]">
                               <button
                                 type="button"
                                 onClick={() => setUploadSourceType('FILE')}
                                 className={`px-2 py-0.5 rounded ${
                                   uploadSourceType === 'FILE'
-                                    ? 'bg-[#FF5500] text-[#07080C] font-semibold'
+                                    ? 'bg-[#DE1B34] text-white font-semibold'
                                     : 'text-[#8E93A4]'
                                 }`}
                               >
@@ -3545,7 +5001,7 @@ export function App() {
                                 onClick={() => setUploadSourceType('STREAM')}
                                 className={`px-2 py-0.5 rounded ${
                                   uploadSourceType === 'STREAM'
-                                    ? 'bg-[#FF5500] text-[#07080C] font-semibold'
+                                    ? 'bg-[#DE1B34] text-white font-semibold'
                                     : 'text-[#8E93A4]'
                                 }`}
                               >
@@ -3555,8 +5011,8 @@ export function App() {
                           </div>
 
                           {uploadSourceType === 'FILE' ? (
-                            <label className="flex flex-col items-center justify-center border border-dashed border-white/15 rounded-xl p-5 cursor-pointer hover:border-[#FF5500]/60 bg-[#07080C]/60 text-center">
-                              <Upload className="w-5 h-5 text-[#FF5500] mb-1.5" />
+                            <label className="flex flex-col items-center justify-center border border-dashed border-white/15 rounded-xl p-5 cursor-pointer hover:border-[#DE1B34]/60 bg-[#07080C]/60 text-center">
+                              <Upload className="w-5 h-5 text-[#DE1B34] mb-1.5" />
                               <span className="text-xs font-medium text-[#F5F2EB] truncate max-w-full px-2">
                                 {newAudioFileName || 'Sélectionner un fichier audio'}
                               </span>
@@ -3581,12 +5037,12 @@ export function App() {
                             <div className="bg-[#07080C] border border-white/[0.08] rounded-xl p-2.5">
                               <div className="flex justify-between text-[11px] font-mono mb-1">
                                 <span className="text-[#8E93A4]">Progression</span>
-                                <span className="text-[#FF5500]">{uploadProgress}%</span>
+                                <span className="text-[#DE1B34]">{uploadProgress}%</span>
                               </div>
                               <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
                                 <div
                                   style={{ width: `${uploadProgress}%` }}
-                                  className="h-full bg-[#FF5500]"
+                                  className="h-full bg-[#DE1B34]"
                                 />
                               </div>
                             </div>
@@ -3639,28 +5095,69 @@ export function App() {
 
                     {wizardStep === 2 && (
                       <div className="flex flex-col gap-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
                             <label className="block text-[11px] text-[#8E93A4] mb-1">Titre *</label>
                             <input
                               type="text"
                               value={newTitle}
                               onChange={(e) => setNewTitle(e.target.value)}
-                              placeholder="Titre"
+                              placeholder="Ex: Souverain du Komo"
                               className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                             />
                           </div>
                           <div>
                             <label className="block text-[11px] text-[#8E93A4] mb-1">
-                              Artiste *
+                              Artiste Principal *
                             </label>
                             <input
                               type="text"
                               value={newArtist}
                               onChange={(e) => setNewArtist(e.target.value)}
-                              placeholder="Artiste"
+                              placeholder="Ex: L'Oiseau Rare, Emma'a..."
                               className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                             />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-violet-300 mb-1">
+                              Artistes en Featuring (séparés par virgule)
+                            </label>
+                            <input
+                              type="text"
+                              value={newFeaturingInput}
+                              onChange={(e) => setNewFeaturingInput(e.target.value)}
+                              placeholder="Ex: Eboloko, Ng Bling"
+                              className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-violet-300 mb-1">
+                              Contrat de Partage Featuring (Crédits ECG)
+                            </label>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setNewFeaturingSplitMode('70_30')}
+                                className={`py-2 px-2 rounded-xl text-[11px] font-mono border transition-colors ${
+                                  newFeaturingSplitMode === '70_30'
+                                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-200 font-bold'
+                                    : 'bg-[#07080C] border-white/[0.08] text-[#8E93A4]'
+                                }`}
+                              >
+                                70% Lead / 30% Feat
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setNewFeaturingSplitMode('50_50')}
+                                className={`py-2 px-2 rounded-xl text-[11px] font-mono border transition-colors ${
+                                  newFeaturingSplitMode === '50_50'
+                                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-200 font-bold'
+                                    : 'bg-[#07080C] border-white/[0.08] text-[#8E93A4]'
+                                }`}
+                              >
+                                50% / 50% Co-Lead
+                              </button>
+                            </div>
                           </div>
                           <div>
                             <label className="block text-[11px] text-[#8E93A4] mb-1">
@@ -3670,14 +5167,29 @@ export function App() {
                               type="text"
                               value={newDurationFormatted}
                               onChange={(e) => setNewDurationFormatted(e.target.value)}
-                              placeholder="02:42"
-                              className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-[#FF5500]"
+                              placeholder="03:00"
+                              className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-[#F59E0B]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-emerald-300 mb-1">
+                              Quota Écoutes Territoire Gabon (+241) : {newGabonTerritoryPct}%
+                            </label>
+                            <input
+                              type="range"
+                              min={50}
+                              max={99}
+                              value={newGabonTerritoryPct}
+                              onChange={(e) => setNewGabonTerritoryPct(Number(e.target.value))}
+                              className="w-full accent-emerald-400 mt-1.5"
                             />
                           </div>
                         </div>
 
                         <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-2">
-                          <span className="text-[11px] text-[#8E93A4]">Catégorie</span>
+                          <span className="text-[11px] text-[#8E93A4]">
+                            Genre / Identité Musicale Gabonaise (Synchronisé avec Recherche &amp; Awards)
+                          </span>
                           <div className="flex flex-wrap gap-1.5">
                             {categories.map((cat) => (
                               <button
@@ -3686,7 +5198,7 @@ export function App() {
                                 onClick={() => setNewCategory(cat)}
                                 className={`px-2.5 py-1 rounded-lg text-xs ${
                                   newCategory === cat
-                                    ? 'bg-[#FF5500] text-[#07080C] font-bold'
+                                    ? 'bg-[#DE1B34] text-white font-bold'
                                     : 'bg-[#0D1017] text-[#8E93A4]'
                                 }`}
                               >
@@ -3699,7 +5211,7 @@ export function App() {
                               type="text"
                               value={customCategoryInput}
                               onChange={(e) => setCustomCategoryInput(e.target.value)}
-                              placeholder="Nouvelle catégorie..."
+                              placeholder="Nouveau genre (ex: Ikokou Moderne, Afro-Trap LBV)..."
                               className="flex-1 min-w-0 bg-[#0D1017] border border-white/[0.08] rounded-lg px-2.5 py-1 text-xs text-[#F5F2EB]"
                             />
                             <button
@@ -3707,7 +5219,7 @@ export function App() {
                               onClick={handleAddCategory}
                               className="px-2.5 py-1 rounded-lg bg-white/[0.06] text-xs text-[#F5F2EB] shrink-0"
                             >
-                              +
+                              + Ajouter
                             </button>
                           </div>
                         </div>
@@ -3715,43 +5227,111 @@ export function App() {
                     )}
 
                     {wizardStep === 3 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-[#FF5500]" />
-                            <span>Label</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={newLabelName}
-                            onChange={(e) => setNewLabelName(e.target.value)}
-                            placeholder="Monolith Records"
-                            className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
-                          />
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-[#DE1B34]" />
+                              <span>Label Producteur (Éligibilité &ge; 3 artistes)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newLabelName}
+                              onChange={(e) => setNewLabelName(e.target.value)}
+                              placeholder="Direct Prod Gabon / Eben Entertainment"
+                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            />
+                          </div>
+                          <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
+                              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Beatmaker / Compositeur (Plafond 25%/titre)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newBeatmakerName}
+                              onChange={(e) => setNewBeatmakerName(e.target.value)}
+                              placeholder="Kvnz Beats"
+                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            />
+                          </div>
                         </div>
-                        <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                            <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Beatmaker</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={newBeatmakerName}
-                            onChange={(e) => setNewBeatmakerName(e.target.value)}
-                            placeholder="Kosh Beats"
-                            className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
-                          />
+
+                        {/* Granular Sound Engineer Sub-Roles: 20% Prise / 50% Mix / 30% Master */}
+                        <div className="bg-[#07080C] border border-amber-500/25 rounded-xl p-3 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                              <Headphones className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Ingénierie du Son — Répartition Granulaire (-14 LUFS)</span>
+                            </span>
+                            <span className="text-[10px] font-mono text-amber-300/80">
+                              20% Prise • 50% Mix • 30% Master
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-mono text-[#8E93A4] mb-1">
+                                1. Ingé Prise de Son (20%)
+                              </label>
+                              <input
+                                type="text"
+                                value={newRecordingEngineerName}
+                                onChange={(e) => setNewRecordingEngineerName(e.target.value)}
+                                placeholder="Junior Nzeng"
+                                className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-amber-300 mb-1">
+                                2. Ingé Mixage (50% Majeur)
+                              </label>
+                              <input
+                                type="text"
+                                value={newMixingEngineerName || newSoundEngineerName}
+                                onChange={(e) => {
+                                  setNewMixingEngineerName(e.target.value);
+                                  setNewSoundEngineerName(e.target.value);
+                                }}
+                                placeholder="Maître Boussengui (Studio K)"
+                                className="w-full bg-[#0D1017] border border-amber-500/30 rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-[#8E93A4] mb-1">
+                                3. Ingé Mastering (30%)
+                              </label>
+                              <input
+                                type="text"
+                                value={newMasteringEngineerName}
+                                onChange={(e) => setNewMasteringEngineerName(e.target.value)}
+                                placeholder="Samy Master LBV"
+                                className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                            <Headphones className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Ingé Son</span>
-                          </label>
+
+                        <div className="bg-[#07080C] border border-sky-500/30 rounded-xl p-3 flex flex-col gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <label className="text-xs font-semibold text-sky-300 flex items-center gap-1.5">
+                              <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                              <span>Parolier / Auteur des paroles (Plume)</span>
+                            </label>
+                            <label className="flex items-center gap-1.5 text-[11px] font-mono text-sky-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={newIsExternalLyricist}
+                                onChange={(e) => setNewIsExternalLyricist(e.target.checked)}
+                                className="accent-sky-400"
+                              />
+                              <span>Plume Externe dédiée (Bonus x1.25)</span>
+                            </label>
+                          </div>
                           <input
                             type="text"
-                            value={newSoundEngineerName}
-                            onChange={(e) => setNewSoundEngineerName(e.target.value)}
-                            placeholder="Soren Vance"
+                            value={newLyricistName}
+                            onChange={(e) => setNewLyricistName(e.target.value)}
+                            placeholder="Ex: Edgar Nguema & Movaizhaleine"
                             className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                           />
                         </div>
@@ -3761,14 +5341,14 @@ export function App() {
                     {wizardStep === 4 && (
                       <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-[#FF5500] truncate">
+                          <span className="text-xs font-semibold text-[#F59E0B] truncate">
                             Drop : {formatTime(newDropStart)} →{' '}
                             {formatTime(Math.min(parsedNewDuration, newDropStart + newDropDuration))}
                           </span>
                           <button
                             type="button"
                             onClick={toggleUploadDropPreview}
-                            className="px-3 py-1 rounded-lg bg-[#FF5500]/15 text-[#FF5500] border border-[#FF5500]/30 text-xs font-semibold flex items-center gap-1 shrink-0"
+                            className="px-3 py-1 rounded-lg bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 text-xs font-semibold flex items-center gap-1 shrink-0"
                           >
                             {isPreviewingUploadDrop ? (
                               <>
@@ -3797,7 +5377,7 @@ export function App() {
                                 key={i}
                                 style={{ height: `${Math.round(peak * 88)}%` }}
                                 className={`flex-1 rounded-t ${
-                                  inDrop ? 'bg-[#FF5500]' : 'bg-white/15'
+                                  inDrop ? 'bg-[#F59E0B]' : 'bg-white/15'
                                 }`}
                               />
                             );
@@ -3818,7 +5398,7 @@ export function App() {
                               max={Math.max(10, parsedNewDuration - newDropDuration)}
                               value={newDropStart}
                               onChange={(e) => setNewDropStart(Number(e.target.value))}
-                              className="w-full accent-[#FF5500]"
+                              className="w-full accent-[#F59E0B]"
                             />
                           </div>
                           <div>
@@ -3834,7 +5414,7 @@ export function App() {
                               max={60}
                               value={newDropDuration}
                               onChange={(e) => setNewDropDuration(Number(e.target.value))}
-                              className="w-full accent-[#FF5500]"
+                              className="w-full accent-[#F59E0B]"
                             />
                           </div>
                         </div>
@@ -3860,7 +5440,7 @@ export function App() {
                           onClick={() =>
                             setWizardStep((prev) => (prev < 4 ? ((prev + 1) as 1 | 2 | 3 | 4) : prev))
                           }
-                          className="px-4 py-2 rounded-xl bg-[#FF5500] text-[#07080C] font-bold text-xs flex items-center gap-1"
+                          className="px-4 py-2 rounded-xl bg-[#DE1B34] text-white font-bold text-xs flex items-center gap-1"
                         >
                           <span>Suivant</span>
                           <ChevronRight className="w-4 h-4" />
@@ -3880,9 +5460,6 @@ export function App() {
                 </div>
               )}
 
-              {/* =============================================================== */}
-              {/* MAIN TAB 3: AUDITEURS — CLEAN CARDS WITH RANK (#1👑, #2🥈, #3🥉) */}
-              {/* =============================================================== */}
               {adminMainTab === 'USERS' && (
                 <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-3 overflow-y-auto flex flex-col gap-2">
                   {[...users]
@@ -3891,7 +5468,7 @@ export function App() {
                       <div
                         key={u.id}
                         onClick={() => setSelectedConsumerUserId(u.id)}
-                        className="w-full flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#FF5500]/50 cursor-pointer transition-colors"
+                        className="w-full flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/50 cursor-pointer transition-colors"
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center font-bold text-xs text-[#F5F2EB] shrink-0">
@@ -3918,9 +5495,7 @@ export function App() {
             </>
           )}
 
-          {/* =================================================================== */}
-          {/* COMPLETE TRACK EDIT MODAL                                           */}
-          {/* =================================================================== */}
+          {/* Complete Track Edit Modal */}
           {editingTrack && (
             <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
               <form
@@ -3970,6 +5545,48 @@ export function App() {
                     />
                   </div>
                   <div>
+                    <label className="block text-[11px] text-violet-300 mb-1">
+                      Artistes en Featuring
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        editingTrack.featuringInput !== undefined
+                          ? editingTrack.featuringInput
+                          : (editingTrack.track.featuringArtists || []).join(', ')
+                      }
+                      onChange={(e) =>
+                        setEditingTrack({
+                          ...editingTrack,
+                          featuringInput: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: Eboloko, Ng Bling"
+                      className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-violet-300 mb-1">
+                      Partage Featuring
+                    </label>
+                    <select
+                      value={editingTrack.track.featuringSplitMode || '70_30'}
+                      onChange={(e) =>
+                        setEditingTrack({
+                          ...editingTrack,
+                          track: {
+                            ...editingTrack.track,
+                            featuringSplitMode: e.target.value as FeaturingSplitMode,
+                          },
+                        })
+                      }
+                      className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                    >
+                      <option value="70_30">70% Lead / 30% Feat</option>
+                      <option value="50_50">50% / 50% Co-Lead</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-[11px] text-[#8E93A4] mb-1">Catégorie</label>
                     <select
                       value={editingTrack.track.category}
@@ -3999,7 +5616,7 @@ export function App() {
                           durationFormatted: e.target.value,
                         })
                       }
-                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#FF5500]"
+                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#F59E0B]"
                     />
                   </div>
                   <div>
@@ -4030,18 +5647,40 @@ export function App() {
                       className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
                     />
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-[11px] text-[#8E93A4] mb-1">Ingé Son</label>
+                  <div>
+                    <label className="block text-[11px] text-amber-300 mb-1">
+                      Ingé Mixage (50%)
+                    </label>
                     <input
                       type="text"
                       value={editingTrack.track.soundEngineerName}
                       onChange={(e) =>
                         setEditingTrack({
                           ...editingTrack,
-                          track: { ...editingTrack.track, soundEngineerName: e.target.value },
+                          track: {
+                            ...editingTrack.track,
+                            soundEngineerName: e.target.value,
+                            mixingEngineerName: e.target.value,
+                          },
                         })
                       }
-                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                      className="w-full bg-[#07080C] border border-amber-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-sky-300 mb-1">
+                      Parolier (Plume)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingTrack.track.lyricistName}
+                      onChange={(e) =>
+                        setEditingTrack({
+                          ...editingTrack,
+                          track: { ...editingTrack.track, lyricistName: e.target.value },
+                        })
+                      }
+                      className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
                     />
                   </div>
                 </div>
@@ -4090,7 +5729,7 @@ export function App() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-xl bg-[#FF5500] text-[#07080C] font-bold text-xs"
+                    className="px-4 py-1.5 rounded-xl bg-[#DE1B34] text-white font-bold text-xs"
                   >
                     Enregistrer
                   </button>

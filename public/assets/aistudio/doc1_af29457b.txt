@@ -1,0 +1,237 @@
+LIVRE BLANC & CAHIER DES CHARGES : SYSTÈME DE CLASSEMENT, CERTIFICATIONS ET AWARDS (MARCHÉ GABONAIS)
+1. VISION STRATÉGIQUE ET PHILOSOPHIE DU SYSTÈME
+1.1. Le problème de « l'effet de halo » dans le streaming classique
+Dans les applications de streaming traditionnelles, les classements reposent sur une addition brute des volumes d'écoutes. Dès qu'une tête d'affiche sort un tube qui cumule des centaines de milliers d'écoutes, son beatmaker, son ingénieur du son, son parolier et son label sont automatiquement propulsés à la première place de leurs catégories respectives. Ce biais statistique récompense l'exposition médiatique de l'artiste principal au lieu de mesurer la compétence réelle, la régularité et la valeur ajoutée des artisans de la musique.
+1.2. Les 3 piliers de la nouvelle philosophie méritocratique
+Pour séparer la notoriété de la star du talent de l'artisan, l'algorithme de l'application repose sur trois lois fondamentales :
+
+Le Delta d'Impact (La Valeur Ajoutée) : Un artisan (beatmaker, ingé son, parolier) est évalué sur sa capacité à faire surperformer un artiste par rapport à sa moyenne habituelle. Faire passer un artiste émergent de 2 000 à 25 000 écoutes démontre un impact créatif supérieur au fait d'accompagner une superstar qui réalise son score habituel.
+Le Plafonnement par Titre (La Régularité) : Un tube isolé ne fait pas le meilleur professionnel de l'année. Dans les classements des métiers techniques et créatifs, la contribution d'un seul morceau est mathématiquement plafonnée (maximum 25 % du score total d'un professionnel sur une période donnée).
+L'Indice de Polyvalence (La Maîtrise Transversale) : L'excellence d'un technicien ou d'un producteur se prouve par sa capacité à faire briller des voix, des univers et des projets différents. Un multiplicateur récompense la diversité des collaborations réussies.
+1.3. Calibrage spécifique au marché du Gabon
+Le modèle est taillé sur mesure pour les réalités démographiques, économiques et culturelles du Gabon :
+
+Bassin d'audience national : Environ 2,4 millions d'habitants, avec une forte concentration urbaine (Libreville, Port-Gentil, Franceville, Oyem) et un taux de pénétration mobile et internet parmi les plus élevés d'Afrique centrale.
+Écosystème musical local : Forte consommation de musiques urbaines et locales (Ntcham, Rap gabonais, Afrobeats, Rumba, Gospel, Tradimoderne) où les producteurs et ingénieurs du son jouent un rôle central dans l'identité sonore.
+Réalité monétaire et abonnements : Prise en compte des habitudes de consommation via Mobile Money (Airtel Money, Moov Money) incluant des pass journaliers, hebdomadaires et mensuels, ainsi qu'une base d'utilisateurs en mode Freemium (financé par la publicité).
+2. L'UNITÉ DE MESURE ET LE BOUCLIER ANTI-FRAUDE : L'ÉCOUTE CERTIFIÉE GABONAISE (ECG)
+Avant tout calcul de classement ou de disque d'or, l'application filtre les flux bruts pour ne retenir que des Écoutes Certifiées Gabonaises (ECG).
+2.1. Critères techniques de validation d'une écoute
+Seuil temporel des 30 secondes : Une lecture n'est enregistrée que si l'auditeur écoute le titre pendant au moins 30 secondes consécutives sans zapper. Pour les interludes de moins de 60 secondes, l'écoute doit atteindre 75 % de la durée du titre.
+Validation du mode Hors-Ligne (Offline) : Les écoutes effectuées sans connexion (via le cache sécurisé de l'application) sont horodatées, chiffrées localement et synchronisées dès que l'appareil retrouve une connexion réseau, dans la limite d'une fenêtre de 14 jours.
+Interdiction du « Mute Streaming » : Toute écoute effectuée avec le volume du téléphone ou de l'application réglé à 0 % est automatiquement rejetée par l'algorithme.
+2.2. Pondération économique selon le type de compte
+Type de Compte / Formule d'Accès
+Valeur Unitaire ECG
+Pass Mensuel ou Hebdomadaire (Airtel Money / Moov Money / Carte)
+ 1,0 ECG
+Pass Journalier payant
+ 0,8 ECG
+Freemium (avec diffusion publicitaire complétée)
+ 0,5 ECG
+Période d'essai gratuit
+ 0,5 ECG
+
+2.3. Règles anti-fermes à clics et anti-bots
+Plafond quotidien par utilisateur (Cap 5/24h) : Au-delà de 5 écoutes d'un même titre par un même utilisateur sur une tranche de 24 heures, les écoutes supplémentaires restent visibles dans les statistiques personnelles de l'auditeur mais ne comptent plus pour les classements ni pour les certifications.
+Plafond par foyer / IP : Limitation du nombre d'écoutes simultanées comptabilisables sur une même adresse IP domestique (Wi-Fi), tout en distinguant les passerelles IP partagées des opérateurs mobiles gabonais (CG-NAT Airtel, Moov Africa, Gabon Telecom) grâce à l'identifiant matériel unique du téléphone (Device ID) et à la vérification du numéro (+241).
+Exclusion des boucles robotiques : Si un compte écoute exactement la même playlist de moins de 5 titres en boucle pendant plus de 4 heures consécutives sans aucune interaction humaine avec l'écran, la session est gelée pour le calcul des classements.
+3. ARCHITECTURE MATHÉMATIQUE DES 6 CLASSEMENTS (CHARTS)
+Les classements sont actualisés de manière hebdomadaire (Top de la semaine) et mensuelle (Top des 30 derniers jours), avec un classement annuel glissant pour la course aux Awards.
+3.1. Classement 1 : Top Chansons / Titres (L'Instantané Populaire)
+C'est le seul classement qui mesure la puissance virale immédiate d'une œuvre.
+
+Volume d'ECG sur la période (60 %) : Somme des écoutes certifiées générées par le titre.
+Vélocité et Dynamique de croissance (25 %) : Progression du titre par rapport à la période précédente et vitesse d'adoption par de nouveaux auditeurs uniques.
+Indice d'Engagement (15 %) : Ajouts aux favoris, ajouts dans les playlists personnelles des utilisateurs et partages externes du lien sur les réseaux sociaux.
+Loi d'amortissement (Usure naturelle) : Après 10 semaines de présence dans le Top 10, un coefficient réducteur de 5 % par semaine s'applique au score de classement (mais jamais au compteur de certification) afin de favoriser le renouvellement des tendances.
+3.2. Classement 2 : Top Artistes (La Puissance et la Fidélité de la Communauté)
+Le classement Artiste ne doit pas être un copier-coller du Top Singles ; il mesure la solidité globale de l'artiste.
+
+Volume global d'ECG du catalogue (40 %) : Cumul des écoutes sur l'ensemble des titres de l'artiste.
+Profondeur de catalogue (30 %) : Ratio entre les écoutes du titre numéro 1 de l'artiste et le reste de sa discographie. Plus le public écoute plusieurs morceaux différents de l'artiste, plus ce score est élevé.
+Fidélisation et Conversion (30 %) : Taux d'auditeurs uniques qui reviennent écouter l'artiste au moins 3 fois dans le mois, taux d'abonnement au profil (« Suivre ») et taux d'écoute complète de ses projets.
+Règle de partage en Featuring : Sur une collaboration, l'artiste principal reçoit 70 % des points d'artiste générés par le titre et l'artiste invité (feat) reçoit 30 %. S'il s'agit d'un single co-produit à parts égales (déclaré comme tel par les deux parties), la répartition est de 50 % / 50 %.
+3.3. Classement 3 : Top Beatmakers / Compositeurs (La Valeur Ajoutée Musicale)
+Pour empêcher qu'un beatmaker ne domine le classement grâce à un seul placement sur le tube d'une star, son Score de Beatmaker repose sur 4 variables :
+
+Le Volume Plafonné (30 %) : Somme des ECG de ses productions, avec un plafond strict : aucun titre unique ne peut contribuer à plus de 25 % de ses points de volume. L'artisan doit posséder au moins 4 titres actifs pour atteindre son plein potentiel.
+Le Delta d'Impact / Surperformance (30 %) : Division des écoutes du morceau (sur les 30 premiers jours) par la moyenne des 3 sorties précédentes de l'artiste interprète.
+La Rétention d'Accroche et Replay Value (20 %) : Évaluée selon le taux de survie à 45 secondes (capacité de rétention de l'intro et du premier refrain) et le taux de réécoute immédiate (Loop Rate).
+Le Multiplicateur de Polyvalence (20 %) : Coefficient appliqué sur le volume global selon la diversité des artistes produits au cours des 90 derniers jours.
+
+Nombre d'Artistes Distincts Produits (90 jours)
+Coefficient Multiplicateur
+Statut / Impact
+1 seul artiste
+x0,70
+Pénalité d'exclusivité
+2 artistes distincts
+x1,00
+Neutre
+3 à 4 artistes distincts
+x1,20
+Bonus de diversité
+5 artistes distincts ou plus
+x1,40
+Bonus maximal d'éclectisme
+
+3.4. Classement 4 : Top Ingénieurs du Son (L'Excellence Technique et le Confort d'Écoute)
+L'ingénieur du son ne compose pas la mélodie et n'apporte pas sa propre fanbase : son rôle est d'assurer une clarté sonore irréprochable sur tous les supports (écouteurs, enceintes, autoradios, clubs) et d'éviter la fatigue auditive.
+
+Répartition des sous-rôles techniques :
+Prise de voix / Enregistrement (Recording) : 20 % des points techniques du titre.
+Mixage (Mixing) : 50 % des points techniques du titre.
+Mastering : 30 % des points techniques du titre.
+(Un professionnel cumulant l'enregistrement, le mixage et le mastering perçoit 100 % des points).
+Critère 1 : Le Taux de Complétion Audio (35 %) : Indicateur majeur récompensant les titres maintenant un taux d'écoute supérieur à 85 % de la durée totale, limitant l'abandon précoce lié à une fatigue fréquentielle.
+Critère 2 : La Conformité Acoustique et Validation Éditoriale (25 %) : Respect strict des normes de sonie (LUFS) sans distorsion, absence d'écrêtage numérique, et taux de sélection des morceaux dans les playlists éditoriales officielles.
+Critère 3 : Le Volume Plafonné et la Régularité de Livraison (25 %) : Plafond strict de 20 % des points maximum attribuables par titre unique.
+Critère 4 : La Diversité de Studios / Artistes (15 %) : Volume d'artistes distincts accompagnés avec succès sur une période glissante de 90 jours.
+3.5. Classement 5 : Top Paroliers / Auteurs (La Force du Texte et l'Intemporalité)
+Ce classement valorise les plumes. Condition préalable impérative : les paroles complètes doivent être intégrées dans l'application.
+
+Critère 1 : L'Engagement Lyrique In-App (35 %) : Taux d'ouverture de l'onglet « Paroles », durée de lecture active et volume de citations partagées via l'outil d'export punchline vers les réseaux sociaux.
+Critère 2 : L'Indice de Longévité / Demi-vie du Titre (30 %) : Analyse de la courbe de rétention d'écoute à J+30, J+60 et J+90 par rapport au pic initial de sortie.
+Critère 3 : Volume Plafonné et Delta d'Impact (20 %) : ECG plafonnées à 25 % par morceau et mesure de la surperformance générée chez l'interprète.
+Critère 4 : Bonus de Plume Externe (15 %) : Multiplicateur de x1,25 appliqué sur les titres écrits pour le compte de tiers (toplining / songwriting externe).
+3.6. Classement 6 : Top Labels / Structures de Production (La Force Collective)
+Un label ne doit jamais être numéro 1 parce qu'il possède une seule superstar et quatre artistes laissés à l'abandon.
+
+Condition d'éligibilité : Compter au minimum 3 artistes actifs ayant sorti au moins un titre officiel durant les 12 derniers mois. (Les structures de 1 à 2 artistes sont assignées à la division « Écuries Indépendantes »).
+Critère 1 : La Médiane de Performance du Catalogue (40 %) : Utilisation de la médiane des streams par signature et application d'une moyenne tronquée réduisant de 50 % le poids du titre locomotive.
+Critère 2 : L'Indice d'Équilibre du Roster (25 %) : Formule pénalisant les rosters où un seul profil concentre plus de 80 % du trafic, et valorisant les écuries générant des performances homogènes.
+Critère 3 : Le Taux de Croissance des Nouvelles Signatures (20 %) : Progression trimestrielle de la visibilité des nouveaux talents entrés au roster.
+Critère 4 : La Régularité et Qualité de Sortie (15 %) : Fiabilité du calendrier de distribution, conformité intégrale des métadonnées et taux de rétention globale.
+4. SYSTÈME OFFICIEL DE CERTIFICATIONS NATIONALES (GABON)
+Pour que les Disques d'Or, de Platine et de Diamant deviennent la référence absolue au Gabon, les seuils sont calibrés scientifiquement sur le bassin d'internautes gabonais (environ 1,5 million d'utilisateurs connectés).
+4.1. Conditions d'éligibilité aux certifications
+Critère national : Œuvre produite par un artiste gabonais, un label enregistré au Gabon, ou enregistrée majoritairement sur le territoire national.
+Origine géographique des flux : Au moins 70 % des ECG prises en compte doivent obligatoirement provenir d'utilisateurs situés sur le territoire gabonais (les 30 % restants étant ouverts à la diaspora et à l'international).
+4.2. Grille des seuils pour les SINGLES
+Niveau de Certification
+Seuil Requis (Cumul ECG)
+Single d'Or
+100 000 ECG
+Single de Platine
+250 000 ECG
+Single de Diamant
+500 000 ECG
+
+4.3. Grille des seuils pour les ALBUMS et EPs (5 titres et plus)
+Application stricte de la Règle Anti-Locomotive :
+
+Les écoutes des 2 titres les plus populaires de l'album sont divisées par 2 pour le décompte du projet.
+Aucun titre individuel ne peut représenter plus de 20 % du seuil requis.
+Les singles sortis en amont du projet ne contribuent qu'à hauteur de 50 % de leur volume historique préalable.
+
+Niveau de Certification Album
+Seuil Requis (ECG Pondérées)
+Album d'Or
+300 000 ECG pondérées
+Album de Platine
+750 000 ECG pondérées
+Album de Diamant
+1 500 000 ECG pondérées
+
+4.4. Les Certifications des Métiers de l'Ombre (Beatmakers, Ingés Son, Paroliers)
+Niveau 1 : Le Certificat Officiel d'Œuvre (Automatique) : Attribution d'un badge numérique certifié et d'un certificat nominatif à tous les artisans déclarés et validés sur un single ou album certifié.
+Niveau 2 : Le Disque d'Artisan (Carrière / Catalogue) : Récompense individuelle décernée sur le catalogue global d'un professionnel, soumise à 3 critères d'intégrité :
+Condition A : Répartition sur au moins 10 titres différents.
+Condition B : Aucun titre individuel ne peut excéder 15 % du seuil total.
+Condition C : Aucun interprète unique ne peut représenter plus de 40 % du volume global de l'artisan.
+
+Distinction de Carrière (Artisan)
+Seuil Cumulé Qualifié
+Artisan d'Or (Producteur / Ingé Son / Plume)
+500 000 ECG
+Artisan de Platine
+1 250 000 ECG
+Artisan de Diamant
+2 500 000 ECG
+
+4.5. Audit et Délivrance des Certifications
+Audit automatisé de 72 heures : Gel préventif pour vérification de l'intégrité des flux, détection de fermes de clics et validation des adresses IP/Device IDs.
+Authentification par QR Code Infalsifiable : Insertion sur chaque plaque physique d'un QR code dirigeant vers le registre public in-app (historique de streams, crédits détaillés et hash de validation).
+5. RÈGLEMENT OFFICIEL ET ARCHITECTURE DES AWARDS ANNUELS
+La cérémonie annuelle récompense l'excellence musicale sur une période de référence glissante de 12 mois (du 1er novembre de l'année N-1 au 31 octobre de l'année N).
+5.1. La Formule de Pondération Hybride
+Typologie des Récompenses
+Score Algorithmique (12 mois)
+Jury Professionnel
+Vote Public In-App
+Grille A : Catégories Artistiques & Grand Public
+50 %
+25 % (Collège d'experts)
+25 % (Auditeurs in-app)
+Grille B : Métiers Techniques & Artisans
+50 %
+35 % (Écoute à l'aveugle)
+15 % (Auditeurs & pairs)
+
+5.2. Le protocole révolutionnaire du « Jury à l'Aveugle » (Blind Test In-App)
+Pour les catégories techniques (Beatmaker, Ingénieur du son, Parolier), l'évaluation s'effectue via un module logiciel dédié garantissant l'équité :
+
+Dossier de 3 titres : Chaque nommé présente 3 morceaux couvrant obligatoirement au moins 2 artistes interprètes différents.
+Anonymisation de l'interface : Suppression des métadonnées visibles (nom de scène, jaquette, studio, diffuseur).
+Normalisation sonore (-14 LUFS) : Alignement dynamique strict pour les ingénieurs du son afin de baser le vote sur l'équilibre spectral et la finesse acoustique plutôt que sur le volume sonore apparent.
+Détection de conflits d'intérêts : Retrait automatique du droit de vote d'un juré lié contractuellement à une œuvre soumise.
+5.3. Sécurisation du Vote du Public In-App
+Accès exclusif via l'application mobile et validation du compte par OTP mobile (+241).
+Comptes Freemium (avec activité minimale de 30 min/mois) : 1 vote journalier par catégorie.
+Comptes Abonnés Actifs (Pass Mobile Money / Carte) : 3 votes journaliers par catégorie.
+Blocage absolu des comptes créés sans historique d'écoute réel.
+5.4. Liste officielle des Catégories et Critères d'Éligibilité
+Catégorie
+Prérequis d'Éligibilité
+Critères d'Évaluation Principaux
+Artiste de l'Année
+≥ 3 singles ou 1 projet complet dans l'année
+Top 5 du score algorithmique annuel Artistes
+Chanson de l'Année
+Sortie officielle dans la période de référence
+Somme combinée ECG, indice de partage et longévité
+Album / Projet de l'Année
+Projet de ≥ 6 titres inédits
+Score pondéré anti-locomotive, écoute intégrale et jury
+Révélation de l'Année
+Franchissement initial du cap des 20 000 ECG/mois
+Taux de conversion « auditeur occasionnel vers abonné »
+Beatmaker de l'Année
+≥ 5 titres officiels pour ≥ 3 artistes différents
+Grille B (50 % Algo / 35 % Jury Blind Test / 15 % Public)
+Ingénieur du Son de l'Année
+≥ 8 titres mixés/masterisés pour ≥ 3 artistes
+Taux de complétion moyen et écoute technique normée
+Parolier / Plume de l'Année
+≥ 4 titres avec paroles référencées sur l'app
+Engagement lyrique, rétention long terme et jury littéraire
+Label de l'Année
+≥ 3 artistes actifs sous contrat
+Médiane du catalogue et homogénéité du développement
+Meilleure Collaboration
+≥ 2 artistes d'écuries indépendantes distinctes
+Capacité de fertilisation croisée des communautés
+Trophées de Genres
+Titres affiliés aux segments Ntcham, Rap, Afrobeats, Gospel, Tradimoderne
+Performance statistique sectorielle et vote public
+
+6. GOUVERNANCE DES MÉTADONNÉES ET VALIDATION DES CRÉDITS (LE PROTOCOLE D'INTÉGRITÉ)
+L'exactitude des classements repose sur une déclaration irréprochable des ayants droit techniques dès le dépôt des fichiers audio.
+6.1. Champs obligatoires lors de la mise en ligne (Upload)
+Le distributeur ou l'artiste doit impérativement relier chaque rôle à un profil vérifié de la plateforme :
+
+Interprète(s) : Rôle principal et artistes invités (Featuring).
+Composition : Identification formelle du ou des beatmakers.
+Post-Production Audio : Attribution distincte de l'ingénieur de mixage et de l'ingénieur de mastering.
+Écriture : Déclaration de tous les paroliers et topliners.
+Production : Structure de label ou mention « Auto-production / Artiste Indépendant ».
+6.2. Système de « Double Validation » par Notification (Handshake Protocol)
+Avis d'attribution : Chaque artisan cité reçoit une alerte in-app l'invitant à valider la paternité de son travail technique sur l'œuvre.
+Verrouillage des droits : Les flux d'écoutes ne sont intégrés aux classements métiers qu'après acceptation formelle du crédité.
+Contrôle d'auto-attribution abusive : Les profils revendiquant l'intégralité des rôles (auteur, compositeur, interprète, mixeur, masteriseur) sur un volume massif font l'objet d'un audit de conformité avec soumission des sessions de travail numériques (DAW).
+6.3. Gestion des litiges et revendications de crédits
+Dépôt de réclamation in-app : Possibilité d'ouvrir une contestation documentaire en cas d'omission d'un ayant droit.
+Mise sous séquestre des points : En cas de différend ouvert, les points techniques du titre sont temporairement gelés dans les classements sans impacter la disponibilité publique du morceau.
+Recalcul rétroactif : Toute résolution de crédit validée déclenche le recalcul transparent de l'ensemble des points accumulés depuis la date de parution du titre.
+

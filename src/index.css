@@ -4,9 +4,15 @@
   :root {
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --ambient-primary: #eab308;
+    --ambient-secondary: #a16207;
+    --accent-bar: #f59e0b;
   }
 
   * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -19,13 +25,14 @@
 
   html,
   body {
+    margin: 0;
+    padding: 0;
+    background-color: #050507;
+    color: #ffffff;
     font-family: var(--font-sans);
-    background-color: #09090b;
-    color: #fafafa;
     overflow: hidden;
     height: 100dvh;
     width: 100vw;
-    user-select: none;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -35,7 +42,370 @@
   }
 }
 
-/* Bordures biseautées 3D + Ombre portée légère exclusivement pour les cartes cover */
+/* Conteneur principal adaptatif : Plein écran sur mobile ou vue 9:16 sans bordure sur grand écran (avec switch plein écran) */
+#app-viewport {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  max-width: 440px;
+  max-height: 920px;
+  background: #0c0a06;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.45s ease;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.95);
+}
+
+@media (min-width: 500px) {
+  #app-viewport:not(.full-bleed) {
+    height: 95dvh;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+#app-viewport.full-bleed {
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+/* Fond dynamique flouté haute profondeur prenant la couleur dominante exacte de la pochette active */
+.ambient-bg {
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 30%, var(--ambient-primary) 0%, transparent 56%),
+    radial-gradient(circle at 26% 58%, var(--ambient-secondary) 0%, transparent 62%),
+    radial-gradient(circle at 76% 74%, var(--ambient-primary) 0%, transparent 54%);
+  opacity: 0.56;
+  filter: blur(62px) saturate(165%);
+  transition: background 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+}
+
+.ambient-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(12, 10, 8, 0.08) 0%, rgba(10, 8, 7, 0.52) 70%, rgba(6, 5, 7, 0.88) 100%),
+    linear-gradient(180deg, rgba(10, 9, 10, 0.72) 0%, rgba(14, 11, 8, 0.18) 28%, rgba(14, 11, 8, 0.28) 60%, rgba(8, 7, 8, 0.88) 100%);
+}
+
+/* Scène Carrousel 3D Apple Cover Flow — Adaptive 100dvh Mobile */
+.carousel-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(210px, 34dvh, 320px);
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  touch-action: none;
+  cursor: grab;
+}
+
+.carousel-stage:active {
+  cursor: grabbing;
+}
+
+.cover-card {
+  position: absolute;
+  width: clamp(192px, 30dvh, 262px);
+  height: clamp(206px, 32dvh, 280px);
+  border-radius: 28px;
+  transform-style: preserve-3d;
+  will-change: transform, filter, opacity;
+  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.25, 1),
+              filter 0.55s cubic-bezier(0.2, 0.9, 0.25, 1),
+              opacity 0.55s ease,
+              box-shadow 0.55s ease;
+  overflow: visible;
+  user-select: none;
+}
+
+.cover-card.dragging {
+  transition: none !important;
+}
+
+.cover-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  overflow: hidden;
+  /* Liseré spéculaire 3D et relief inférieur */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 34px 68px -10px rgba(0, 0, 0, 0.96),
+    0 16px 32px -6px rgba(0, 0, 0, 0.85),
+    0 4px 0 0 rgba(255, 255, 255, 0.18),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.48),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.48);
+  background: #141417;
+}
+
+/* Reflet dynamique sur la pochette active */
+.cover-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.24) 100%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Dock Glassmorphique Haute Densité (effet cristal accentué) */
+.glass-dock {
+  position: relative;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.07) 42%,
+    rgba(22, 22, 28, 0.52) 100%
+  );
+  backdrop-filter: blur(48px) saturate(215%) brightness(1.06);
+  -webkit-backdrop-filter: blur(48px) saturate(215%) brightness(1.06);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow:
+    0 26px 60px -10px rgba(0, 0, 0, 0.78),
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 1.5px rgba(255, 255, 255, 0.38),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+}
+
+/* Boutons secondaires carrés arrondis en verre givré (rangée du bas) */
+.utility-pill {
+  width: clamp(46px, 6.2dvh, 52px);
+  height: clamp(44px, 5.8dvh, 50px);
+  border-radius: 16px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(16, 16, 22, 0.56) 100%
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.24),
+    0 6px 16px rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.94);
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.utility-pill:hover {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(28, 28, 36, 0.68) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+.utility-pill:active {
+  transform: scale(0.92);
+}
+
+.utility-pill.active-pill {
+  background: linear-gradient(
+    145deg,
+    rgba(251, 191, 36, 0.28) 0%,
+    rgba(217, 119, 6, 0.22) 100%
+  );
+  border-color: rgba(251, 191, 36, 0.65);
+  color: #fbbf24;
+  box-shadow:
+    0 0 22px rgba(245, 158, 11, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+/* Bouton Play Principal Rouge Cramoisi */
+.play-btn-main {
+  width: clamp(56px, 8dvh, 68px);
+  height: clamp(56px, 8dvh, 68px);
+  border-radius: 9999px;
+  background: linear-gradient(145deg, #f41f4e 0%, #dc143c 100%);
+  box-shadow:
+    0 10px 28px rgba(225, 29, 72, 0.58),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.play-btn-main:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 14px 34px rgba(225, 29, 72, 0.75),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.45);
+}
+
+.play-btn-main:active {
+  transform: scale(0.93);
+}
+
+/* Curseur tactile large ("Gros Doigts") pour Volume et Égaliseur */
+input[type="range"].fat-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.16);
+  height: 10px;
+  border-radius: 999px;
+  outline: none;
+  touch-action: none;
+}
+
+input[type="range"].fat-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fbbf24;
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.9), 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+input[type="range"].fat-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fbbf24;
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.9), 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+/* Barre de progression interactive */
+.scrubber-container {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.scrubber-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  position: relative;
+  overflow: visible;
+}
+
+.scrubber-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 999px;
+  position: relative;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.55);
+}
+
+.scrubber-thumb {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.9), 0 2px 6px rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  transition: transform 0.15s ease;
+}
+
+.scrubber-container:hover .scrubber-thumb,
+.scrubber-container.dragging .scrubber-thumb {
+  transform: translateY(-50%) scale(1.28);
+}
+
+/* Animation coeur favori */
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.38) rotate(-8deg); }
+  70% { transform: scale(0.9) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.heart-animate {
+  animation: heartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Paroles synchronisées */
+.lyrics-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.lyrics-line {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.38;
+  transform: scale(0.95);
+  transform-origin: left center;
+  cursor: pointer;
+}
+
+.lyrics-line:hover {
+  opacity: 0.7;
+}
+
+.lyrics-line.active-lyric {
+  opacity: 1;
+  transform: scale(1.03);
+  color: #ffffff;
+  text-shadow: 0 0 22px rgba(251, 191, 36, 0.55);
+}
+
+/* Barres d'égaliseur animées */
+@keyframes eqPulse1 { 0%, 100% { height: 4px; } 50% { height: 15px; } }
+@keyframes eqPulse2 { 0%, 100% { height: 14px; } 40% { height: 5px; } 80% { height: 16px; } }
+@keyframes eqPulse3 { 0%, 100% { height: 7px; } 60% { height: 17px; } }
+
+.eq-bar-1 { animation: eqPulse1 0.8s infinite ease-in-out; }
+.eq-bar-2 { animation: eqPulse2 0.7s infinite ease-in-out; }
+.eq-bar-3 { animation: eqPulse3 0.9s infinite ease-in-out; }
+
+/* Custom Range Sliders pour l'Égaliseur */
+input[type="range"].eq-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.15);
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+}
+
+input[type="range"].eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+}
+
+/* Bordures biseautées 3D + Ombre portée pour l'Admin */
 .cover-card-bevel {
   box-shadow:
     0 14px 30px -8px rgba(0, 0, 0, 0.52),
@@ -47,7 +417,6 @@
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
-/* Texture brillante avec mini transparence de reflet lumineux traversant la carte */
 .cover-gloss-sheen {
   background: linear-gradient(
     125deg,
@@ -71,6 +440,7 @@
   }
 }
 
-.animate-fadeIn {
+.animate-fadeIn,
+.animate-fade-in {
   animation: fadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

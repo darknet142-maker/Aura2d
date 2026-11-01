@@ -1,6 +1,6 @@
 {
-  "summary":  "Plan d'implémentation pour l'architecture Offline-First (Store-and-Forward avec API Express /api/sync-metrics, déduplication idempotente UUID et simulateur Hors-Ligne), les Fiches Artistes plein écran (discographie, équipe studio, top auditeurs), l'épuration des cartes Catalogue/Utilisateurs et le design Icon-First (icône Play au lieu de \"écoutes\" et suppression des textes superflus).",
-  "updatedAt":  "2026-10-31T16:07:07.090259737Z",
+  "summary":  "Plan d'implémentation complet et approfondi du Livre Blanc & Cahier des Charges (Marché Gabonais) : Unité d'Écoute Certifiée Gabonaise (ECG) avec pondération Mobile Money (Airtel/Moov) et bouclier anti-fraude, Architecture mathématique des 6 classements découplés, Système officiel de Certifications Nationales (Singles, Albums/EP anti-locomotive, Disque d'Artisan carrière, Audit 72h & Registre QR Code), Awards Annuels (Grilles A/B hybrides, Blind Test Jury -14 LUFS, Vote Public +241 OTP), et Gouvernance des Métadonnées (Handshake Protocol, Audit DAW, Litiges sous séquestre & recalcul rétroactif).",
+  "updatedAt":  "2026-11-01T13:12:54.062030421Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

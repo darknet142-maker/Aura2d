@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lecteur Musical Immersif 3D</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Permanent Marker for the artwork hand-lettered style -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --ambient-primary: #eab308;
+      --ambient-secondary: #a16207;
+      --accent-bar: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #050507;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      height: 100dvh;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Conteneur principal adaptatif : Plein écran sur mobile ou vue 9:16 sans bordure sur grand écran (avec switch plein écran) */
+    #app-viewport {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      max-width: 440px;
+      max-height: 920px;
+      background: #0c0a06;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.45s ease;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.95);
+    }
+
+    @media (min-width: 500px) {
+      #app-viewport:not(.full-bleed) {
+        height: 95dvh;
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    #app-viewport.full-bleed {
+      max-width: 100vw !important;
+      max-height: 100dvh !important;
+      height: 100dvh !important;
+      border-radius: 0 !important;
+      border: none !important;
+    }
+
+    /* Fond dynamique flouté haute profondeur */
+    .ambient-bg {
+      position: absolute;
+      inset: -15%;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 34%, var(--ambient-primary) 0%, transparent 55%),
+        radial-gradient(circle at 30% 62%, var(--ambient-secondary) 0%, transparent 60%),
+        radial-gradient(circle at 75% 75%, var(--ambient-primary) 0%, transparent 55%);
+      opacity: 0.46;
+      filter: blur(65px) saturate(150%);
+      transition: background 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+    }
+
+    .ambient-vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(8, 7, 5, 0.78) 0%, rgba(12, 10, 6, 0.18) 28%, rgba(12, 10, 6, 0.35) 60%, rgba(8, 7, 5, 0.88) 100%);
+    }
+
+    /* Scène Carrousel 3D Apple Cover Flow */
+    .carousel-stage {
+      position: relative;
+      width: 100%;
+      height: 330px;
+      perspective: 1100px;
+      transform-style: preserve-3d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      touch-action: pan-y;
+      cursor: grab;
+    }
+
+    .carousel-stage:active {
+      cursor: grabbing;
+    }
+
+    .cover-card {
+      position: absolute;
+      width: 266px;
+      height: 286px;
+      border-radius: 30px;
+      transform-style: preserve-3d;
+      will-change: transform, filter, opacity;
+      transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.25, 1),
+                  filter 0.55s cubic-bezier(0.2, 0.9, 0.25, 1),
+                  opacity 0.55s ease,
+                  box-shadow 0.55s ease;
+      overflow: visible;
+      user-select: none;
+    }
+
+    .cover-card.dragging {
+      transition: none !important;
+    }
+
+    .cover-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 30px;
+      overflow: hidden;
+      /* Liseré spéculaire 3D et relief inférieur */
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow:
+        0 30px 60px -10px rgba(0, 0, 0, 0.92),
+        0 14px 28px -6px rgba(0, 0, 0, 0.8),
+        0 4px 0 0 rgba(255, 255, 255, 0.18),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.45);
+      background: #18181b;
+    }
+
+    /* Reflet dynamique sur la pochette active */
+    .cover-glare {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.2) 100%);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Dock Glassmorphique fidèle à l'image */
+    .glass-dock {
+      position: relative;
+      background: linear-gradient(155deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 55%, rgba(20, 20, 22, 0.35) 100%);
+      backdrop-filter: blur(32px) saturate(170%);
+      -webkit-backdrop-filter: blur(32px) saturate(170%);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        inset 0 1px 1px rgba(255, 255, 255, 0.28);
+      border-radius: 30px;
+    }
+
+    /* Boutons secondaires carrés arrondis (rangée du bas) */
+    .utility-pill {
+      width: 52px;
+      height: 50px;
+      border-radius: 16px;
+      background: rgba(18, 18, 20, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+
+    .utility-pill:hover {
+      background: rgba(34, 34, 38, 0.68);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .utility-pill:active {
+      transform: scale(0.92);
+    }
+
+    .utility-pill.active-pill {
+      background: rgba(245, 158, 11, 0.24);
+      border-color: rgba(245, 158, 11, 0.6);
+      color: #fbbf24;
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
+    }
+
+    /* Bouton Play Principal Rouge Cramoisi */
+    .play-btn-main {
+      width: 68px;
+      height: 68px;
+      border-radius: 9999px;
+      background: linear-gradient(145deg, #f41f4e 0%, #dc143c 100%);
+      box-shadow:
+        0 10px 28px rgba(225, 29, 72, 0.58),
+        0 2px 8px rgba(0, 0, 0, 0.4),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+    }
+
+    .play-btn-main:hover {
+      transform: scale(1.05);
+      box-shadow:
+        0 14px 34px rgba(225, 29, 72, 0.75),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.45);
+    }
+
+    .play-btn-main:active {
+      transform: scale(0.93);
+    }
+
+    /* Barre de progression interactive */
+    .scrubber-container {
+      position: relative;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .scrubber-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .scrubber-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+      border-radius: 999px;
+      position: relative;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.55);
+    }
+
+    .scrubber-thumb {
+      position: absolute;
+      right: -9px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fbbf24;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.9), 0 2px 6px rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      transition: transform 0.15s ease;
+    }
+
+    .scrubber-container:hover .scrubber-thumb,
+    .scrubber-container.dragging .scrubber-thumb {
+      transform: translateY(-50%) scale(1.28);
+    }
+
+    /* Animation coeur favori */
+    @keyframes heartPop {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.38) rotate(-8deg); }
+      70% { transform: scale(0.9) rotate(4deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    .heart-animate {
+      animation: heartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    /* Paroles synchronisées */
+    .lyrics-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .lyrics-line {
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity: 0.38;
+      transform: scale(0.95);
+      transform-origin: left center;
+      cursor: pointer;
+    }
+    .lyrics-line:hover {
+      opacity: 0.7;
+    }
+    .lyrics-line.active-lyric {
+      opacity: 1;
+      transform: scale(1.03);
+      color: #ffffff;
+      text-shadow: 0 0 22px rgba(251, 191, 36, 0.55);
+    }
+
+    /* Barres d'égaliseur animées */
+    @keyframes eqPulse1 { 0%, 100% { height: 4px; } 50% { height: 15px; } }
+    @keyframes eqPulse2 { 0%, 100% { height: 14px; } 40% { height: 5px; } 80% { height: 16px; } }
+    @keyframes eqPulse3 { 0%, 100% { height: 7px; } 60% { height: 17px; } }
+
+    .eq-bar-1 { animation: eqPulse1 0.8s infinite ease-in-out; }
+    .eq-bar-2 { animation: eqPulse2 0.7s infinite ease-in-out; }
+    .eq-bar-3 { animation: eqPulse3 0.9s infinite ease-in-out; }
+
+    /* Custom Range Sliders pour l'Égaliseur */
+    input[type="range"].eq-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.15);
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"].eq-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f59e0b;
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Bouton flottant sur Bureau pour basculer entre 9:16 et Plein Écran Intégral -->
+  <button id="toggle-fullscreen-mode"
+    class="hidden sm:flex fixed top-4 right-4 z-50 items-center gap-2 px-3.5 py-2 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-xs font-medium text-zinc-200 border border-white/15 backdrop-blur-md shadow-xl transition-all"
+    title="Basculer l'affichage plein écran">
+    <svg id="fs-icon" class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+    </svg>
+    <span id="fs-label">Étendre Plein Écran</span>
+  </button>
+
+  <!-- CONTENEUR PRINCIPAL DU LECTEUR -->
+  <main id="app-viewport">
+    <!-- Fond ambiant flouté dynamique -->
+    <div id="ambient-bg" class="ambient-bg"></div>
+    <div class="ambient-vignette"></div>
+
+    <!-- Notification Toast Interactive -->
+    <div id="toast-notification"
+      class="pointer-events-none fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-zinc-900/95 border border-white/20 text-white text-xs font-medium shadow-2xl flex items-center gap-2.5 opacity-0 -translate-y-3 transition-all duration-300 backdrop-blur-xl">
+      <span id="toast-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+      <span id="toast-text">Action effectuée</span>
+    </div>
+
+    <!-- 1. EN-TÊTE DE NAVIGATION (Header) -->
+    <header class="relative z-20 flex items-center justify-between px-7 pt-6 pb-2">
+      <!-- Bouton Réduire (Mini-lecteur) -->
+      <button id="btn-minimize"
+        class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
+        aria-label="Réduire le lecteur">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- Titre Central (Ouvre la Playlist / File d'attente) -->
+      <button id="btn-open-queue"
+        class="group flex items-center gap-2 px-3 py-1 rounded-full hover:bg-white/10 transition">
+        <span class="text-[19px] font-medium tracking-wide text-white">Playlist</span>
+        <span id="playing-eq-indicator" class="hidden items-end gap-0.5 h-3.5 ml-0.5">
+          <span class="w-0.5 bg-amber-400 rounded-full eq-bar-1"></span>
+          <span class="w-0.5 bg-amber-400 rounded-full eq-bar-2"></span>
+          <span class="w-0.5 bg-amber-400 rounded-full eq-bar-3"></span>
+        </span>
+      </button>
+
+      <!-- Menu Options & Égaliseur (•••) -->
+      <button id="btn-open-options"
+        class="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
+        aria-label="Options et égaliseur">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="2" />
+          <circle cx="12" cy="12" r="2" />
+          <circle cx="19" cy="12" r="2" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- 2. ZONE CENTRALE : CARROUSEL 3D SUPERPOSÉ OU VUE PAROLES -->
+    <section class="relative z-20 flex-1 flex flex-col justify-center min-h-[300px]">
+      <!-- Carrousel 3D avec profondeur et flou d'arrière-plan -->
+      <div id="carousel-stage" class="carousel-stage">
+        <!-- Les cartes 3D sont injectées et animées par JavaScript -->
+      </div>
+
+      <!-- Superposition Paroles Synchronisées (Masquée par défaut, activable via le bouton Paroles) -->
+      <div id="lyrics-overlay"
+        class="hidden absolute inset-x-6 inset-y-2 z-30 rounded-[30px] bg-zinc-950/85 border border-white/15 backdrop-blur-2xl p-6 flex-col justify-between shadow-2xl transition-all">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-amber-300">Paroles Synchronisées</span>
+          </div>
+          <button id="btn-close-lyrics" class="text-xs text-zinc-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5">
+            Fermer
+          </button>
+        </div>
+        <div id="lyrics-container" class="lyrics-scroll flex-1 overflow-y-auto py-4 space-y-4 pr-2">
+          <!-- Paroles injectées dynamiquement -->
+        </div>
+        <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
+          <span>Touchez une ligne pour avancer</span>
+          <span class="text-amber-400 font-medium">Audio Hi-Res Lossless</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. MÉTADONNÉES, STATISTIQUES & BARRE DE PROGRESSION -->
+    <section class="relative z-20 px-7 pt-1 pb-3">
+      <!-- Titre, Artiste & Bouton Coeur -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <h1 id="track-title" class="text-[27px] leading-tight font-bold text-white tracking-tight truncate">
+            Story of My Life
+          </h1>
+          <p id="track-artist" class="text-[19px] leading-snug font-normal text-zinc-300/85 mt-0.5 truncate">
+            One Direction
+          </p>
+        </div>
+
+        <!-- Bouton Favori (Coeur Rouge) -->
+        <button id="btn-favorite"
+          class="mt-1.5 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition relative"
+          aria-label="Ajouter aux favoris">
+          <svg id="heart-svg" class="w-7 h-7 text-[#ef233c] drop-shadow-[0_0_12px_rgba(239,35,60,0.45)] transition-colors"
+            fill="currentColor" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Ligne Analytique & Classement (#4 ▲+3 | ▶ 76K • il y a 5 min) -->
+      <div class="flex items-center justify-between mt-3 text-[14px]">
+        <div class="flex items-center gap-2">
+          <span id="track-rank" class="font-bold text-white tracking-tight">#4</span>
+          <span id="track-trend" class="font-semibold text-[#22c55e] flex items-center gap-0.5">
+            <span class="text-[11px]">▲</span> +3
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5 text-zinc-300/90">
+          <svg class="w-3.5 h-3.5 text-white fill-current" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <span id="track-plays" class="font-bold text-white">76K</span>
+          <span class="text-zinc-400">•</span>
+          <span id="track-time-ago" class="text-zinc-300/80">il y a 5 min</span>
+        </div>
+      </div>
+
+      <!-- Barre de Progression (Scrubber) -->
+      <div class="mt-3.5">
+        <div id="scrubber" class="scrubber-container" role="slider" aria-label="Progression du titre">
+          <div class="scrubber-track">
+            <div id="scrubber-fill" class="scrubber-fill" style="width: 64.4%;">
+              <div class="scrubber-thumb"></div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-[13px] font-medium text-zinc-300/80 mt-0.5">
+          <span id="time-current">1:56</span>
+          <span id="time-total">3:00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. DOCK DE CONTRÔLE GLASSMORPHIQUE (2 Rangées Symétriques) -->
+    <section class="relative z-20 px-6 pb-2">
+      <div class="glass-dock px-5 py-5">
+        <!-- Rangée 1 : Contrôles de flux principaux (Aléatoire, Précédent, Lecture/Pause, Suivant, Répéter) -->
+        <div class="flex items-center justify-between px-1">
+          <!-- Aléatoire (Shuffle) -->
+          <button id="btn-shuffle"
+            class="relative w-11 h-11 rounded-full flex items-center justify-center text-white/90 hover:text-white active:scale-90 transition"
+            aria-label="Lecture aléatoire">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+            </svg>
+            <span id="shuffle-dot" class="hidden absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+          </button>
+
+          <!-- Piste Précédente -->
+          <button id="btn-prev"
+            class="w-12 h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
+            aria-label="Titre précédent">
+            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+              <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+            </svg>
+          </button>
+
+          <!-- Bouton Central Lecture / Pause Rouge Vif -->
+          <button id="btn-play" class="play-btn-main" aria-label="Lecture ou Pause">
+            <!-- Icône Play -->
+            <svg id="icon-play" class="w-8 h-8 text-white fill-current ml-1" viewBox="0 0 24 24">
+              <path d="M8 5.14v14l11-7-11-7z" />
+            </svg>
+            <!-- Icône Pause -->
+            <svg id="icon-pause" class="hidden w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+
+          <!-- Piste Suivante -->
+          <button id="btn-next"
+            class="w-12 h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
+            aria-label="Titre suivant">
+            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+            </svg>
+          </button>
+
+          <!-- Répéter (Repeat) -->
+          <button id="btn-repeat"
+            class="relative w-11 h-11 rounded-full flex items-center justify-center text-white/90 hover:text-white active:scale-90 transition"
+            aria-label="Mode répétition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 1l4 4-4 4" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 13v2a4 4 0 01-4 4H3" />
+            </svg>
+            <span id="repeat-badge" class="hidden absolute -top-0.5 right-1 text-[9px] font-extrabold bg-amber-400 text-black rounded-full w-3.5 h-3.5 items-center justify-center">1</span>
+            <span id="repeat-dot" class="hidden absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+          </button>
+        </div>
+
+        <!-- Rangée 2 : 4 Boutons Utilitaires en Verre Sombre (Ajouter Playlist, Paroles, Cast, Télécharger) -->
+        <div class="flex items-center justify-between px-3 mt-5">
+          <!-- 1. Ajouter à une Playlist -->
+          <button id="btn-add-playlist" class="utility-pill" aria-label="Ajouter à une playlist" title="Ajouter à une playlist">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h12M4 10h12M4 14h8M17 14v6M14 17h6" />
+            </svg>
+          </button>
+
+          <!-- 2. Paroles Synchronisées -->
+          <button id="btn-lyrics" class="utility-pill" aria-label="Afficher les paroles" title="Paroles synchronisées">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10zM8 9h8M8 13h5" />
+            </svg>
+          </button>
+
+          <!-- 3. Cast / Diffuser sur un appareil -->
+          <button id="btn-cast" class="utility-pill" aria-label="Diffuser sur un appareil" title="Diffuser l'audio">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2 16.1A5 5 0 015.9 20M2 12.05A9 9 0 019.95 20M2 8V6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2h-6" />
+              <line x1="2" y1="20" x2="2.01" y2="20" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            <span id="cast-badge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400"></span>
+          </button>
+
+          <!-- 4. Télécharger hors-ligne -->
+          <button id="btn-download" class="utility-pill" aria-label="Télécharger le titre" title="Télécharger hors-ligne">
+            <svg id="download-icon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+            </svg>
+            <span id="download-progress" class="hidden text-[11px] font-bold text-amber-400">0%</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. PIED DE PAGE (Copyright discret en bas) -->
+    <footer class="relative z-20 pb-4 pt-1 text-center">
+      <p id="track-copyright" class="text-[11.5px] text-zinc-400/75 tracking-tight">
+        Copyright 2028 Sony Music. All rights reserved
+      </p>
+    </footer>
+
+    <!-- =================================================================== -->
+    <!-- TIROIRS & MODALES INTERACTIVES (Playlist, Cast, Égaliseur, Mini-Bar) -->
+    <!-- =================================================================== -->
+
+    <!-- A. Modale "Ajouter à une Playlist" -->
+    <div id="modal-playlist" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-md flex items-end justify-center">
+      <div class="w-full rounded-t-[32px] bg-zinc-900/95 border-t border-white/15 p-6 space-y-4 shadow-2xl animate-fade-in">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white">Ajouter à une playlist</h3>
+          <button data-close-modal="modal-playlist" class="text-zinc-400 hover:text-white text-sm">Fermer</button>
+        </div>
+        <div id="playlist-items" class="space-y-2.5 max-h-60 overflow-y-auto">
+          <!-- Injecté par JS -->
+        </div>
+        <div class="pt-2 flex gap-2">
+          <input id="new-playlist-input" type="text" placeholder="Nouvelle playlist..."
+            class="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400" />
+          <button id="btn-create-playlist"
+            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition">
+            Créer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B. Modale "Cast / Diffuser sur un appareil" -->
+    <div id="modal-cast" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-md flex items-end justify-center">
+      <div class="w-full rounded-t-[32px] bg-zinc-900/95 border-t border-white/15 p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">Diffuser l'audio</h3>
+            <p class="text-xs text-zinc-400">AirPlay & Google Cast Ultra HD</p>
+          </div>
+          <button data-close-modal="modal-cast" class="text-zinc-400 hover:text-white text-sm">Fermer</button>
+        </div>
+        <div id="cast-devices-list" class="space-y-2.5">
+          <!-- Injecté par JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- C. Modale "File d'attente / Playlist Actuelle" -->
+    <div id="modal-queue" class="hidden absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex items-end justify-center">
+      <div class="w-full rounded-t-[32px] bg-zinc-900/95 border-t border-white/15 p-6 space-y-4 shadow-2xl max-h-[80%] flex flex-col">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">File d'attente • Playlist</h3>
+            <p class="text-xs text-zinc-400">5 titres en écoute • Glissez ou touchez un titre</p>
+          </div>
+          <button data-close-modal="modal-queue" class="text-zinc-400 hover:text-white text-sm">Fermer</button>
+        </div>
+        <div id="queue-list" class="space-y-2 overflow-y-auto pr-1">
+          <!-- Injecté par JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- D. Modale "Options Audio & Égaliseur 5 Bandes" -->
+    <div id="modal-options" class="hidden absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex items-end justify-center">
+      <div class="w-full rounded-t-[32px] bg-zinc-900/95 border-t border-white/15 p-6 space-y-5 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">Paramètres Audio & Égaliseur</h3>
+            <p class="text-xs text-amber-400">Moteur Web Audio Synthétisé Temps Réel</p>
+          </div>
+          <button data-close-modal="modal-options" class="text-zinc-400 hover:text-white text-sm">Fermer</button>
+        </div>
+
+        <!-- Volume Principal -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between text-xs text-zinc-300">
+            <span>Volume Principal</span>
+            <span id="volume-label" class="font-semibold text-amber-400">85%</span>
+          </div>
+          <input id="master-volume" type="range" min="0" max="100" value="85" class="eq-slider w-full" />
+        </div>
+
+        <!-- Égaliseur 5 bandes -->
+        <div class="space-y-2.5 bg-white/5 p-4 rounded-2xl border border-white/10">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-white">Égaliseur Dynamique</span>
+            <button id="btn-reset-eq" class="text-[11px] text-amber-400 hover:underline">Réinitialiser</button>
+          </div>
+          <div class="grid grid-cols-5 gap-3 pt-2 text-center">
+            <div class="flex flex-col items-center gap-2">
+              <input type="range" min="-12" max="12" value="3" data-eq-band="0" class="eq-slider w-full" />
+              <span class="text-[10px] text-zinc-400">60Hz</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+              <input type="range" min="-12" max="12" value="2" data-eq-band="1" class="eq-slider w-full" />
+              <span class="text-[10px] text-zinc-400">250Hz</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+              <input type="range" min="-12" max="12" value="0" data-eq-band="2" class="eq-slider w-full" />
+              <span class="text-[10px] text-zinc-400">1kHz</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+              <input type="range" min="-12" max="12" value="2" data-eq-band="3" class="eq-slider w-full" />
+              <span class="text-[10px] text-zinc-400">4kHz</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+              <input type="range" min="-12" max="12" value="4" data-eq-band="4" class="eq-slider w-full" />
+              <span class="text-[10px] text-zinc-400">12kHz</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Qualité Audio & Partage -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btn-toggle-quality" class="p-3 rounded-2xl bg-white/5 border border-white/10 text-left hover:bg-white/10 transition">
+            <div class="text-[11px] text-zinc-400">Qualité du flux</div>
+            <div id="quality-value" class="text-xs font-bold text-amber-400 mt-0.5">Hi-Res 24-bit/192kHz</div>
+          </button>
+          <button id="btn-share-track" class="p-3 rounded-2xl bg-white/5 border border-white/10 text-left hover:bg-white/10 transition">
+            <div class="text-[11px] text-zinc-400">Lien universel</div>
+            <div class="text-xs font-bold text-white mt-0.5 flex items-center gap-1">
+              <span>Copier le lien</span>
+              <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- E. Mode Mini-Lecteur Réduit (quand on clique sur le chevron en haut à gauche) -->
+    <div id="mini-player-overlay"
+      class="hidden absolute inset-0 z-50 bg-zinc-950 flex flex-col justify-between p-6 animate-fade-in">
+      <div>
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white">Découvrir</h2>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-medium">Mode Réduit</span>
+        </div>
+        <p class="text-xs text-zinc-400 mt-1">Touchez le mini-lecteur en bas pour rouvrir l'expérience 3D plein écran.</p>
+
+        <div class="mt-6 space-y-3">
+          <div class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Titres populaires aujourd'hui</div>
+          <div id="mini-discover-list" class="space-y-2.5"></div>
+        </div>
+      </div>
+
+      <!-- Barre Mini-Player Flottante -->
+      <div id="mini-player-bar"
+        class="glass-dock p-3.5 flex items-center justify-between cursor-pointer hover:border-amber-400/40 transition">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-11 h-11 rounded-xl bg-amber-500 flex items-center justify-center font-black text-black text-xs shadow-lg">
+            3D
+          </div>
+          <div class="min-w-0">
+            <div id="mini-title" class="text-sm font-bold text-white truncate">Story of My Life</div>
+            <div id="mini-artist" class="text-xs text-zinc-300 truncate">One Direction</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="mini-play-btn" class="w-10 h-10 rounded-full bg-[#e11d48] flex items-center justify-center text-white shadow-md">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button id="mini-expand-btn" class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SCRIPT PRINCIPAL : CARROUSEL 3D, SYNTHÉTISEUR WEB AUDIO & INTERACTIONS -->
+  <script>
+    /*************************************************************************
+     * 1. ILLUSTRATIONS VECTORIELLES HAUTE DÉFINITION DES POCHETTES (4K SVG)
+     *    Reproduction fidèle de la pochette centrale "ALWAYS BE CREATIVE"
+     *    ainsi que des pochettes adjacentes gauche/droite de l'image de référence.
+     *************************************************************************/
+    function getArtworkSVG(type) {
+      if (type === 'creative_yellow') {
+        // Pochette centrale exacte : "ALWAYS BE CREATIVE" sur fond jaune-or, personnage souriant en hoodie, ruban blanc 3D
+        return `
+        <svg viewBox="0 0 400 430" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgYellow" x1="0" y1="0" x2="0.8" y2="1">
+              <stop offset="0%" stop-color="#fbbd23"/>
+              <stop offset="55%" stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#d97706"/>
+            </linearGradient>
+            <linearGradient id="hoodieGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#eab308"/>
+              <stop offset="50%" stop-color="#ca8a04"/>
+              <stop offset="100%" stop-color="#854d0e"/>
+            </linearGradient>
+            <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+
+          <!-- Fond Jaune Or Vibrant -->
+          <rect width="400" height="430" fill="url(#bgYellow)"/>
+
+          <!-- Grandes lettres "C" et "A" filigranées en arrière-plan -->
+          <text x="58" y="325" font-family="Inter, sans-serif" font-weight="900" font-size="180" fill="#d97706" opacity="0.45">C</text>
+          <text x="235" y="330" font-family="Inter, sans-serif" font-weight="900" font-size="185" fill="#d97706" opacity="0.45">A</text>
+
+          <!-- Typographie "ALWAYS BE CREATIVE" style brush en haut -->
+          <g fill="#ffffff" style="font-family: 'Permanent Marker', cursive, sans-serif; text-anchor: middle;">
+            <text x="200" y="76" font-size="50" letter-spacing="1">ALWAYS BE</text>
+            <text x="200" y="130" font-size="55" letter-spacing="1">CREATIVE</text>
+          </g>
+
+          <!-- Petit badge typographique "CREATIVITY IS FUN" à gauche -->
+          <g transform="translate(88, 226)" font-family="Inter, sans-serif" font-weight="900" font-size="12" line-height="1">
+            <text x="0" y="0" fill="#1c1917">CREA</text>
+            <text x="0" y="11" fill="#1c1917">TIVITY</text>
+            <text x="0" y="22" fill="#ffffff">IS FUN</text>
+          </g>
+
+          <!-- Ruban blanc arrière -->
+          <path d="M 30 355 Q 200 320 375 365" fill="none" stroke="#f8fafc" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+
+          <!-- Personnage Expressif Souriant en Hoodie Jaune/Marron -->
+          <g transform="translate(0, 8)">
+            <!-- Épaules & Hoodie Jaune Moutarde -->
+            <path d="M 82 430 L 106 320 Q 125 285 200 285 Q 275 285 294 320 L 318 430 Z" fill="url(#hoodieGrad)" stroke="#713f12" stroke-width="2"/>
+            <!-- Sweat interne bordeaux/marron -->
+            <path d="M 145 290 L 200 395 L 255 290 Z" fill="#451a03"/>
+            <path d="M 162 325 L 238 325 M 172 355 L 228 355" stroke="#d97706" stroke-width="6"/>
+            <!-- Capuche repliée autour du cou -->
+            <path d="M 122 292 Q 140 246 200 256 Q 260 246 278 292 Q 245 322 200 320 Q 155 322 122 292 Z" fill="#b45309" stroke="#fef08a" stroke-width="1.5"/>
+            <!-- Cordons blancs du hoodie -->
+            <path d="M 188 312 Q 186 355 189 390" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M 212 312 Q 214 355 211 390" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+
+            <!-- Cou -->
+            <rect x="176" y="232" width="48" height="45" rx="16" fill="#7c3f1c"/>
+            <path d="M 176 245 Q 200 265 224 245" fill="#431407" opacity="0.45"/>
+
+            <!-- Visage (Sourire rayonnant) -->
+            <rect x="158" y="152" width="84" height="96" rx="40" fill="#8d4925"/>
+            <!-- Oreilles -->
+            <circle cx="156" cy="202" r="10" fill="#7c3f1c"/>
+            <circle cx="244" cy="202" r="10" fill="#7c3f1c"/>
+
+            <!-- Yeux rieurs -->
+            <path d="M 173 190 Q 182 181 191 190" fill="none" stroke="#1c1917" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 209 190 Q 218 181 227 190" fill="none" stroke="#1c1917" stroke-width="4" stroke-linecap="round"/>
+            <!-- Sourcils expressifs -->
+            <path d="M 170 177 Q 182 170 193 176" fill="none" stroke="#1c1917" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M 207 176 Q 218 170 230 177" fill="none" stroke="#1c1917" stroke-width="3.5" stroke-linecap="round"/>
+
+            <!-- Nez -->
+            <path d="M 194 202 Q 200 208 206 202" fill="none" stroke="#52250c" stroke-width="3" stroke-linecap="round"/>
+
+            <!-- Grand sourire blanc éclatant -->
+            <path d="M 175 213 Q 200 238 225 213 Z" fill="#ffffff" stroke="#451a03" stroke-width="2.5"/>
+            <path d="M 181 221 Q 200 227 219 221" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+
+            <!-- Coiffure Locks / Dreadlocks Dynamiques -->
+            <g fill="#1c1917">
+              <circle cx="200" cy="142" r="24"/>
+              <circle cx="176" cy="148" r="20"/>
+              <circle cx="224" cy="148" r="20"/>
+              <path d="M 160 165 Q 140 142 152 125 Q 168 135 172 155 Z"/>
+              <path d="M 175 145 Q 165 112 182 108 Q 192 125 188 148 Z"/>
+              <path d="M 198 142 Q 202 104 218 110 Q 216 130 208 146 Z"/>
+              <path d="M 218 148 Q 238 116 250 128 Q 238 148 228 158 Z"/>
+              <path d="M 232 162 Q 260 146 264 162 Q 246 174 235 172 Z"/>
+              <path d="M 158 175 Q 134 165 138 182 Q 152 185 162 182 Z"/>
+            </g>
+
+            <!-- 3 traits d'expression blancs à droite du visage -->
+            <g stroke="#ffffff" stroke-width="5.5" stroke-linecap="round">
+              <line x1="258" y1="205" x2="270" y2="200"/>
+              <line x1="260" y1="218" x2="274" y2="218"/>
+              <line x1="258" y1="231" x2="270" y2="236"/>
+            </g>
+          </g>
+
+          <!-- Ruban lumineux blanc 3D au premier plan -->
+          <path d="M -15 362 Q 45 395 210 402 Q 345 408 415 425" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" filter="url(#ribbonGlow)"/>
+        </svg>`;
+      }
+
+      if (type === 'crimson_bloom') {
+        // Pochette gauche de l'image de référence : Fleurs rouges & esthétique néon sombre
+        return `
+        <svg viewBox="0 0 400 430" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgCrimson" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#94a3b8"/>
+              <stop offset="35%" stop-color="#334155"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+            <radialGradient id="petalRed" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fb7185"/>
+              <stop offset="60%" stop-color="#e11d48"/>
+              <stop offset="100%" stop-color="#881337"/>
+            </radialGradient>
+          </defs>
+          <rect width="400" height="430" fill="url(#bgCrimson)"/>
+          <!-- Lignes diagonales synthwave en haut -->
+          <g stroke="#cbd5e1" stroke-width="2" opacity="0.35">
+            <line x1="0" y1="20" x2="400" y2="90"/>
+            <line x1="0" y1="40" x2="400" y2="110"/>
+            <line x1="0" y1="60" x2="400" y2="130"/>
+            <line x1="0" y1="80" x2="400" y2="150"/>
+          </g>
+          <!-- Silhouette casquée néon -->
+          <path d="M 40 110 Q 170 120 190 210 Q 140 265 40 250 Z" fill="#1e1b4b"/>
+          <path d="M 65 175 Q 135 170 155 198 Q 120 218 65 205 Z" fill="#f43f5e"/>
+          <text x="72" y="197" font-family="monospace" font-weight="bold" font-size="16" fill="#fde047">KAO..!</text>
+          <!-- Pétales de fleurs écarlates en bas -->
+          <g transform="translate(180, 320)">
+            <circle cx="-40" cy="40" r="75" fill="url(#petalRed)" stroke="#fda4af" stroke-width="1.5"/>
+            <circle cx="30" cy="10" r="80" fill="url(#petalRed)" stroke="#fda4af" stroke-width="1.5"/>
+            <circle cx="-10" cy="-30" r="65" fill="url(#petalRed)" stroke="#fda4af" stroke-width="1.5"/>
+            <circle cx="0" cy="15" r="24" fill="#4c0519"/>
+          </g>
+        </svg>`;
+      }
+
+      if (type === 'pastel_heart') {
+        // Pochette droite de l'image de référence : Coeur 3D bleu glacé, étoiles et mains
+        return `
+        <svg viewBox="0 0 400 430" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgSky" x1="0" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stop-color="#93c5fd"/>
+              <stop offset="55%" stop-color="#64748b"/>
+              <stop offset="100%" stop-color="#334155"/>
+            </linearGradient>
+            <radialGradient id="heart3d" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="45%" stop-color="#93c5fd"/>
+              <stop offset="100%" stop-color="#3b82f6"/>
+            </radialGradient>
+          </defs>
+          <rect width="400" height="430" fill="url(#bgSky)"/>
+          <!-- Coeur 3D glacé en haut à gauche -->
+          <path d="M 95 115 C 65 90, 35 55, 65 32 C 85 18, 105 38, 110 48 C 115 38, 135 18, 155 32 C 185 55, 155 90, 110 122 Z" fill="url(#heart3d)" opacity="0.9"/>
+          <!-- Étoiles scintillantes -->
+          <path d="M 90 155 L 95 168 L 108 173 L 95 178 L 90 191 L 85 178 L 72 173 L 85 168 Z" fill="#ffffff"/>
+          <circle cx="60" cy="145" r="3" fill="#ffffff" opacity="0.8"/>
+          <!-- Drapé blanc soyeux et mains -->
+          <path d="M 150 430 Q 175 210 265 140 L 400 180 L 400 430 Z" fill="#f1f5f9"/>
+          <path d="M 120 340 Q 195 290 230 330 Q 195 375 130 390 Z" fill="#fbcfe8" stroke="#f472b6" stroke-width="2"/>
+        </svg>`;
+      }
+
+      if (type === 'emerald_matrix') {
+        return `
+        <svg viewBox="0 0 400 430" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgEmerald" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#064e3b"/>
+              <stop offset="50%" stop-color="#047857"/>
+              <stop offset="100%" stop-color="#022c22"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="430" fill="url(#bgEmerald)"/>
+          <circle cx="200" cy="215" r="120" fill="none" stroke="#34d399" stroke-width="12" opacity="0.35"/>
+          <circle cx="200" cy="215" r="75" fill="#10b981" opacity="0.5"/>
+          <text x="200" y="225" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">PULSE</text>
+        </svg>`;
+      }
+
+      // Violet Odyssey
+      return `
+      <svg viewBox="0 0 400 430" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgViolet" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#7e22ce"/>
+            <stop offset="50%" stop-color="#4c1d95"/>
+            <stop offset="100%" stop-color="#1e1b4b"/>
+          </linearGradient>
+        </defs>
+        <rect width="400" height="430" fill="url(#bgViolet)"/>
+        <circle cx="200" cy="215" r="105" fill="#c084fc" opacity="0.25"/>
+        <path d="M 70 320 Q 200 120 330 320" fill="none" stroke="#f0abfc" stroke-width="16" stroke-linecap="round"/>
+        <text x="200" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="36" fill="#ffffff" letter-spacing="3">HORIZON</text>
+      </svg>`;
+    }
+
+    /*************************************************************************
+     * 2. DONNÉES DES 5 PISTES MUSICALES (Index 1 = "Story of My Life" par défaut)
+     *************************************************************************/
+    const TRACKS = [
+      {
+        id: 'track-0',
+        title: 'Midnight Crimson',
+        artist: 'The Weeknd & Kavinsky',
+        rank: '#9',
+        trend: '▲ +2',
+        trendUp: true,
+        plays: '54K',
+        timeAgo: 'il y a 12 min',
+        duration: 214,
+        currentTime: 84,
+        favorite: false,
+        downloaded: false,
+        artworkType: 'crimson_bloom',
+        ambientPrimary: '#e11d48',
+        ambientSecondary: '#4c0519',
+        copyright: 'Copyright 2028 Republic Records. All rights reserved',
+        notes: [220, 261.63, 329.63, 392.00], // Am7
+        tempo: 112,
+        lyrics: [
+          { time: 0, text: "Sous les néons rouges de la ville endormie" },
+          { time: 35, text: "Les reflets dansent sur l'asphalte humide" },
+          { time: 75, text: "Un battement synthétique guide nos pas" },
+          { time: 120, text: "Midnight Crimson résonne jusqu'à l'aube" },
+          { time: 165, text: "Perdus dans la vitesse et la lumière" }
+        ]
+      },
+      {
+        id: 'track-1',
+        title: 'Story of My Life',
+        artist: 'One Direction',
+        rank: '#4',
+        trend: '+3',
+        trendUp: true,
+        plays: '76K',
+        timeAgo: 'il y a 5 min',
+        duration: 180, // 3:00 exactement comme sur la maquette
+        currentTime: 116, // 1:56 exactement comme sur la maquette
+        favorite: true,
+        downloaded: false,
+        artworkType: 'creative_yellow',
+        ambientPrimary: '#eab308',
+        ambientSecondary: '#78350f',
+        copyright: 'Copyright 2028 Sony Music. All rights reserved',
+        notes: [261.63, 329.63, 392.00, 523.25], // C Major Warm
+        tempo: 120,
+        lyrics: [
+          { time: 0, text: "Written in these walls are the stories that I can't explain" },
+          { time: 38, text: "I leave my heart open but it stays right here empty for days" },
+          { time: 78, text: "She told me in the morning she don't feel the same about us in her bones" },
+          { time: 110, text: "The story of my life, I take her home" },
+          { time: 138, text: "I drive all night to keep her warm and time is frozen" },
+          { time: 160, text: "The story of my life, I give her hope" }
+        ]
+      },
+      {
+        id: 'track-2',
+        title: 'Celestial Heart',
+        artist: 'Billie Eilish & Finneas',
+        rank: '#2',
+        trend: '+5',
+        trendUp: true,
+        plays: '112K',
+        timeAgo: 'il y a 2 min',
+        duration: 198,
+        currentTime: 42,
+        favorite: false,
+        downloaded: true,
+        artworkType: 'pastel_heart',
+        ambientPrimary: '#60a5fa',
+        ambientSecondary: '#1e3a8a',
+        copyright: 'Copyright 2028 Darkroom / Interscope. All rights reserved',
+        notes: [293.66, 349.23, 440.00, 523.25], // Dm7
+        tempo: 98,
+        lyrics: [
+          { time: 0, text: "Un cœur de cristal suspendu dans l'azur" },
+          { time: 40, text: "Respire doucement entre les nuages d'argent" },
+          { time: 85, text: "Chaque étoile murmure une promesse oubliée" },
+          { time: 135, text: "Laisse la gravité s'effacer ce soir" }
+        ]
+      },
+      {
+        id: 'track-3',
+        title: 'Emerald Pulse',
+        artist: 'Daft Punk & Parcels',
+        rank: '#6',
+        trend: '+1',
+        trendUp: true,
+        plays: '64K',
+        timeAgo: 'il y a 9 min',
+        duration: 225,
+        currentTime: 65,
+        favorite: false,
+        downloaded: false,
+        artworkType: 'emerald_matrix',
+        ambientPrimary: '#10b981',
+        ambientSecondary: '#064e3b',
+        copyright: 'Copyright 2028 Columbia / Sony Music. All rights reserved',
+        notes: [196.00, 246.94, 293.66, 369.99], // Gmaj7
+        tempo: 118,
+        lyrics: [
+          { time: 0, text: "Digital horizon, analog soul" },
+          { time: 55, text: "Feel the magnetic groove take control" },
+          { time: 115, text: "Emerald frequencies locked in phase" },
+          { time: 170, text: "Dancing forever in the laser maze" }
+        ]
+      },
+      {
+        id: 'track-4',
+        title: 'Violet Odyssey',
+        artist: 'Tame Impala',
+        rank: '#11',
+        trend: '+4',
+        trendUp: true,
+        plays: '41K',
+        timeAgo: 'il y a 18 min',
+        duration: 205,
+        currentTime: 30,
+        favorite: false,
+        downloaded: false,
+        artworkType: 'violet_odyssey',
+        ambientPrimary: '#a855f7',
+        ambientSecondary: '#3b0764',
+        copyright: 'Copyright 2028 Modular Recordings. All rights reserved',
+        notes: [246.94, 311.13, 369.99, 493.88], // B Major
+        tempo: 108,
+        lyrics: [
+          { time: 0, text: "Floating across the violet dunes of time" },
+          { time: 50, text: "Every synth wave bends the skyline" },
+          { time: 110, text: "Let it happen, let the colors collide" },
+          { time: 160, text: "Drifting further into the cosmic tide" }
+        ]
+      }
+    ];
+
+    /*************************************************************************
+     * 3. ÉTAT DE L'APPLICATION
+     *************************************************************************/
+    let activeIndex = 1; // "Story of My Life" au centre par défaut
+    let isPlaying = false;
+    let isShuffle = false;
+    let repeatMode = 0; // 0: Off, 1: All, 2: One
+    let lyricsOpen = false;
+    let playbackTimer = null;
+
+    const USER_PLAYLISTS = [
+      { id: 'pl-1', name: 'Favoris Créatifs ✨', count: 42, added: true },
+      { id: 'pl-2', name: 'Late Night Drive 🌙', count: 28, added: false },
+      { id: 'pl-3', name: 'Design & Focus Studio 🎧', count: 65, added: true },
+      { id: 'pl-4', name: 'Workout Boost 🔥', count: 19, added: false }
+    ];
+
+    const CAST_DEVICES = [
+      { id: 'dev-1', name: 'Cet appareil (Hi-Res Audio)', type: 'Local • 24-bit/192kHz', active: true },
+      { id: 'dev-2', name: 'Apple HomePod Studio Salon', type: 'AirPlay 2 • Dolby Atmos', active: false },
+      { id: 'dev-3', name: 'Sony WH-1000XM6 Pro', type: 'Bluetooth LDAC • 96% batterie', active: false },
+      { id: 'dev-4', name: 'Samsung Neo QLED 8K', type: 'Google Cast • Salon', active: false }
+    ];
+
+    /*************************************************************************
+     * 4. MOTEUR WEB AUDIO API SYNTHÉTISÉ TEMPS RÉEL + ÉGALISEUR 5 BANDES
+     *************************************************************************/
+    let audioCtx = null;
+    let masterGain = null;
+    let eqFilters = [];
+    let synthInterval = null;
+    let stepCounter = 0;
+
+    function initAudioEngine() {
+      if (audioCtx) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.85;
+
+      // Création des 5 bandes d'égalisation (60Hz, 250Hz, 1kHz, 4kHz, 12kHz)
+      const frequencies = [60, 250, 1000, 4000, 12000];
+      const defaultGains = [3, 2, 0, 2, 4];
+
+      eqFilters = frequencies.map((freq, idx) => {
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = idx === 0 ? 'lowshelf' : idx === frequencies.length - 1 ? 'highshelf' : 'peaking';
+        filter.frequency.value = freq;
+        filter.gain.value = defaultGains[idx];
+        return filter;
+      });
+
+      // Chaînage des filtres jusqu'au Master Gain et à la sortie
+      for (let i = 0; i < eqFilters.length - 1; i++) {
+        eqFilters[i].connect(eqFilters[i + 1]);
+      }
+      eqFilters[eqFilters.length - 1].connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+    }
+
+    function playSynthStep() {
+      if (!isPlaying || !audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const track = TRACKS[activeIndex];
+      const now = audioCtx.currentTime;
+      const noteFreq = track.notes[stepCounter % track.notes.length];
+
+      // Oscillateur harmonique doux (Pad + Pluck)
+      const osc = audioCtx.createOscillator();
+      const subOsc = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(noteFreq, now);
+
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(noteFreq / 2, now);
+
+      noteGain.gain.setValueAtTime(0.001, now);
+      noteGain.gain.exponentialRampToValueAtTime(0.11, now + 0.04);
+      noteGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.48);
+
+      osc.connect(noteGain);
+      subOsc.connect(noteGain);
+      noteGain.connect(eqFilters[0]);
+
+      osc.start(now);
+      subOsc.start(now);
+      osc.stop(now + 0.5);
+      subOsc.stop(now + 0.5);
+
+      stepCounter++;
+    }
+
+    function startAudioLoop() {
+      initAudioEngine();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      clearInterval(synthInterval);
+      const track = TRACKS[activeIndex];
+      const intervalMs = Math.round((60 / track.tempo) * 1000);
+      playSynthStep();
+      synthInterval = setInterval(playSynthStep, intervalMs);
+    }
+
+    function stopAudioLoop() {
+      clearInterval(synthInterval);
+    }
+
+    /*************************************************************************
+     * 5. RENDU DU CARROUSEL 3D SUPERPOSÉ AVEC FLOU DE PROFONDEUR DE CHAMP
+     *************************************************************************/
+    const carouselStage = document.getElementById('carousel-stage');
+    let cardElements = [];
+
+    function buildCarouselCards() {
+      carouselStage.innerHTML = '';
+      cardElements = TRACKS.map((track, idx) => {
+        const card = document.createElement('div');
+        card.className = 'cover-card';
+        card.dataset.index = idx;
+        card.innerHTML = `
+          <div class="cover-card-inner">
+            ${getArtworkSVG(track.artworkType)}
+            <div class="cover-glare"></div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          if (dragMoved) return;
+          if (idx !== activeIndex) {
+            selectTrack(idx);
+          }
+        });
+        carouselStage.appendChild(card);
+        return card;
+      });
+      updateCarousel3D(0);
+    }
+
+    /**
+     * Calcule la transformation 3D exacte pour chaque carte.
+     * - La carte centrale domine au premier plan (translateZ(70px), scale(1), blur(0px), z-index: 30)
+     * - Les cartes adjacentes sont rapprochées et partiellement chevauchées par la carte centrale
+     *   (translateX(±45%), translateZ(-45px), rotateY(∓24deg), scale(0.84), blur(3.2px))
+     */
+    function updateCarousel3D(dragOffsetRatio = 0) {
+      cardElements.forEach((card, idx) => {
+        const rawOffset = (idx - activeIndex) + dragOffsetRatio;
+        const absOffset = Math.abs(rawOffset);
+
+        // Chevauchement serré fidèle à l'image : ±44% d'écart horizontal pour que la carte centrale se superpose aux cartes d'arrière-plan
+        const translateX = rawOffset * 116; // en px (~44% de 266px)
+        const translateZ = -absOffset * 95;
+        const rotateY = rawOffset * -22; // Inclinaison 3D fluide type Apple Cover Flow
+        const rotateZ = rawOffset * 2.5; // Légère inclinaison organique comme sur la maquette
+        const scale = Math.max(0.68, 1 - absOffset * 0.14);
+
+        // Flou de profondeur de champ progressif sur les cartes en arrière-plan
+        const blurPx = absOffset < 0.08 ? 0 : Math.min(8, absOffset * 3.2);
+        const brightness = Math.max(0.5, 1 - absOffset * 0.22);
+        const opacity = absOffset > 2.1 ? 0 : Math.max(0.35, 1 - (absOffset - 1) * 0.55);
+        const zIndex = Math.round(30 - absOffset * 10);
+
+        card.style.zIndex = zIndex;
+        card.style.opacity = opacity;
+        card.style.transform = `translate3d(${translateX}px, ${absOffset * 6}px, ${translateZ}px) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) scale(${scale})`;
+        card.style.filter = `blur(${blurPx.toFixed(2)}px) brightness(${brightness.toFixed(2)})`;
+        card.style.pointerEvents = absOffset > 1.5 ? 'none' : 'auto';
+      });
+    }
+
+    // Glissement fluide tactile et souris (Drag Physics)
+    let isDraggingCarousel = false;
+    let dragStartX = 0;
+    let currentDragDeltaX = 0;
+    let dragMoved = false;
+
+    carouselStage.addEventListener('pointerdown', (e) => {
+      isDraggingCarousel = true;
+      dragMoved = false;
+      dragStartX = e.clientX;
+      currentDragDeltaX = 0;
+      cardElements.forEach(c => c.classList.add('dragging'));
+      carouselStage.setPointerCapture(e.pointerId);
+    });
+
+    carouselStage.addEventListener('pointermove', (e) => {
+      if (!isDraggingCarousel) return;
+      currentDragDeltaX = e.clientX - dragStartX;
+      if (Math.abs(currentDragDeltaX) > 6) dragMoved = true;
+      const ratio = currentDragDeltaX / 220;
+      updateCarousel3D(ratio);
+    });
+
+    function endCarouselDrag() {
+      if (!isDraggingCarousel) return;
+      isDraggingCarousel = false;
+      cardElements.forEach(c => c.classList.remove('dragging'));
+
+      const threshold = 48;
+      if (currentDragDeltaX < -threshold && activeIndex < TRACKS.length - 1) {
+        selectTrack(activeIndex + 1);
+      } else if (currentDragDeltaX > threshold && activeIndex > 0) {
+        selectTrack(activeIndex - 1);
+      } else {
+        updateCarousel3D(0);
+      }
+      currentDragDeltaX = 0;
+    }
+
+    carouselStage.addEventListener('pointerup', endCarouselDrag);
+    carouselStage.addEventListener('pointercancel', endCarouselDrag);
+
+    // Support de la molette horizontale / trackpad
+    let wheelCooldown = false;
+    carouselStage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (wheelCooldown) return;
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(delta) > 18) {
+        wheelCooldown = true;
+        if (delta > 0 && activeIndex < TRACKS.length - 1) selectTrack(activeIndex + 1);
+        else if (delta < 0 && activeIndex > 0) selectTrack(activeIndex - 1);
+        setTimeout(() => { wheelCooldown = false; }, 420);
+      }
+    }, { passive: false });
+
+    /*************************************************************************
+     * 6. MISE À JOUR DE L'INTERFACE ET DES MÉTADONNÉES
+     *************************************************************************/
+    function formatTime(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+    }
+
+    function selectTrack(newIndex, autoPlay = false) {
+      activeIndex = (newIndex + TRACKS.length) % TRACKS.length;
+      const track = TRACKS[activeIndex];
+
+      updateCarousel3D(0);
+
+      // Couleurs ambiantes dynamiques
+      document.documentElement.style.setProperty('--ambient-primary', track.ambientPrimary);
+      document.documentElement.style.setProperty('--ambient-secondary', track.ambientSecondary);
+
+      // Textes et statistiques
+      document.getElementById('track-title').textContent = track.title;
+      document.getElementById('track-artist').textContent = track.artist;
+      document.getElementById('mini-title').textContent = track.title;
+      document.getElementById('mini-artist').textContent = track.artist;
+      document.getElementById('track-rank').textContent = track.rank;
+      document.getElementById('track-trend').innerHTML = `<span class="text-[11px]">▲</span> ${track.trend}`;
+      document.getElementById('track-plays').textContent = track.plays;
+      document.getElementById('track-time-ago').textContent = track.timeAgo;
+      document.getElementById('track-copyright').textContent = track.copyright;
+
+      // État du bouton Coeur (Favori)
+      renderFavoriteState();
+
+      // État du bouton Téléchargement
+      renderDownloadState();
+
+      // Barre de progression
+      updateScrubberUI();
+
+      // Paroles synchronisées
+      renderLyrics();
+
+      // File d'attente
+      renderQueueList();
+
+      if (autoPlay || isPlaying) {
+        startAudioLoop();
+      }
+    }
+
+    function renderFavoriteState() {
+      const track = TRACKS[activeIndex];
+      const heartSvg = document.getElementById('heart-svg');
+      if (track.favorite) {
+        heartSvg.setAttribute('fill', 'currentColor');
+        heartSvg.classList.remove('text-zinc-400');
+        heartSvg.classList.add('text-[#ef233c]', 'drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]');
+      } else {
+        heartSvg.setAttribute('fill', 'none');
+        heartSvg.classList.remove('text-[#ef233c]', 'drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]');
+        heartSvg.classList.add('text-zinc-400');
+      }
+    }
+
+    function renderDownloadState() {
+      const track = TRACKS[activeIndex];
+      const btnDownload = document.getElementById('btn-download');
+      const dlIcon = document.getElementById('download-icon');
+      const dlProgress = document.getElementById('download-progress');
+
+      dlProgress.classList.add('hidden');
+      dlIcon.classList.remove('hidden');
+
+      if (track.downloaded) {
+        btnDownload.classList.add('active-pill');
+        dlIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />`;
+      } else {
+        btnDownload.classList.remove('active-pill');
+        dlIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />`;
+      }
+    }
+
+    function updateScrubberUI() {
+      const track = TRACKS[activeIndex];
+      const pct = Math.min(100, Math.max(0, (track.currentTime / track.duration) * 100));
+      document.getElementById('scrubber-fill').style.width = `${pct}%`;
+      document.getElementById('time-current').textContent = formatTime(track.currentTime);
+      document.getElementById('time-total').textContent = formatTime(track.duration);
+      highlightActiveLyric(track.currentTime);
+    }
+
+    /*************************************************************************
+     * 7. CONTRÔLES DE LECTURE & BARRE DE DÉFILEMENT TEMPOREL
+     *************************************************************************/
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const iconPlay = document.getElementById('icon-play');
+      const iconPause = document.getElementById('icon-pause');
+      const eqIndicator = document.getElementById('playing-eq-indicator');
+
+      if (isPlaying) {
+        iconPlay.classList.add('hidden');
+        iconPause.classList.remove('hidden');
+        eqIndicator.classList.remove('hidden');
+        eqIndicator.classList.add('flex');
+        startAudioLoop();
+        startPlaybackClock();
+      } else {
+        iconPlay.classList.remove('hidden');
+        iconPause.classList.add('hidden');
+        eqIndicator.classList.add('hidden');
+        eqIndicator.classList.remove('flex');
+        stopAudioLoop();
+        clearInterval(playbackTimer);
+      }
+    }
+
+    function startPlaybackClock() {
+      clearInterval(playbackTimer);
+      playbackTimer = setInterval(() => {
+        if (!isPlaying) return;
+        const track = TRACKS[activeIndex];
+        track.currentTime += 1;
+        if (track.currentTime >= track.duration) {
+          if (repeatMode === 2) {
+            track.currentTime = 0;
+            updateScrubberUI();
+          } else if (isShuffle) {
+            const randomIdx = Math.floor(Math.random() * TRACKS.length);
+            TRACKS[randomIdx].currentTime = 0;
+            selectTrack(randomIdx, true);
+          } else if (activeIndex < TRACKS.length - 1 || repeatMode === 1) {
+            const nextIdx = (activeIndex + 1) % TRACKS.length;
+            TRACKS[nextIdx].currentTime = 0;
+            selectTrack(nextIdx, true);
+          } else {
+            track.currentTime = 0;
+            togglePlay();
+          }
+        } else {
+          updateScrubberUI();
+        }
+      }, 1000);
+    }
+
+    document.getElementById('btn-play').addEventListener('click', togglePlay);
+    document.getElementById('mini-play-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePlay();
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', () => {
+      const track = TRACKS[activeIndex];
+      if (track.currentTime > 12 && activeIndex === 0) {
+        track.currentTime = 0;
+        updateScrubberUI();
+      } else {
+        const prevIdx = (activeIndex - 1 + TRACKS.length) % TRACKS.length;
+        selectTrack(prevIdx);
+      }
+    });
+
+    document.getElementById('btn-next').addEventListener('click', () => {
+      if (isShuffle) {
+        let rnd = Math.floor(Math.random() * TRACKS.length);
+        if (rnd === activeIndex) rnd = (rnd + 1) % TRACKS.length;
+        selectTrack(rnd);
+      } else {
+        selectTrack((activeIndex + 1) % TRACKS.length);
+      }
+    });
+
+    // Aléatoire (Shuffle)
+    document.getElementById('btn-shuffle').addEventListener('click', () => {
+      isShuffle = !isShuffle;
+      const btn = document.getElementById('btn-shuffle');
+      const dot = document.getElementById('shuffle-dot');
+      if (isShuffle) {
+        btn.classList.add('text-amber-400');
+        dot.classList.remove('hidden');
+        showToast('Lecture aléatoire activée');
+      } else {
+        btn.classList.remove('text-amber-400');
+        dot.classList.add('hidden');
+        showToast('Lecture aléatoire désactivée');
+      }
+    });
+
+    // Répéter (Repeat : Off -> Tout -> Un seul)
+    document.getElementById('btn-repeat').addEventListener('click', () => {
+      repeatMode = (repeatMode + 1) % 3;
+      const btn = document.getElementById('btn-repeat');
+      const dot = document.getElementById('repeat-dot');
+      const badge = document.getElementById('repeat-badge');
+
+      if (repeatMode === 0) {
+        btn.classList.remove('text-amber-400');
+        dot.classList.add('hidden');
+        badge.classList.add('hidden');
+        badge.classList.remove('flex');
+        showToast('Répétition désactivée');
+      } else if (repeatMode === 1) {
+        btn.classList.add('text-amber-400');
+        dot.classList.remove('hidden');
+        badge.classList.add('hidden');
+        showToast('Répéter toute la playlist');
+      } else {
+        btn.classList.add('text-amber-400');
+        dot.classList.remove('hidden');
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        showToast('Répéter ce titre en boucle');
+      }
+    });
+
+    // Interaction Scrubber (Cliquer & Glisser sur la barre de progression)
+    const scrubber = document.getElementById('scrubber');
+    let isScrubbing = false;
+
+    function seekFromEvent(e) {
+      const rect = scrubber.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const track = TRACKS[activeIndex];
+      track.currentTime = Math.round(ratio * track.duration);
+      updateScrubberUI();
+    }
+
+    scrubber.addEventListener('pointerdown', (e) => {
+      isScrubbing = true;
+      scrubber.classList.add('dragging');
+      scrubber.setPointerCapture(e.pointerId);
+      seekFromEvent(e);
+    });
+
+    scrubber.addEventListener('pointermove', (e) => {
+      if (!isScrubbing) return;
+      seekFromEvent(e);
+    });
+
+    scrubber.addEventListener('pointerup', () => {
+      isScrubbing = false;
+      scrubber.classList.remove('dragging');
+    });
+
+    // Bouton Coeur Favori
+    document.getElementById('btn-favorite').addEventListener('click', () => {
+      const track = TRACKS[activeIndex];
+      track.favorite = !track.favorite;
+      const heartSvg = document.getElementById('heart-svg');
+      heartSvg.classList.remove('heart-animate');
+      void heartSvg.offsetWidth;
+      heartSvg.classList.add('heart-animate');
+      renderFavoriteState();
+      showToast(track.favorite ? `Ajouté aux titres aimés ❤️` : `Retiré des titres aimés`);
+    });
+
+    /*************************************************************************
+     * 8. FONCTIONNALITÉS DES 4 BOUTONS UTILITAIRES DE LA RANGÉE INFÉRIEURE
+     *************************************************************************/
+
+    // 1. Ajouter à une Playlist
+    function renderPlaylistModal() {
+      const container = document.getElementById('playlist-items');
+      container.innerHTML = USER_PLAYLISTS.map((pl, idx) => `
+        <button data-pl-idx="${idx}"
+          class="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition">
+          <div class="text-left">
+            <div class="text-sm font-semibold text-white">${pl.name}</div>
+            <div class="text-xs text-zinc-400">${pl.count} titres</div>
+          </div>
+          <span class="w-6 h-6 rounded-full flex items-center justify-center ${pl.added ? 'bg-amber-400 text-black' : 'border border-white/25 text-transparent'}">
+            ✓
+          </span>
+        </button>
+      `).join('');
+
+      container.querySelectorAll('button[data-pl-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = Number(btn.dataset.plIdx);
+          USER_PLAYLISTS[i].added = !USER_PLAYLISTS[i].added;
+          USER_PLAYLISTS[i].count += USER_PLAYLISTS[i].added ? 1 : -1;
+          renderPlaylistModal();
+          showToast(USER_PLAYLISTS[i].added
+            ? `Ajouté à "${USER_PLAYLISTS[i].name}"`
+            : `Retiré de "${USER_PLAYLISTS[i].name}"`);
+        });
+      });
+    }
+
+    document.getElementById('btn-add-playlist').addEventListener('click', () => {
+      renderPlaylistModal();
+      document.getElementById('modal-playlist').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-create-playlist').addEventListener('click', () => {
+      const input = document.getElementById('new-playlist-input');
+      const val = input.value.trim();
+      if (!val) return;
+      USER_PLAYLISTS.unshift({ id: 'pl-' + Date.now(), name: val, count: 1, added: true });
+      input.value = '';
+      renderPlaylistModal();
+      showToast(`Playlist "${val}" créée avec ce titre`);
+    });
+
+    // 2. Paroles Synchronisées
+    function renderLyrics() {
+      const track = TRACKS[activeIndex];
+      const container = document.getElementById('lyrics-container');
+      container.innerHTML = track.lyrics.map((line, i) => `
+        <p data-lyric-time="${line.time}" data-lyric-idx="${i}"
+          class="lyrics-line text-lg font-bold text-zinc-200 leading-snug">
+          ${line.text}
+        </p>
+      `).join('');
+
+      container.querySelectorAll('.lyrics-line').forEach(el => {
+        el.addEventListener('click', () => {
+          const t = Number(el.dataset.lyricTime);
+          TRACKS[activeIndex].currentTime = t;
+          updateScrubberUI();
+          if (!isPlaying) togglePlay();
+        });
+      });
+      highlightActiveLyric(track.currentTime);
+    }
+
+    function highlightActiveLyric(currentTime) {
+      const track = TRACKS[activeIndex];
+      const lines = document.querySelectorAll('#lyrics-container .lyrics-line');
+      if (!lines.length) return;
+
+      let activeLyricIdx = 0;
+      track.lyrics.forEach((l, idx) => {
+        if (currentTime >= l.time) activeLyricIdx = idx;
+      });
+
+      lines.forEach((el, idx) => {
+        if (idx === activeLyricIdx) {
+          el.classList.add('active-lyric');
+        } else {
+          el.classList.remove('active-lyric');
+        }
+      });
+    }
+
+    function toggleLyricsOverlay() {
+      lyricsOpen = !lyricsOpen;
+      const overlay = document.getElementById('lyrics-overlay');
+      const btn = document.getElementById('btn-lyrics');
+      if (lyricsOpen) {
+        renderLyrics();
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        btn.classList.add('active-pill');
+      } else {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+        btn.classList.remove('active-pill');
+      }
+    }
+
+    document.getElementById('btn-lyrics').addEventListener('click', toggleLyricsOverlay);
+    document.getElementById('btn-close-lyrics').addEventListener('click', toggleLyricsOverlay);
+
+    // 3. Cast / Diffuser sur un appareil
+    function renderCastDevices() {
+      const list = document.getElementById('cast-devices-list');
+      list.innerHTML = CAST_DEVICES.map((dev, idx) => `
+        <button data-cast-idx="${idx}"
+          class="w-full flex items-center justify-between p-3.5 rounded-2xl ${dev.active ? 'bg-amber-500/20 border-amber-400/50' : 'bg-white/5 border-white/10'} border hover:bg-white/10 transition">
+          <div class="text-left">
+            <div class="text-sm font-semibold ${dev.active ? 'text-amber-300' : 'text-white'}">${dev.name}</div>
+            <div class="text-xs text-zinc-400">${dev.type}</div>
+          </div>
+          ${dev.active ? `<span class="text-xs font-bold text-emerald-400">Connecté ●</span>` : `<span class="text-xs text-zinc-400">Sélectionner</span>`}
+        </button>
+      `).join('');
+
+      list.querySelectorAll('button[data-cast-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.castIdx);
+          CAST_DEVICES.forEach((d, i) => d.active = (i === idx));
+          renderCastDevices();
+          const badge = document.getElementById('cast-badge');
+          const castBtn = document.getElementById('btn-cast');
+          if (idx !== 0) {
+            badge.classList.remove('hidden');
+            castBtn.classList.add('active-pill');
+          } else {
+            badge.classList.add('hidden');
+            castBtn.classList.remove('active-pill');
+          }
+          showToast(`Audio diffusé sur ${CAST_DEVICES[idx].name}`);
+        });
+      });
+    }
+
+    document.getElementById('btn-cast').addEventListener('click', () => {
+      renderCastDevices();
+      document.getElementById('modal-cast').classList.remove('hidden');
+    });
+
+    // 4. Télécharger hors-ligne avec animation circulaire / pourcentage
+    let downloadBusy = false;
+    document.getElementById('btn-download').addEventListener('click', () => {
+      if (downloadBusy) return;
+      const track = TRACKS[activeIndex];
+      if (track.downloaded) {
+        track.downloaded = false;
+        renderDownloadState();
+        showToast('Téléchargement hors-ligne supprimé');
+        return;
+      }
+
+      downloadBusy = true;
+      const dlIcon = document.getElementById('download-icon');
+      const dlProgress = document.getElementById('download-progress');
+      dlIcon.classList.add('hidden');
+      dlProgress.classList.remove('hidden');
+
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct += 20;
+        dlProgress.textContent = `${pct}%`;
+        if (pct >= 100) {
+          clearInterval(timer);
+          track.downloaded = true;
+          downloadBusy = false;
+          renderDownloadState();
+          showToast(`"${track.title}" téléchargé en Hi-Res Lossless`);
+        }
+      }, 110);
+    });
+
+    /*************************************************************************
+     * 9. NAVIGATION EN-TÊTE (Playlist Queue, Égaliseur, Mini-Lecteur, Plein Écran)
+     *************************************************************************/
+    function renderQueueList() {
+      const container = document.getElementById('queue-list');
+      container.innerHTML = TRACKS.map((t, idx) => `
+        <button data-queue-idx="${idx}"
+          class="w-full flex items-center justify-between p-3 rounded-2xl ${idx === activeIndex ? 'bg-amber-500/20 border-amber-400/50' : 'bg-white/5 border-white/10'} border hover:bg-white/10 transition">
+          <div class="flex items-center gap-3 min-w-0 text-left">
+            <span class="text-xs font-bold ${idx === activeIndex ? 'text-amber-400' : 'text-zinc-500'}">${t.rank}</span>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-white truncate">${t.title}</div>
+              <div class="text-xs text-zinc-400 truncate">${t.artist}</div>
+            </div>
+          </div>
+          <span class="text-xs text-zinc-400">${formatTime(t.duration)}</span>
+        </button>
+      `).join('');
+
+      container.querySelectorAll('button[data-queue-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = Number(btn.dataset.queueIdx);
+          selectTrack(i, true);
+          if (!isPlaying) togglePlay();
+          document.getElementById('modal-queue').classList.add('hidden');
+        });
+      });
+    }
+
+    document.getElementById('btn-open-queue').addEventListener('click', () => {
+      renderQueueList();
+      document.getElementById('modal-queue').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-open-options').addEventListener('click', () => {
+      document.getElementById('modal-options').classList.remove('hidden');
+    });
+
+    // Contrôles de l'Égaliseur & Volume
+    document.getElementById('master-volume').addEventListener('input', (e) => {
+      const val = Number(e.target.value);
+      document.getElementById('volume-label').textContent = `${val}%`;
+      if (masterGain) masterGain.gain.value = val / 100;
+    });
+
+    document.querySelectorAll('input[data-eq-band]').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const band = Number(e.target.dataset.eqBand);
+        const gainVal = Number(e.target.value);
+        if (eqFilters[band]) eqFilters[band].gain.value = gainVal;
+      });
+    });
+
+    document.getElementById('btn-reset-eq').addEventListener('click', () => {
+      document.querySelectorAll('input[data-eq-band]').forEach((slider, idx) => {
+        slider.value = 0;
+        if (eqFilters[idx]) eqFilters[idx].gain.value = 0;
+      });
+      showToast('Égaliseur réinitialisé ( Neutre )');
+    });
+
+    // Qualité Audio & Copier le lien
+    const QUALITIES = ['Hi-Res 24-bit/192kHz', 'Dolby Atmos Spatial', 'Lossless 16-bit/44.1kHz'];
+    let qualityIdx = 0;
+    document.getElementById('btn-toggle-quality').addEventListener('click', () => {
+      qualityIdx = (qualityIdx + 1) % QUALITIES.length;
+      document.getElementById('quality-value').textContent = QUALITIES[qualityIdx];
+      showToast(`Qualité réglée sur ${QUALITIES[qualityIdx]}`);
+    });
+
+    document.getElementById('btn-share-track').addEventListener('click', () => {
+      const track = TRACKS[activeIndex];
+      const dummy = document.createElement('textarea');
+      dummy.value = `https://stream-music.app/track/${track.id}`;
+      document.body.appendChild(dummy);
+      dummy.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummy);
+      showToast(`Lien de "${track.title}" copié !`);
+    });
+
+    // Fermeture des modales
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-close-modal');
+        document.getElementById(target).classList.add('hidden');
+      });
+    });
+
+    // Mini-lecteur (Chevron haut gauche)
+    function renderMiniDiscover() {
+      const list = document.getElementById('mini-discover-list');
+      list.innerHTML = TRACKS.map((t, idx) => `
+        <div data-mini-idx="${idx}" class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+          <div>
+            <div class="text-sm font-semibold text-white">${t.title}</div>
+            <div class="text-xs text-zinc-400">${t.artist} • ${t.plays} écoutes</div>
+          </div>
+          <span class="text-xs font-bold text-emerald-400">${t.rank}</span>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('[data-mini-idx]').forEach(el => {
+        el.addEventListener('click', () => {
+          selectTrack(Number(el.dataset.miniIdx), true);
+          if (!isPlaying) togglePlay();
+          document.getElementById('mini-player-overlay').classList.add('hidden');
+        });
+      });
+    }
+
+    document.getElementById('btn-minimize').addEventListener('click', () => {
+      renderMiniDiscover();
+      document.getElementById('mini-player-overlay').classList.remove('hidden');
+    });
+
+    document.getElementById('mini-player-bar').addEventListener('click', () => {
+      document.getElementById('mini-player-overlay').classList.add('hidden');
+    });
+
+    // Bouton Bascule Plein Écran Intégral / Format 9:16 Sans Cadre
+    document.getElementById('toggle-fullscreen-mode').addEventListener('click', () => {
+      const vp = document.getElementById('app-viewport');
+      const label = document.getElementById('fs-label');
+      vp.classList.toggle('full-bleed');
+      label.textContent = vp.classList.contains('full-bleed') ? 'Format Mobile 9:16' : 'Étendre Plein Écran';
+    });
+
+    // Notification Toast
+    let toastTimeout = null;
+    function showToast(message) {
+      const toast = document.getElementById('toast-notification');
+      document.getElementById('toast-text').textContent = message;
+      toast.classList.remove('opacity-0', '-translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-3');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2200);
+    }
+
+    // Initialisation au chargement
+    window.onload = function () {
+      buildCarouselCards();
+      selectTrack(1, false);
+    };
+  </script>
+</body>
+</html>
