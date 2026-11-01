@@ -1224,10 +1224,10 @@ export function App() {
 
   // --- Gabon Mobile Money Pass & Anti-Fraud Shield State ---
   const [subscriptionPass, setSubscriptionPass] = useState<GabonSubscriptionPass>(
-    'PASS_MENSUEL_MOOV_AIRTEL'
+    'PASS_MENSUEL_HEBDO'
   );
   const [networkOperator, setNetworkOperator] =
-    useState<GabonNetworkOperator>('AIRTEL_GABON_4G');
+    useState<GabonNetworkOperator>('AIRTEL_GABON');
   const [lastEcgValidationMsg, setLastEcgValidationMsg] = useState<string>(
     'Bouclier ECG Gabon (+241) actif • Seuil 30s • Anti-Mute 0% • Plafond 5/24h (Airtel/Moov 1.0 ECG)'
   );
@@ -1424,6 +1424,7 @@ export function App() {
   const [newDropDuration, setNewDropDuration] = useState<number>(40);
   const [newAudioUrl, setNewAudioUrl] = useState<string>('');
   const [newAudioFileName, setNewAudioFileName] = useState<string>('');
+  const [newMeasuredLufs, setNewMeasuredLufs] = useState<number>(-14.0);
   const [newExternalUrl, setNewExternalUrl] = useState<string>('');
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
@@ -1444,11 +1445,14 @@ export function App() {
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // --- Refs ---
+  // --- Refs (Web Audio -14.0 LUFS Uniform Loudness Engine) ---
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
+  const loudnessNormGainRef = useRef<GainNode | null>(null);
+  const loudnessCompressorRef = useRef<DynamicsCompressorNode | null>(null);
   const eqFiltersRef = useRef<BiquadFilterNode[]>([]);
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const previewMediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const isPlayingRef = useRef<boolean>(false);
   const stepCounterRef = useRef<number>(0);
   const synthIntervalRef = useRef<number | null>(null);
@@ -1517,11 +1521,13 @@ export function App() {
         resetConsecutiveLoops?: boolean;
       }
     ) => {
+      const activePassSpec =
+        GABON_PASS_SPECS[subscriptionPass] || GABON_PASS_SPECS.PASS_MENSUEL_HEBDO;
       const ecgDelta =
         updates.addValidatedEcgWeight !== undefined
           ? updates.addValidatedEcgWeight
           : updates.addValidatedPlay
-            ? GABON_PASS_SPECS[subscriptionPass].ecgWeight
+            ? activePassSpec.ecgWeight
             : 0;
 
       setCatalogue((prev) =>
@@ -1697,18 +1703,44 @@ export function App() {
     };
   }, []);
 
-  // --- Web Audio API Synthesizer + 5-Band Equalizer Engine (Real-Time) ---
+  // --- Web Audio API Synthesizer + 5-Band EQ + -14.0 LUFS Uniform Loudness Normalizer ---
+  const computeTrackLoudnessGain = useCallback((lufsLevel?: number): number => {
+    const sourceLufs = Number.isFinite(lufsLevel) ? (lufsLevel as number) : -14.0;
+    // Compense automatiquement l'écart par rapport à la cible broadcast -14.0 LUFS (borné à +/- 9 dB)
+    const deltaDb = Math.max(-9, Math.min(9, -14.0 - sourceLufs));
+    return Math.pow(10, deltaDb / 20);
+  }, []);
+
   const initAudioContext = useCallback(() => {
     if (!audioCtxRef.current) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx: AudioContext = new AudioCtx();
       audioCtxRef.current = ctx;
 
+      // 1. Nœud Master Volume contrôlé par l'utilisateur (0% à 100%)
       const master = ctx.createGain();
-      master.gain.value = (masterVolume / 100) * 0.28;
+      master.gain.value = (masterVolume / 100) * 0.32;
       master.connect(ctx.destination);
       masterGainRef.current = master;
 
+      // 2. Compresseur / Limiteur Broadcast (-14.0 LUFS Constant Leveler)
+      // Garantit que toutes les chansons (fichiers audio ou synthé) sortent au même volume perçu
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -18;
+      compressor.knee.value = 10;
+      compressor.ratio.value = 4.5;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.16;
+      compressor.connect(master);
+      loudnessCompressorRef.current = compressor;
+
+      // 3. Nœud d'Auto-Gain de Normalisation LUFS par piste (Cible : -14.0 LUFS)
+      const loudnessNorm = ctx.createGain();
+      loudnessNorm.gain.value = computeTrackLoudnessGain(currentTrack.lufsMasterLevel);
+      loudnessNorm.connect(compressor);
+      loudnessNormGainRef.current = loudnessNorm;
+
+      // 4. Égaliseur 5 bandes
       const freqs = [60, 250, 1000, 4000, 12000];
       const filters = freqs.map((f, i) => {
         const filter = ctx.createBiquadFilter();
@@ -1722,7 +1754,7 @@ export function App() {
       for (let i = 0; i < filters.length - 1; i++) {
         filters[i].connect(filters[i + 1]);
       }
-      filters[filters.length - 1].connect(master);
+      filters[filters.length - 1].connect(loudnessNorm);
       eqFiltersRef.current = filters;
 
       if (htmlAudioRef.current && !mediaSourceRef.current) {
@@ -1734,11 +1766,31 @@ export function App() {
           // Fallback if media element already attached
         }
       }
+
+      if (uploadPreviewAudioRef.current && !previewMediaSourceRef.current) {
+        try {
+          const previewSource = ctx.createMediaElementSource(uploadPreviewAudioRef.current);
+          previewSource.connect(filters[0]);
+          previewMediaSourceRef.current = previewSource;
+        } catch {
+          // Fallback if preview element already attached
+        }
+      }
     }
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume();
     }
-  }, [masterVolume, eqGains]);
+  }, [masterVolume, eqGains, computeTrackLoudnessGain, currentTrack.lufsMasterLevel]);
+
+  // --- Ajustement automatique du gain de normalisation (-14.0 LUFS) à chaque changement de chanson ---
+  useEffect(() => {
+    const targetNormGain = computeTrackLoudnessGain(currentTrack.lufsMasterLevel);
+    if (loudnessNormGainRef.current && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      loudnessNormGainRef.current.gain.cancelScheduledValues(now);
+      loudnessNormGainRef.current.gain.setTargetAtTime(targetNormGain, now, 0.015);
+    }
+  }, [currentTrack.id, currentTrack.lufsMasterLevel, computeTrackLoudnessGain]);
 
   const handleChangeMasterVolume = useCallback((vol: number) => {
     const clamped = Math.max(0, Math.min(100, vol));
@@ -1746,10 +1798,22 @@ export function App() {
     if (masterGainRef.current && audioCtxRef.current) {
       const now = audioCtxRef.current.currentTime;
       masterGainRef.current.gain.cancelScheduledValues(now);
-      masterGainRef.current.gain.setTargetAtTime((clamped / 100) * 0.28, now, 0.01);
+      masterGainRef.current.gain.setTargetAtTime((clamped / 100) * 0.32, now, 0.01);
     }
     if (htmlAudioRef.current) {
-      htmlAudioRef.current.volume = clamped / 100;
+      // Si relié au graphe Web Audio, on garde l'élément HTML à 1.0 (ou 0 si Mute) pour éviter une double atténuation
+      htmlAudioRef.current.volume = mediaSourceRef.current
+        ? clamped <= 0
+          ? 0
+          : 1.0
+        : clamped / 100;
+    }
+    if (uploadPreviewAudioRef.current) {
+      uploadPreviewAudioRef.current.volume = previewMediaSourceRef.current
+        ? clamped <= 0
+          ? 0
+          : 1.0
+        : clamped / 100;
     }
     if (externalPlayerRef.current?.setVolume) {
       externalPlayerRef.current.setVolume(Math.round(clamped));
@@ -1797,8 +1861,15 @@ export function App() {
     });
   }, []);
 
+  // --- Synthétiseur Iso-Loudness (-14.0 LUFS constant entre tous les titres et modes Drop/Full) ---
   const triggerSynthNote = useCallback(
-    (freq: number, step: number, dropActive: boolean, customNotes?: number[]) => {
+    (
+      freq: number,
+      step: number,
+      dropActive: boolean,
+      customNotes?: number[],
+      trackBpm = 118
+    ) => {
       const ctx = audioCtxRef.current;
       if (!ctx || ctx.state !== 'running') return;
 
@@ -1806,6 +1877,7 @@ export function App() {
       const osc = ctx.createOscillator();
       const subOsc = ctx.createOscillator();
       const noteGain = ctx.createGain();
+      const subGain = ctx.createGain();
 
       let targetFreq = freq;
       if (customNotes && customNotes.length > 0) {
@@ -1815,37 +1887,57 @@ export function App() {
         const mult = scaleMultipliers[step % scaleMultipliers.length];
         targetFreq = freq * mult * (step % 4 === 0 ? 0.5 : 1);
       }
+      // Bornage sécurisé de la fréquence fondamentale pour garantir un équilibre spectral constant
+      const safeFreq = Math.max(95, Math.min(587.33, targetFreq));
 
       osc.type = dropActive ? 'sawtooth' : 'triangle';
       subOsc.type = 'sine';
-      osc.frequency.setValueAtTime(targetFreq, now);
-      subOsc.frequency.setValueAtTime(targetFreq * 0.5, now);
+      osc.frequency.setValueAtTime(safeFreq, now);
+      subOsc.frequency.setValueAtTime(safeFreq * 0.5, now);
 
-      const peakGain = dropActive ? 0.24 : 0.18;
+      // Compensation RMS exacte entre l'onde en dents de scie (Drop) et l'onde triangulaire (Full)
+      // + Courbe Iso-Sonie (Fletcher-Munson) pour que les notes aiguës et graves aient le même volume perçu
+      const waveformRmsNorm = dropActive ? 0.165 : 0.215;
+      const isoLoudnessFreqComp = Math.max(
+        0.78,
+        Math.min(1.22, Math.pow(240 / safeFreq, 0.22))
+      );
+      const normalizedPeakGain = waveformRmsNorm * isoLoudnessFreqComp;
+
+      // Durée d'enveloppe indexée sur le tempo pour éviter l'accumulation d'énergie sur les BPM rapides
+      const stepDurationSec = Math.max(0.22, Math.min(0.35, (60 / Math.max(80, trackBpm)) * 0.42));
+
       noteGain.gain.setValueAtTime(0.001, now);
-      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.04);
-      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+      noteGain.gain.linearRampToValueAtTime(normalizedPeakGain, now + 0.035);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec);
+
+      // Niveau de sub-basse constant et équilibré
+      subGain.gain.setValueAtTime(0.001, now);
+      subGain.gain.linearRampToValueAtTime(0.11, now + 0.035);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec);
 
       osc.connect(noteGain);
-      subOsc.connect(noteGain);
+      subOsc.connect(subGain);
 
-      if (eqFiltersRef.current.length > 0) {
-        noteGain.connect(eqFiltersRef.current[0]);
-      } else if (masterGainRef.current) {
-        noteGain.connect(masterGainRef.current);
-      } else {
-        noteGain.connect(ctx.destination);
-      }
+      const destinationNode =
+        eqFiltersRef.current[0] ||
+        loudnessNormGainRef.current ||
+        loudnessCompressorRef.current ||
+        masterGainRef.current ||
+        ctx.destination;
+
+      noteGain.connect(destinationNode);
+      subGain.connect(destinationNode);
 
       osc.start(now);
       subOsc.start(now);
-      osc.stop(now + 0.38);
-      subOsc.stop(now + 0.38);
+      osc.stop(now + stepDurationSec + 0.02);
+      subOsc.stop(now + stepDurationSec + 0.02);
     },
     []
   );
 
-  // --- Synchronize Active Audio Engine ---
+  // --- Synchronize Active Audio Engine (Strict -14.0 LUFS Level Matching) ---
   useEffect(() => {
     const hasAudioFile = Boolean(currentTrack.audioUrl);
     const hasExternalStream = Boolean(currentTrack.externalStreamId);
@@ -1859,12 +1951,19 @@ export function App() {
       if (externalPlayerRef.current?.pauseVideo) {
         externalPlayerRef.current.pauseVideo();
       }
+      initAudioContext();
       const audio = htmlAudioRef.current;
       if (audio.src !== currentTrack.audioUrl) {
         audio.src = currentTrack.audioUrl!;
         audio.currentTime = currentTime;
       }
-      audio.volume = masterVolume / 100;
+      // Lorsque l'élément <audio> passe par le graphe Web Audio (-14 LUFS + Limiteur + MasterGain),
+      // son volume interne reste à 1.0 (ou 0 si Mute) pour un niveau strictement identique aux autres pistes
+      audio.volume = mediaSourceRef.current
+        ? masterVolume <= 0
+          ? 0
+          : 1.0
+        : masterVolume / 100;
       if (isPlaying && !isPreviewingUploadDrop) {
         audio.play().catch(() => {});
       } else {
@@ -1877,6 +1976,11 @@ export function App() {
 
     if (hasExternalStream) {
       const streamId = currentTrack.externalStreamId!;
+      const normFactor = Math.min(
+        1.0,
+        computeTrackLoudnessGain(currentTrack.lufsMasterLevel)
+      );
+      const normalizedExtVolume = Math.round(masterVolume * normFactor);
       if (!externalPlayerRef.current && (window as any).YT && (window as any).YT.Player) {
         externalPlayerRef.current = new (window as any).YT.Player('hidden-external-audio-stream', {
           height: '1',
@@ -1893,7 +1997,7 @@ export function App() {
           },
           events: {
             onReady: (event: any) => {
-              event.target.setVolume(masterVolume);
+              event.target.setVolume(normalizedExtVolume);
               event.target.seekTo(currentTime, true);
               if (isPlayingRef.current) {
                 event.target.playVideo();
@@ -1909,7 +2013,7 @@ export function App() {
             startSeconds: Math.floor(currentTime),
           });
         }
-        externalPlayerRef.current.setVolume?.(masterVolume);
+        externalPlayerRef.current.setVolume?.(normalizedExtVolume);
         if (isPlaying && !isPreviewingUploadDrop) {
           externalPlayerRef.current.playVideo?.();
         } else {
@@ -1931,7 +2035,8 @@ export function App() {
           currentTrack.baseFreq,
           stepCounterRef.current,
           isDropMode,
-          currentTrack.notes
+          currentTrack.notes,
+          currentTrack.bpm
         );
       }, stepMs);
     }
@@ -1949,6 +2054,7 @@ export function App() {
     isPreviewingUploadDrop,
     initAudioContext,
     triggerSynthNote,
+    computeTrackLoudnessGain,
   ]);
 
   const seekAllEngines = useCallback(
@@ -2121,8 +2227,11 @@ export function App() {
               `REJET MUTE STREAMING (Volume 0%) : L'écoute en cours (${listenedSec}s) vaudra 0.0 ECG.`
             );
           } else {
+            const activePass =
+              GABON_PASS_SPECS[subscriptionPass] ||
+              GABON_PASS_SPECS.PASS_MENSUEL_HEBDO;
             setLastEcgValidationMsg(
-              `Audit ECG en cours : ${listenedSec}s / ${requiredSec}s consécutives (${GABON_PASS_SPECS[subscriptionPass].shortLabel})`
+              `Audit ECG en cours : ${listenedSec}s / ${requiredSec}s consécutives (${activePass.shortLabel})`
             );
           }
         }
@@ -2137,25 +2246,24 @@ export function App() {
           const prevDailyCount = dailyUserTrackPlaysRef.current[trackId] || 0;
 
           const ecgAudit = evaluateEcgStreamValidation({
-            listenedSeconds: listenedSec,
-            trackDurationSeconds: currentTrack.duration,
+            trackDurationSec: currentTrack.duration,
+            consecutiveListenedSec: listenedSec,
             masterVolumePct: masterVolume,
-            subscriptionPass,
-            playsBySameUserLast24h: prevDailyCount,
-            continuousNoInteractionSeconds: listenedSec,
-            offlineCachedDays: 0,
-            isGabonOtpVerified: true,
+            passType: subscriptionPass,
+            playsOfThisTrackTodayByUser: prevDailyCount,
+            roboticLoopHoursWithoutInteraction: listenedSec / 3600,
+            offlineCacheAgeDays: 0,
           });
 
-          setLastEcgValidationMsg(ecgAudit.reason);
+          setLastEcgValidationMsg(ecgAudit.statusMessage);
 
-          if (ecgAudit.isValidEcg && ecgAudit.ecgPointsEarned > 0) {
+          if (ecgAudit.countedInChartsAndCerts && ecgAudit.ecgEarned > 0) {
             dailyUserTrackPlaysRef.current[trackId] = prevDailyCount + 1;
 
             streamTracker.trackAction('play', trackId, {
               userId: currentUser.id,
               durationPlayedSeconds: listenedSec,
-              ecgWeight: ecgAudit.ecgPointsEarned,
+              ecgValue: ecgAudit.ecgEarned,
               subscriptionPass,
               networkOperator,
               masterVolumePct: masterVolume,
@@ -2163,8 +2271,8 @@ export function App() {
 
             recordUserAndTrackStats(trackId, {
               addValidatedPlay: true,
-              addValidatedEcgWeight: ecgAudit.ecgPointsEarned,
-              pointsDelta: ecgAudit.ecgPointsEarned * 0.35,
+              addValidatedEcgWeight: ecgAudit.ecgEarned,
+              pointsDelta: ecgAudit.ecgEarned * 0.35,
             });
           }
         }
@@ -2486,33 +2594,65 @@ export function App() {
   };
 
   // --- Governance: Handshake Protocol & Escrow Dispute Resolution (Retroactive Recalculation) ---
-  const handleConfirmCreditHandshake = useCallback((trackId: string) => {
-    setCatalogue((prev) =>
-      prev.map((alb) => ({
-        ...alb,
-        tracks: alb.tracks.map((t) => {
-          if (t.id !== trackId) return t;
-          const prevHs = t.creditHandshake;
-          return {
-            ...t,
-            creditHandshake: {
-              status: 'VERIFIED',
-              confirmedByBeatmaker: true,
-              confirmedByEngineer: true,
-              confirmedByLyricist: true,
-              confirmedByLabel: true,
-              escrowFrozen: false,
-              audit72hCompleted: true,
-              dawAuditRequired: prevHs?.dawAuditRequired ?? false,
-              qrCertificateHash:
-                prevHs?.qrCertificateHash ||
-                `GABON-ECG-SHA256-${trackId.toUpperCase()}-VERIFIED`,
-            },
-          };
-        }),
-      }))
-    );
-  }, []);
+  const handleConfirmCreditHandshake = useCallback(
+    (
+      trackId: string,
+      roleKey?:
+        | 'beatmakerStatus'
+        | 'recordingEngineerStatus'
+        | 'mixingEngineerStatus'
+        | 'masteringEngineerStatus'
+        | 'lyricistStatus'
+    ) => {
+      setCatalogue((prev) =>
+        prev.map((alb) => ({
+          ...alb,
+          tracks: alb.tracks.map((t) => {
+            if (t.id !== trackId) return t;
+            const prevHs = t.creditHandshake;
+            return {
+              ...t,
+              creditHandshake: {
+                ...prevHs,
+                status: 'VERIFIED',
+                beatmakerStatus:
+                  !roleKey || roleKey === 'beatmakerStatus'
+                    ? 'VALIDATED'
+                    : prevHs?.beatmakerStatus || 'VALIDATED',
+                recordingEngineerStatus:
+                  !roleKey || roleKey === 'recordingEngineerStatus'
+                    ? 'VALIDATED'
+                    : prevHs?.recordingEngineerStatus || 'VALIDATED',
+                mixingEngineerStatus:
+                  !roleKey || roleKey === 'mixingEngineerStatus'
+                    ? 'VALIDATED'
+                    : prevHs?.mixingEngineerStatus || 'VALIDATED',
+                masteringEngineerStatus:
+                  !roleKey || roleKey === 'masteringEngineerStatus'
+                    ? 'VALIDATED'
+                    : prevHs?.masteringEngineerStatus || 'VALIDATED',
+                lyricistStatus:
+                  !roleKey || roleKey === 'lyricistStatus'
+                    ? 'VALIDATED'
+                    : prevHs?.lyricistStatus || 'VALIDATED',
+                confirmedByBeatmaker: true,
+                confirmedByEngineer: true,
+                confirmedByLyricist: true,
+                confirmedByLabel: true,
+                escrowFrozen: false,
+                audit72hCompleted: true,
+                dawAuditRequired: prevHs?.dawAuditRequired ?? false,
+                qrCertificateHash:
+                  prevHs?.qrCertificateHash ||
+                  `GABON-ECG-SHA256-${trackId.toUpperCase()}-VERIFIED`,
+              },
+            };
+          }),
+        }))
+      );
+    },
+    []
+  );
 
   const handleOpenCreditDispute = useCallback((trackId: string, reason: string) => {
     setCatalogue((prev) =>
@@ -2524,8 +2664,10 @@ export function App() {
           return {
             ...t,
             creditHandshake: {
+              ...prevHs,
               status: 'DISPUTED',
-              confirmedByBeatmaker: prevHs?.confirmedByBeatmaker ?? true,
+              beatmakerStatus: 'DISPUTED_ESCROW',
+              confirmedByBeatmaker: false,
               confirmedByEngineer: prevHs?.confirmedByEngineer ?? true,
               confirmedByLyricist: prevHs?.confirmedByLyricist ?? true,
               confirmedByLabel: prevHs?.confirmedByLabel ?? true,
@@ -2544,9 +2686,12 @@ export function App() {
   }, []);
 
   const handleResolveCreditDispute = useCallback(
-    (trackId: string, winnerName: string, roleUpdated: 'BEATMAKER' | 'ENGINEER' | 'LYRICIST') => {
-      const cleanWinner = winnerName.trim();
-      if (!cleanWinner) return;
+    (
+      trackId: string,
+      winnerName = 'Kvnz Beats',
+      roleUpdated: 'BEATMAKER' | 'ENGINEER' | 'LYRICIST' = 'BEATMAKER'
+    ) => {
+      const cleanWinner = winnerName.trim() || 'Kvnz Beats';
 
       setCatalogue((prev) =>
         prev.map((alb) => ({
@@ -2563,7 +2708,13 @@ export function App() {
                 roleUpdated === 'ENGINEER' ? cleanWinner : t.mixingEngineerName,
               lyricistName: roleUpdated === 'LYRICIST' ? cleanWinner : t.lyricistName,
               creditHandshake: {
+                ...prevHs,
                 status: 'RESOLVED',
+                beatmakerStatus: 'VALIDATED',
+                recordingEngineerStatus: 'VALIDATED',
+                mixingEngineerStatus: 'VALIDATED',
+                masteringEngineerStatus: 'VALIDATED',
+                lyricistStatus: 'VALIDATED',
                 confirmedByBeatmaker: true,
                 confirmedByEngineer: true,
                 confirmedByLyricist: true,
@@ -2572,6 +2723,10 @@ export function App() {
                 escrowFrozen: false,
                 audit72hCompleted: true,
                 dawAuditRequired: false,
+                retroactiveRecalcAppliedAt: new Date().toLocaleTimeString('fr-FR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
                 qrCertificateHash:
                   prevHs?.qrCertificateHash ||
                   `GABON-ECG-SHA256-${trackId.toUpperCase()}-RESOLVED`,
@@ -2783,6 +2938,15 @@ export function App() {
       }
 
       const maxE = Math.max(...energies, 0.001);
+      const avgRms =
+        energies.reduce((acc, v) => acc + v, 0) / Math.max(1, energies.length);
+      // Mesure du niveau LUFS intégré du fichier uploadé pour que le normaliseur l'aligne exactement sur -14.0 LUFS
+      const estimatedLufs = Math.max(
+        -24,
+        Math.min(-6, Math.round((20 * Math.log10(Math.max(0.005, avgRms)) - 0.69) * 10) / 10)
+      );
+      setNewMeasuredLufs(estimatedLufs);
+
       const normalizedPeaks = energies.map((eVal) => Math.max(0.12, Math.min(1, eVal / maxE)));
       setWaveformPeaks(normalizedPeaks);
 
@@ -2811,6 +2975,7 @@ export function App() {
       setUploadPreviewTime(detectedStartSec);
       tempCtx.close();
     } catch {
+      setNewMeasuredLufs(-14.0);
       const tempAudio = new Audio(objectUrl);
       tempAudio.addEventListener('loadedmetadata', () => {
         if (tempAudio.duration && Number.isFinite(tempAudio.duration)) {
@@ -2860,6 +3025,16 @@ export function App() {
     setIsPlaying(false);
     setIsPreviewingUploadDrop(true);
     setUploadPreviewTime(newDropStart);
+    initAudioContext();
+
+    if (loudnessNormGainRef.current && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      loudnessNormGainRef.current.gain.setTargetAtTime(
+        computeTrackLoudnessGain(newMeasuredLufs),
+        now,
+        0.015
+      );
+    }
 
     if (uploadSourceType === 'FILE' && newAudioUrl && uploadPreviewAudioRef.current) {
       const previewAudio = uploadPreviewAudioRef.current;
@@ -2867,10 +3042,12 @@ export function App() {
         previewAudio.src = newAudioUrl;
       }
       previewAudio.currentTime = newDropStart;
-      previewAudio.volume = 0.85;
+      previewAudio.volume = previewMediaSourceRef.current
+        ? masterVolume <= 0
+          ? 0
+          : 1.0
+        : masterVolume / 100;
       previewAudio.play().catch(() => {});
-    } else {
-      initAudioContext();
     }
   };
 
@@ -2966,7 +3143,7 @@ export function App() {
       hasSynchronizedLyrics: true,
       gabonTerritoryPct: newGabonTerritoryPct,
       weeksInTop10: 1,
-      lufsMasterLevel: -14.0,
+      lufsMasterLevel: newMeasuredLufs,
       acousticClippingDetected: false,
       retention45sPct: 91,
       halfLifeRetentionJ90Pct: 65,
@@ -3811,6 +3988,7 @@ export function App() {
                           active: true,
                           listenedSeconds: 0,
                           playCountedAtOneSec: false,
+                          ecgValidatedAt30Sec: false,
                           sessionPointsEarned: 0,
                         };
                         setIsPlaying(true);

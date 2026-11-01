@@ -7,6 +7,10 @@ export type GabonSubscriptionPass =
   | 'ESSAI_GRATUIT'; // 0.5 ECG — Cap 3 écoutes/titre/24h — 1 vote/jour Awards
 
 export type GabonNetworkOperator =
+  | 'AIRTEL_GABON'
+  | 'MOOV_AFRICA'
+  | 'GABON_TELECOM'
+  | 'AIRTEL_GABON_4G'
   | 'AIRTEL_CGNAT'
   | 'MOOV_CGNAT'
   | 'GABON_TELECOM_CGNAT'

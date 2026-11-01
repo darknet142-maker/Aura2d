@@ -2502,6 +2502,20 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 </div>
               </div>
 
+              <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-emerald-300 block">
+                    Normalisation Automatique -14,0 LUFS Active
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-300 block truncate">
+                    Volume uniforme garanti sur toutes les chansons (Compensateur RMS + Limiteur Broadcast)
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 font-mono text-[10px] font-bold shrink-0">
+                  -14.0 LUFS Constant
+                </span>
+              </div>
+
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-zinc-400 block">
                   Préréglages Audio

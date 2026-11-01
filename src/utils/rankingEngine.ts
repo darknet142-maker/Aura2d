@@ -196,16 +196,27 @@ export interface CertificationInfo {
 }
 
 export interface TrackCreditHandshake {
-  beatmakerStatus: CreditHandshakeStatus;
-  recordingEngineerStatus: CreditHandshakeStatus;
-  mixingEngineerStatus: CreditHandshakeStatus;
-  masteringEngineerStatus: CreditHandshakeStatus;
-  lyricistStatus: CreditHandshakeStatus;
+  beatmakerStatus?: CreditHandshakeStatus;
+  recordingEngineerStatus?: CreditHandshakeStatus;
+  mixingEngineerStatus?: CreditHandshakeStatus;
+  masteringEngineerStatus?: CreditHandshakeStatus;
+  lyricistStatus?: CreditHandshakeStatus;
+  status?: 'VERIFIED' | 'PENDING_HANDSHAKE' | 'DISPUTED' | 'RESOLVED';
+  confirmedByBeatmaker?: boolean;
+  confirmedByEngineer?: boolean;
+  confirmedByLyricist?: boolean;
+  confirmedByLabel?: boolean;
+  escrowFrozen?: boolean;
+  audit72hCompleted?: boolean;
+  dawAuditRequired?: boolean;
+  qrCertificateHash?: string;
   disputeReason?: string;
   disputeOpenedBy?: string;
   disputeOpenedAt?: string;
   retroactiveRecalcAppliedAt?: string;
 }
+
+export type CreditHandshakeRecord = TrackCreditHandshake;
 
 export interface RankableTrack {
   id: string;
@@ -1447,9 +1458,34 @@ export function computeAllDecoupledStudioRankings(
 
       let creditStatus: CreditHandshakeStatus = 'VALIDATED';
       if (t.creditHandshake) {
-        if (group.role === 'BEATMAKER') creditStatus = t.creditHandshake.beatmakerStatus;
-        else if (group.role === 'ENGINEER') creditStatus = t.creditHandshake.mixingEngineerStatus;
-        else if (group.role === 'LYRICIST') creditStatus = t.creditHandshake.lyricistStatus;
+        const isEscrow =
+          t.creditHandshake.status === 'DISPUTED' ||
+          t.creditHandshake.escrowFrozen === true;
+        if (group.role === 'BEATMAKER') {
+          creditStatus =
+            t.creditHandshake.beatmakerStatus ||
+            (isEscrow
+              ? 'DISPUTED_ESCROW'
+              : t.creditHandshake.confirmedByBeatmaker === false
+                ? 'PENDING_HANDSHAKE'
+                : 'VALIDATED');
+        } else if (group.role === 'ENGINEER') {
+          creditStatus =
+            t.creditHandshake.mixingEngineerStatus ||
+            (isEscrow && t.creditHandshake.confirmedByEngineer === false
+              ? 'DISPUTED_ESCROW'
+              : t.creditHandshake.confirmedByEngineer === false
+                ? 'PENDING_HANDSHAKE'
+                : 'VALIDATED');
+        } else if (group.role === 'LYRICIST') {
+          creditStatus =
+            t.creditHandshake.lyricistStatus ||
+            (isEscrow && t.creditHandshake.confirmedByLyricist === false
+              ? 'DISPUTED_ESCROW'
+              : t.creditHandshake.confirmedByLyricist === false
+                ? 'PENDING_HANDSHAKE'
+                : 'VALIDATED');
+        }
       }
       if (creditStatus === 'DISPUTED_ESCROW') {
         hasEscrowDispute = true;

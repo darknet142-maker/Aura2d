@@ -535,14 +535,42 @@ export const ReusableTrackDetailSheet: React.FC<
     track.artist.toLowerCase() === mixEng.toLowerCase() &&
     track.artist.toLowerCase() === mastEng.toLowerCase();
 
-  const hs: TrackCreditHandshake = track.creditHandshake || {
-    beatmakerStatus: 'VALIDATED',
-    recordingEngineerStatus: 'VALIDATED',
-    mixingEngineerStatus: 'VALIDATED',
-    masteringEngineerStatus: 'VALIDATED',
-    lyricistStatus: 'VALIDATED',
+  const rawHs = track.creditHandshake;
+  const isRawEscrow =
+    rawHs?.status === 'DISPUTED' || rawHs?.escrowFrozen === true;
+  const hs = {
+    beatmakerStatus:
+      rawHs?.beatmakerStatus ||
+      (isRawEscrow
+        ? 'DISPUTED_ESCROW'
+        : rawHs?.confirmedByBeatmaker === false
+          ? 'PENDING_HANDSHAKE'
+          : 'VALIDATED'),
+    recordingEngineerStatus:
+      rawHs?.recordingEngineerStatus ||
+      (rawHs?.confirmedByEngineer === false
+        ? 'PENDING_HANDSHAKE'
+        : 'VALIDATED'),
+    mixingEngineerStatus:
+      rawHs?.mixingEngineerStatus ||
+      (rawHs?.confirmedByEngineer === false
+        ? 'PENDING_HANDSHAKE'
+        : 'VALIDATED'),
+    masteringEngineerStatus:
+      rawHs?.masteringEngineerStatus ||
+      (rawHs?.confirmedByEngineer === false
+        ? 'PENDING_HANDSHAKE'
+        : 'VALIDATED'),
+    lyricistStatus:
+      rawHs?.lyricistStatus ||
+      (rawHs?.confirmedByLyricist === false
+        ? 'PENDING_HANDSHAKE'
+        : 'VALIDATED'),
+    disputeReason: rawHs?.disputeReason,
+    retroactiveRecalcAppliedAt: rawHs?.retroactiveRecalcAppliedAt,
   };
   const hasEscrow =
+    isRawEscrow ||
     hs.beatmakerStatus === 'DISPUTED_ESCROW' ||
     hs.mixingEngineerStatus === 'DISPUTED_ESCROW' ||
     hs.lyricistStatus === 'DISPUTED_ESCROW';
@@ -559,7 +587,7 @@ export const ReusableTrackDetailSheet: React.FC<
     track.lyricsSharesCount ?? Math.round(track.realPlays * 0.022);
 
   const renderHandshakeBadge = (
-    status: 'VALIDATED' | 'PENDING_HANDSHAKE' | 'DISPUTED_ESCROW',
+    status: 'VALIDATED' | 'PENDING_HANDSHAKE' | 'DISPUTED_ESCROW' = 'VALIDATED',
     roleKey:
       | 'beatmakerStatus'
       | 'recordingEngineerStatus'
@@ -1944,7 +1972,8 @@ export const ReusableUserProfileSheet: React.FC<
     (a, b) => b.seconds - a.seconds
   );
 
-  const activePassSpec = GABON_PASS_SPECS[subscriptionPass];
+  const activePassSpec =
+    GABON_PASS_SPECS[subscriptionPass] || GABON_PASS_SPECS.PASS_MENSUEL_HEBDO;
 
   return (
     <div className="flex-1 w-full flex flex-col bg-[#0D1017] border border-white/[0.1] rounded-2xl p-3.5 sm:p-4 overflow-hidden gap-3.5 animate-fade-in">
