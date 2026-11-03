@@ -54,6 +54,7 @@ import {
 } from '../services/offlineStreamTracker';
 import {
   syncUserPlaylistsToCloud,
+  getUserPlaylistsFromCloud,
   AdBannerSlide,
   AdBannerSettings,
   DEFAULT_AD_BANNERS,
@@ -1395,6 +1396,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
     return fallbackPlaylists;
   });
   const [newPlaylistInput, setNewPlaylistInput] = useState('');
+
+  // Récupération initiale depuis Supabase Cloud pour persistance multi-appareils
+  useEffect(() => {
+    getUserPlaylistsFromCloud(currentUser?.id || 'usr-1')
+      .then((cloudPls) => {
+        if (cloudPls && cloudPls.length > 0) {
+          setPlaylists(cloudPls);
+        }
+      })
+      .catch(() => {});
+  }, [currentUser?.id]);
 
   useEffect(() => {
     syncUserPlaylistsToCloud(playlists, currentUser?.id || 'usr-1').catch(

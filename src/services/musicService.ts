@@ -3,6 +3,7 @@ import {
   optimizeImageAuto,
   optimizeForStorageUpload,
 } from './imageOptimizer';
+import { broadcastLiveSync } from './realtimeSync';
 
 // ============================================================================
 // CONFIGURATION SUPABASE & FALLBACK HYBRIDE LOCAL PERSISTANT
@@ -627,6 +628,17 @@ export async function uploadLocalTrack(
           .single();
 
         if (!dbError && data) {
+          broadcastLiveSync({
+            type: 'TRACKS_UPDATED',
+            payload: {
+              action: 'CREATE',
+              trackId: appTrackId,
+              trackTitle: metadata.title.trim(),
+              artist: metadata.artist?.trim(),
+              message: `Nouvelle piste publiée : « ${metadata.title.trim()} »`,
+              timestamp: new Date().toISOString(),
+            },
+          }).catch(() => {});
           return data as SupabaseTrackRow;
         }
       }
@@ -691,6 +703,19 @@ export async function uploadLocalTrack(
   } catch {
     // Ignore
   }
+
+  broadcastLiveSync({
+    type: 'TRACKS_UPDATED',
+    payload: {
+      action: 'CREATE',
+      trackId: appTrackId,
+      trackTitle: metadata.title.trim(),
+      artist: metadata.artist?.trim(),
+      message: `Nouvelle piste disponible : « ${metadata.title.trim()} »`,
+      timestamp: new Date().toISOString(),
+    },
+  }).catch(() => {});
+
   return localRow;
 }
 
@@ -751,6 +776,17 @@ export async function addYoutubeTrack(
         .single();
 
       if (!error && data) {
+        broadcastLiveSync({
+          type: 'TRACKS_UPDATED',
+          payload: {
+            action: 'CREATE',
+            trackId: insertPayload.app_track_id,
+            trackTitle: metadata.title.trim(),
+            artist: metadata.artist?.trim(),
+            message: `Nouveau flux YouTube : « ${metadata.title.trim()} »`,
+            timestamp: new Date().toISOString(),
+          },
+        }).catch(() => {});
         return data as SupabaseTrackRow;
       }
     } catch {
@@ -779,6 +815,19 @@ export async function addYoutubeTrack(
   } catch {
     // Ignore
   }
+
+  broadcastLiveSync({
+    type: 'TRACKS_UPDATED',
+    payload: {
+      action: 'CREATE',
+      trackId: insertPayload.app_track_id,
+      trackTitle: metadata.title.trim(),
+      artist: metadata.artist?.trim(),
+      message: `Nouveau flux YouTube : « ${metadata.title.trim()} »`,
+      timestamp: new Date().toISOString(),
+    },
+  }).catch(() => {});
+
   return localRow;
 }
 
@@ -815,6 +864,18 @@ export async function updateTrackMetadataInStorage(
   } catch {
     // Ignore
   }
+
+  broadcastLiveSync({
+    type: 'TRACKS_UPDATED',
+    payload: {
+      action: 'UPDATE',
+      trackId: appTrackId,
+      trackTitle: updates.title,
+      artist: updates.artist,
+      message: `Piste « ${updates.title || appTrackId} » mise à jour en direct`,
+      timestamp: new Date().toISOString(),
+    },
+  }).catch(() => {});
 }
 
 // ============================================================================
@@ -868,6 +929,16 @@ export async function deleteTrack(track: {
     // Ignore
   }
 
+  broadcastLiveSync({
+    type: 'TRACKS_UPDATED',
+    payload: {
+      action: 'DELETE',
+      trackId: track.app_track_id || track.id,
+      message: 'Piste supprimée du catalogue',
+      timestamp: new Date().toISOString(),
+    },
+  }).catch(() => {});
+
   return true;
 }
 
@@ -883,6 +954,53 @@ export function loadStudioEntitiesFromStorage<T>(fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+export async function getStudioEntitiesFromCloud<T extends {
+  artists: string[];
+  labels: string[];
+  beatmakers: string[];
+  engineers: string[];
+  lyricists: string[];
+}>(fallback: T): Promise<T> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('studio_entities')
+        .select('entity_type, name');
+      if (!error && data && data.length > 0) {
+        const artists: string[] = [];
+        const labels: string[] = [];
+        const beatmakers: string[] = [];
+        const engineers: string[] = [];
+        const lyricists: string[] = [];
+
+        data.forEach((row: { entity_type: string; name: string }) => {
+          if (row.entity_type === 'ARTIST') artists.push(row.name);
+          else if (row.entity_type === 'LABEL') labels.push(row.name);
+          else if (row.entity_type === 'BEATMAKER') beatmakers.push(row.name);
+          else if (row.entity_type === 'ENGINEER') engineers.push(row.name);
+          else if (row.entity_type === 'LYRICIST') lyricists.push(row.name);
+        });
+
+        const merged: T = {
+          artists: Array.from(new Set([...fallback.artists, ...artists])),
+          labels: Array.from(new Set([...fallback.labels, ...labels])),
+          beatmakers: Array.from(new Set([...fallback.beatmakers, ...beatmakers])),
+          engineers: Array.from(new Set([...fallback.engineers, ...engineers])),
+          lyricists: Array.from(new Set([...fallback.lyricists, ...lyricists])),
+        } as T;
+
+        try {
+          localStorage.setItem(LOCAL_STORAGE_ENTITIES_KEY, JSON.stringify(merged));
+        } catch {}
+        return merged;
+      }
+    } catch {
+      // Fallback local
+    }
+  }
+  return loadStudioEntitiesFromStorage(fallback);
 }
 
 export async function syncStudioEntities(entities: {
@@ -930,8 +1048,47 @@ export async function syncStudioEntities(entities: {
       onConflict: 'entity_type,name',
       ignoreDuplicates: true,
     });
+    broadcastLiveSync({
+      type: 'ENTITIES_UPDATED',
+      payload: {
+        message: 'Répertoire et crédits studio synchronisés',
+        timestamp: new Date().toISOString(),
+      },
+    }).catch(() => {});
   } catch {
     // Ignore
+  }
+}
+
+export async function getUserPlaylistsFromCloud(userId = 'usr-1') {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_playlists')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+      if (!error && data && data.length > 0) {
+        const mapped = data.map((pl: any) => ({
+          id: pl.id,
+          name: pl.name,
+          colorTheme: pl.color_theme,
+          iconType: pl.icon_type,
+          trackIds: Array.isArray(pl.track_ids) ? pl.track_ids : [],
+          createdAt: pl.created_at,
+        }));
+        try {
+          localStorage.setItem(LOCAL_STORAGE_PLAYLISTS_KEY, JSON.stringify(mapped));
+        } catch {}
+        return mapped;
+      }
+    } catch {}
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PLAYLISTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -970,6 +1127,14 @@ export async function syncUserPlaylistsToCloud(
   if (rows.length > 0) {
     try {
       await supabase.from('user_playlists').upsert(rows, { onConflict: 'id' });
+      broadcastLiveSync({
+        type: 'PLAYLISTS_UPDATED',
+        payload: {
+          userId,
+          message: 'Playlists synchronisées en direct',
+          timestamp: new Date().toISOString(),
+        },
+      }).catch(() => {});
     } catch {
       // Ignore
     }
@@ -1126,6 +1291,39 @@ export function loadAdBannersFromStorage(): AdBannerSlide[] {
   }
 }
 
+export async function getAdBannersFromCloud(): Promise<AdBannerSlide[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('ad_banners')
+        .select('*')
+        .order('order_index', { ascending: true });
+      if (!error && data && data.length > 0) {
+        const mapped: AdBannerSlide[] = data.map((row: any, idx: number) => ({
+          id: row.id,
+          imageUrl: row.image_url,
+          fileName: row.file_name || undefined,
+          placement: (row.placement as AdBannerPlacement) || 'BOTH',
+          redirectType: (row.redirect_type as AdBannerRedirectType) || 'NONE',
+          targetTrackId: row.target_track_id || undefined,
+          targetAlbumId: row.target_album_id || undefined,
+          externalUrl: row.external_url || undefined,
+          active: row.active ?? true,
+          orderIndex: row.order_index ?? idx,
+          createdAt: row.created_at || new Date().toISOString(),
+        }));
+        try {
+          localStorage.setItem(LOCAL_STORAGE_AD_BANNERS_KEY, JSON.stringify(mapped));
+        } catch {}
+        return mapped;
+      }
+    } catch {
+      // Fallback local
+    }
+  }
+  return loadAdBannersFromStorage();
+}
+
 export function loadAdBannerSettingsFromStorage(): AdBannerSettings {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_AD_SETTINGS_KEY);
@@ -1134,6 +1332,34 @@ export function loadAdBannerSettingsFromStorage(): AdBannerSettings {
   } catch {
     return DEFAULT_AD_BANNER_SETTINGS;
   }
+}
+
+export async function getAdBannerSettingsFromCloud(): Promise<AdBannerSettings> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('ad_banner_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (!error && data) {
+        const mapped: AdBannerSettings = {
+          enableTopBanner: data.enable_top_banner ?? true,
+          enableBottomBanner: data.enable_bottom_banner ?? true,
+          slideIntervalSec: data.slide_interval_sec ?? 5,
+          transitionDurationMs: data.transition_duration_ms ?? 500,
+          pauseOnTouch: data.pause_on_touch ?? true,
+        };
+        try {
+          localStorage.setItem(LOCAL_STORAGE_AD_SETTINGS_KEY, JSON.stringify(mapped));
+        } catch {}
+        return mapped;
+      }
+    } catch {
+      // Fallback local
+    }
+  }
+  return loadAdBannerSettingsFromStorage();
 }
 
 export async function syncAdBannersToCloud(
@@ -1185,6 +1411,16 @@ export async function syncAdBannersToCloud(
       ],
       { onConflict: 'id' }
     );
+
+    broadcastLiveSync({
+      type: 'BANNERS_UPDATED',
+      payload: {
+        banners,
+        settings,
+        message: 'Bannières publicitaires et réglages synchronisés en direct',
+        timestamp: new Date().toISOString(),
+      },
+    }).catch(() => {});
   } catch {
     // Ignore
   }
@@ -1461,6 +1697,49 @@ DROP TRIGGER IF EXISTS on_ad_banner_settings_updated ON public.ad_banner_setting
 CREATE TRIGGER on_ad_banner_settings_updated
     BEFORE UPDATE ON public.ad_banner_settings
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- ----------------------------------------------------------------------------
+-- 10. ACTIVATION DE LA RÉPLICATION TEMPS RÉEL (SUPABASE REALTIME CDC)
+-- ----------------------------------------------------------------------------
+ALTER TABLE public.tracks REPLICA IDENTITY FULL;
+ALTER TABLE public.studio_entities REPLICA IDENTITY FULL;
+ALTER TABLE public.user_playlists REPLICA IDENTITY FULL;
+ALTER TABLE public.user_library_state REPLICA IDENTITY FULL;
+ALTER TABLE public.ad_banners REPLICA IDENTITY FULL;
+ALTER TABLE public.ad_banner_settings REPLICA IDENTITY FULL;
+ALTER TABLE public.community_recommendations REPLICA IDENTITY FULL;
+
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.tracks;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.studio_entities;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.user_playlists;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.user_library_state;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.ad_banners;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.ad_banner_settings;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.community_recommendations;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;
 `;
 
 // ============================================================================

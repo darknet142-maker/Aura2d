@@ -91,7 +91,11 @@ import {
   AdBannerPlacement,
   AdBannerRedirectType,
   loadAdBannersFromStorage,
+  getAdBannersFromCloud,
   loadAdBannerSettingsFromStorage,
+  getAdBannerSettingsFromCloud,
+  getStudioEntitiesFromCloud,
+  getUserPlaylistsFromCloud,
   syncAdBannersToCloud,
   saveAudioBlobToIndexedDb,
   getPersistentAudioBlobUrl,
@@ -102,7 +106,12 @@ import {
   loadAwardsCeremonyEnabledFromStorage,
   saveAwardsCeremonyEnabledToStorage,
   triggerBeatAudioDownload,
+  SupabaseTrackRow,
 } from './services/musicService';
+import {
+  subscribeToLiveSync,
+  broadcastLiveSync,
+} from './services/realtimeSync';
 
 // --- Types ---
 export interface AppNotification {
@@ -1651,8 +1660,10 @@ export function App() {
     useState<string>('alb-2');
   const [newBannerExternalUrl, setNewBannerExternalUrl] = useState<string>('');
   const [supabaseHealthMsg, setSupabaseHealthMsg] = useState<string>('');
+  const isRemoteSyncInProgressRef = useRef<boolean>(false);
 
   useEffect(() => {
+    if (isRemoteSyncInProgressRef.current) return;
     syncAdBannersToCloud(adBanners, adBannerSettings).catch(() => {});
   }, [adBanners, adBannerSettings]);
 
@@ -1985,148 +1996,353 @@ export function App() {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
 
-  // --- Synchronisation au démarrage avec Supabase (getAllTracks) & Réhydratation Audio IndexedDB ---
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(false);
+  // --- Réconciliation complète et intelligente du catalogue avec les données Cloud Supabase ---
+  const reconcileCatalogueWithCloudTracks = useCallback(
+    (savedRows: SupabaseTrackRow[]) => {
+      if (!savedRows || savedRows.length === 0) return;
+
+      setCatalogue((prevCatalogue) => {
+        const rowMap = new Map<string, SupabaseTrackRow>();
+        savedRows.forEach((r) => {
+          if (r.app_track_id) rowMap.set(r.app_track_id, r);
+          if (r.id) rowMap.set(r.id, r);
+        });
+
+        // 1. Mettre à jour chaque piste existante avec les métadonnées récentes de Supabase
+        const updatedCatalogue = prevCatalogue.map((album) => {
+          return {
+            ...album,
+            tracks: album.tracks.map((t) => {
+              const matchedRow = rowMap.get(t.id);
+              if (matchedRow) {
+                rowMap.delete(t.id);
+                if (matchedRow.app_track_id) rowMap.delete(matchedRow.app_track_id);
+                if (matchedRow.id) rowMap.delete(matchedRow.id);
+
+                const peaks =
+                  t.waveformPeaks && t.waveformPeaks.length >= 32
+                    ? t.waveformPeaks
+                    : computeDeterministicWaveformPeaks(
+                        `${t.id}-${matchedRow.title}-${matchedRow.artist}`
+                      );
+                const cid =
+                  t.dropContentId ||
+                  generateDropContentId(
+                    peaks,
+                    matchedRow.duration || t.duration,
+                    t.id
+                  );
+
+                return {
+                  ...t,
+                  title: matchedRow.title || t.title,
+                  artist: matchedRow.artist || t.artist,
+                  featuringArtists:
+                    matchedRow.featuring_artists && matchedRow.featuring_artists.length > 0
+                      ? matchedRow.featuring_artists
+                      : t.featuringArtists,
+                  featuringSplitMode: matchedRow.featuring_split_mode || t.featuringSplitMode,
+                  album: matchedRow.album || t.album,
+                  category: matchedRow.category || t.category,
+                  labelName: matchedRow.label_name || t.labelName,
+                  copyrightText: matchedRow.copyright_text || t.copyrightText,
+                  beatmakerName: matchedRow.beatmaker_name || t.beatmakerName,
+                  soundEngineerName: matchedRow.sound_engineer_name || t.soundEngineerName,
+                  recordingEngineerName:
+                    matchedRow.recording_engineer_name || t.recordingEngineerName,
+                  mixingEngineerName:
+                    matchedRow.mixing_engineer_name || t.mixingEngineerName,
+                  masteringEngineerName:
+                    matchedRow.mastering_engineer_name || t.masteringEngineerName,
+                  lyricistName: matchedRow.lyricist_name || t.lyricistName,
+                  isExternalLyricist:
+                    matchedRow.is_external_lyricist !== undefined
+                      ? Boolean(matchedRow.is_external_lyricist)
+                      : t.isExternalLyricist,
+                  isInstrumental:
+                    matchedRow.is_instrumental !== undefined
+                      ? Boolean(matchedRow.is_instrumental)
+                      : t.isInstrumental,
+                  cover: matchedRow.cover_url || t.cover,
+                  duration: Number(matchedRow.duration || t.duration),
+                  dropStart: Number(matchedRow.drop_start ?? t.dropStart),
+                  dropDuration: Number(matchedRow.drop_duration ?? t.dropDuration),
+                  bpm: Number(matchedRow.bpm || t.bpm),
+                  lyrics:
+                    matchedRow.lyrics && matchedRow.lyrics.length > 0
+                      ? matchedRow.lyrics
+                      : t.lyrics,
+                  audioUrl:
+                    matchedRow.source_type === 'file' && matchedRow.stream_url
+                      ? matchedRow.stream_url
+                      : t.audioUrl,
+                  externalStreamId:
+                    matchedRow.source_type === 'youtube' && matchedRow.youtube_id
+                      ? matchedRow.youtube_id
+                      : t.externalStreamId,
+                  waveformPeaks: peaks,
+                  dropContentId: cid,
+                  isBeatDownloadable: Boolean(matchedRow.is_instrumental),
+                };
+              }
+              return t;
+            }),
+          };
+        });
+
+        // 2. Insérer les pistes nouvelles de Supabase qui n'existaient pas encore localement
+        const remainingRows = Array.from(new Set(Array.from(rowMap.values())));
+        if (remainingRows.length > 0) {
+          const newTracksToInsert: Track[] = remainingRows.map((row) => {
+            const trackId = row.app_track_id || row.id;
+            const peaks = computeDeterministicWaveformPeaks(
+              `${trackId}-${row.title}-${row.artist}`
+            );
+            const cid = generateDropContentId(peaks, Number(row.duration || 180), trackId);
+
+            return {
+              id: trackId,
+              title: row.title,
+              artist: row.artist,
+              featuringArtists:
+                row.featuring_artists && row.featuring_artists.length > 0
+                  ? row.featuring_artists
+                  : undefined,
+              featuringSplitMode: row.featuring_split_mode || '70_30',
+              album: row.album || 'Single',
+              category: row.category || 'Ntcham',
+              labelName: row.label_name || 'Indépendant',
+              copyrightText:
+                row.copyright_text ||
+                `Copyright 2026 ${row.label_name || 'DROP'}. Tous droits réservés`,
+              beatmakerName: row.beatmaker_name || row.artist,
+              soundEngineerName:
+                row.sound_engineer_name || 'Maître Boussengui (Studio K)',
+              recordingEngineerName: row.recording_engineer_name || undefined,
+              mixingEngineerName:
+                row.mixing_engineer_name || row.sound_engineer_name,
+              masteringEngineerName: row.mastering_engineer_name || undefined,
+              lyricistName: row.lyricist_name || row.artist,
+              isExternalLyricist: Boolean(row.is_external_lyricist),
+              isInstrumental: Boolean(row.is_instrumental),
+              audioCodec: row.audio_codec || 'OPUS',
+              lufsMasterLevel: Number(row.lufs_master_level ?? -14.0),
+              cover: row.cover_url || '',
+              artworkType: 'creative_yellow',
+              ambientPrimary: row.ambient_primary || '#f59e0b',
+              ambientSecondary: row.ambient_secondary || '#ef4444',
+              duration: Number(row.duration || 180),
+              dropStart: Number(row.drop_start || 30),
+              dropDuration: Number(row.drop_duration || 22),
+              baseFreq: 120,
+              bpm: Number(row.bpm || 120),
+              audioUrl:
+                row.source_type === 'file' ? row.stream_url : undefined,
+              externalStreamId:
+                row.source_type === 'youtube'
+                  ? row.youtube_id || undefined
+                  : undefined,
+              realPlays: Number(row.real_plays || 100000),
+              lastActivityAgo: 'Synchronisé Supabase',
+              totalListenSeconds: Number(row.total_listen_seconds || 180000),
+              listenSessions: Number(row.listen_sessions || 1200),
+              avgRetentionPct: Number(row.avg_retention_pct || 89),
+              retention30sPct: 92,
+              algoPoints: 14.5,
+              likesCount: Number(row.likes_count || 1200),
+              loopPlaysCount: Number(row.loop_plays_count || 300),
+              recommendationsCount: 150,
+              lyricsOpensCount: 900,
+              lyricsSharesCount: 180,
+              longevityDays: 15,
+              consecutiveLoops: 0,
+              baselineRank: 5,
+              waveformPeaks: peaks,
+              dropContentId: cid,
+              isBeatDownloadable: Boolean(row.is_instrumental),
+              lyrics: row.lyrics || [],
+            };
+          });
+
+          newTracksToInsert.forEach((newT) => {
+            const albIdx = updatedCatalogue.findIndex(
+              (a) =>
+                a.artist.toLowerCase() === newT.artist.toLowerCase() &&
+                a.albumTitle.toLowerCase() === newT.album.toLowerCase()
+            );
+            if (albIdx >= 0) {
+              const alreadyHas = updatedCatalogue[albIdx].tracks.some(
+                (t) => t.id === newT.id
+              );
+              if (!alreadyHas) {
+                updatedCatalogue[albIdx] = {
+                  ...updatedCatalogue[albIdx],
+                  tracks: [newT, ...updatedCatalogue[albIdx].tracks],
+                };
+              }
+            } else {
+              updatedCatalogue.unshift({
+                id: `alb-sb-${newT.id}`,
+                artist: newT.artist,
+                albumTitle: newT.album,
+                category: newT.category,
+                year: '2026',
+                tracks: [newT],
+              });
+            }
+          });
+        }
+
+        saveFullCatalogueSnapshot(updatedCatalogue);
+        return updatedCatalogue;
+      });
+    },
+    []
+  );
+
+  // --- Rafraîchissement global de toutes les données Supabase (Pistes, Bannières, Réglages, Entités) ---
+  const refreshAllCloudData = useCallback(async () => {
+    try {
+      const [savedRows, cloudBanners, cloudSettings, cloudEntities] =
+        await Promise.all([
+          getAllTracks(),
+          getAdBannersFromCloud(),
+          getAdBannerSettingsFromCloud(),
+          getStudioEntitiesFromCloud(entityDb),
+        ]);
+
+      if (savedRows && savedRows.length > 0) {
+        reconcileCatalogueWithCloudTracks(savedRows);
+      }
+
+      if (cloudBanners && cloudBanners.length > 0) {
+        isRemoteSyncInProgressRef.current = true;
+        setAdBanners(cloudBanners);
+        setTimeout(() => {
+          isRemoteSyncInProgressRef.current = false;
+        }, 150);
+      }
+
+      if (cloudSettings) {
+        isRemoteSyncInProgressRef.current = true;
+        setAdBannerSettings(cloudSettings);
+        setTimeout(() => {
+          isRemoteSyncInProgressRef.current = false;
+        }, 150);
+      }
+
+      if (cloudEntities) {
+        setEntityDb(cloudEntities);
+      }
+    } catch (err) {
+      console.warn('[RealtimeSync] Erreur rafraîchissement global:', err);
+    }
+  }, [reconcileCatalogueWithCloudTracks, entityDb]);
+
+  // --- Synchronisation temps réel continue (WebSocket Supabase + CDC + Inter-onglets) ---
   useEffect(() => {
     let mounted = true;
 
-    const hydrateCatalogueAndIndexedDbAudio = async () => {
-      try {
-        const savedRows = await getAllTracks();
-        if (!mounted) return;
+    // 1. Chargement initial complet immédiat
+    refreshAllCloudData();
 
-        if (savedRows && savedRows.length > 0) {
-          setCatalogue((prevCatalogue) => {
-            const existingIds = new Set(
-              prevCatalogue.flatMap((alb) => alb.tracks.map((t) => t.id))
-            );
-            const newTracksToMerge = savedRows.filter(
-              (row) => !existingIds.has(row.app_track_id || row.id)
-            );
-            if (newTracksToMerge.length === 0) return prevCatalogue;
-
-            const updatedCatalogue = [...prevCatalogue];
-            newTracksToMerge.forEach((row) => {
-              const restoredTrack: Track = {
-                id: row.app_track_id || row.id,
-                title: row.title,
-                artist: row.artist,
-                featuringArtists:
-                  row.featuring_artists && row.featuring_artists.length > 0
-                    ? row.featuring_artists
-                    : undefined,
-                featuringSplitMode: row.featuring_split_mode || '70_30',
-                album: row.album || 'Single',
-                category: row.category || 'Ntcham',
-                labelName: row.label_name || 'Indépendant',
-                copyrightText:
-                  row.copyright_text ||
-                  `Copyright 2026 ${row.label_name || 'DROP'}. Tous droits réservés`,
-                beatmakerName: row.beatmaker_name || row.artist,
-                soundEngineerName:
-                  row.sound_engineer_name || 'Maître Boussengui (Studio K)',
-                recordingEngineerName:
-                  row.recording_engineer_name || undefined,
-                mixingEngineerName:
-                  row.mixing_engineer_name || row.sound_engineer_name,
-                masteringEngineerName:
-                  row.mastering_engineer_name || undefined,
-                lyricistName: row.lyricist_name || row.artist,
-                isExternalLyricist: Boolean(row.is_external_lyricist),
-                isInstrumental: Boolean(row.is_instrumental),
-                audioCodec: row.audio_codec || 'OPUS',
-                lufsMasterLevel: Number(row.lufs_master_level ?? -14.0),
-                cover: row.cover_url || '',
-                artworkType: 'creative_yellow',
-                ambientPrimary: row.ambient_primary || '#f59e0b',
-                ambientSecondary: row.ambient_secondary || '#ef4444',
-                duration: Number(row.duration || 180),
-                dropStart: Number(row.drop_start || 30),
-                dropDuration: Number(row.drop_duration || 22),
-                baseFreq: 120,
-                bpm: Number(row.bpm || 120),
-                audioUrl:
-                  row.source_type === 'file' ? row.stream_url : undefined,
-                externalStreamId:
-                  row.source_type === 'youtube'
-                    ? row.youtube_id || undefined
-                    : undefined,
-                realPlays: Number(row.real_plays || 100000),
-                lastActivityAgo: 'Synchronisé Supabase',
-                totalListenSeconds: Number(row.total_listen_seconds || 180000),
-                listenSessions: Number(row.listen_sessions || 1200),
-                avgRetentionPct: Number(row.avg_retention_pct || 89),
-                retention30sPct: 92,
-                algoPoints: 14.5,
-                likesCount: Number(row.likes_count || 1200),
-                loopPlaysCount: Number(row.loop_plays_count || 300),
-                recommendationsCount: 150,
-                lyricsOpensCount: 900,
-                lyricsSharesCount: 180,
-                longevityDays: 15,
-                consecutiveLoops: 0,
-                baselineRank: 5,
-              };
-
-              const albIdx = updatedCatalogue.findIndex(
-                (a) =>
-                  a.artist.toLowerCase() === restoredTrack.artist.toLowerCase() &&
-                  a.albumTitle.toLowerCase() === restoredTrack.album.toLowerCase()
-              );
-              if (albIdx >= 0) {
-                updatedCatalogue[albIdx] = {
-                  ...updatedCatalogue[albIdx],
-                  tracks: [restoredTrack, ...updatedCatalogue[albIdx].tracks],
-                };
-              } else {
-                updatedCatalogue.unshift({
-                  id: `alb-sb-${row.id}`,
-                  artist: restoredTrack.artist,
-                  albumTitle: restoredTrack.album,
-                  category: restoredTrack.category,
-                  year: '2026',
-                  tracks: [restoredTrack],
-                });
-              }
-            });
-            return updatedCatalogue;
-          });
-        }
-      } catch {
-        // Ignore
-      }
-
-      // Réhydrater depuis IndexedDB toutes les pistes ayant un fichier audio uploadé localement
-      try {
-        const trackIdsToCheck = catalogue.flatMap((alb) =>
-          alb.tracks.map((t) => t.id)
-        );
-        const rehydratedMap: Record<string, string> = {};
-        for (const tId of trackIdsToCheck) {
-          const freshBlobUrl = await getPersistentAudioBlobUrl(tId);
-          if (freshBlobUrl) {
-            rehydratedMap[tId] = freshBlobUrl;
-          }
-        }
-        if (mounted && Object.keys(rehydratedMap).length > 0) {
+    // 2. Réhydrater depuis IndexedDB les fichiers audio locaux
+    getAllTracks().then((savedRows) => {
+      if (!mounted || !savedRows) return;
+      reconcileCatalogueWithCloudTracks(savedRows);
+      const trackIdsToCheck = catalogue.flatMap((alb) =>
+        alb.tracks.map((t) => t.id)
+      );
+      trackIdsToCheck.forEach(async (tId) => {
+        const freshBlobUrl = await getPersistentAudioBlobUrl(tId);
+        if (freshBlobUrl && mounted) {
           setCatalogue((prev) =>
             prev.map((alb) => ({
               ...alb,
               tracks: alb.tracks.map((t) =>
-                rehydratedMap[t.id]
-                  ? { ...t, audioUrl: rehydratedMap[t.id] }
-                  : t
+                t.id === tId ? { ...t, audioUrl: freshBlobUrl } : t
               ),
             }))
           );
         }
-      } catch {
-        // Ignore
+      });
+    });
+
+    // 3. Abonnement aux événements temps réel (WebSocket Supabase & BroadcastChannel)
+    const unsubscribe = subscribeToLiveSync({
+      onTracksUpdated: async (payload) => {
+        const freshRows = await getAllTracks();
+        reconcileCatalogueWithCloudTracks(freshRows);
+
+        const notifTitle =
+          payload.action === 'CREATE'
+            ? 'Nouvelle musique publiée'
+            : payload.action === 'DELETE'
+            ? 'Piste retirée'
+            : 'Piste mise à jour en direct';
+        const notifMsg =
+          payload.message ||
+          `Catalogue synchronisé en temps réel avec Supabase.`;
+
+        pushNotification(notifTitle, notifMsg, 'PUBLISH', payload.trackId);
+      },
+      onBannersUpdated: (payload) => {
+        if (payload.banners && payload.banners.length > 0) {
+          isRemoteSyncInProgressRef.current = true;
+          setAdBanners(payload.banners);
+          setTimeout(() => {
+            isRemoteSyncInProgressRef.current = false;
+          }, 150);
+        }
+        if (payload.settings && payload.settings.slideIntervalSec) {
+          isRemoteSyncInProgressRef.current = true;
+          setAdBannerSettings(payload.settings);
+          setTimeout(() => {
+            isRemoteSyncInProgressRef.current = false;
+          }, 150);
+        }
+        pushNotification(
+          'Bannières en direct',
+          payload.message ||
+            'Le diaporama publicitaire a été mis à jour par l’administrateur.',
+          'DATABASE'
+        );
+      },
+      onEntitiesUpdated: async (payload) => {
+        const freshEntities = await getStudioEntitiesFromCloud(entityDb);
+        setEntityDb(freshEntities);
+        pushNotification(
+          'Talents & Studio',
+          payload.message ||
+            'Mise à jour des crédits et profils du studio en direct.',
+          'DATABASE'
+        );
+      },
+      onAdminAnnouncement: (payload) => {
+        pushNotification(payload.title, payload.message, 'DATABASE');
+      },
+      onConnectionChange: (status) => {
+        if (mounted) {
+          setIsRealtimeConnected(status === 'CONNECTED');
+        }
+      },
+    });
+
+    // 4. Réveil instantané lors du déverrouillage du téléphone ou retour sur l'onglet
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAllCloudData();
       }
     };
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
 
-    hydrateCatalogueAndIndexedDbAudio();
     return () => {
       mounted = false;
+      unsubscribe();
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
     };
   }, []);
 
@@ -4931,6 +5147,28 @@ export function App() {
                 <span className="text-[10px] font-bold">{syncSnapshot.queue.length}</span>
               )}
             </button>
+
+            <div
+              className={`h-7 px-2 rounded-lg text-[10px] font-mono transition-colors flex items-center gap-1.5 border ${
+                isRealtimeConnected
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]'
+              }`}
+              title={
+                isRealtimeConnected
+                  ? 'Base de données temps réel active (WebSocket Supabase)'
+                  : 'Connexion temps réel...'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isRealtimeConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {isRealtimeConnected ? 'Temps Réel' : 'En attente'}
+              </span>
+            </div>
 
             <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-lg border border-white/[0.07]">
               <button
