@@ -391,6 +391,8 @@ const CentralAdSlideshowBanner: React.FC<{
               src={slide.imageUrl}
               alt=""
               draggable={false}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           </div>

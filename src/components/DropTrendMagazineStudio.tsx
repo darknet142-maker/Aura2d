@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Download,
   X,
@@ -70,7 +70,7 @@ type FullscreenStep = 'CAMERA_CAPTURE' | 'INSTANT_PREVIEW';
 const CANVAS_W = 1080;
 const CANVAS_H = 1920;
 
-const OFFICIAL_DROP_LOGO_SRC = '/assets/aistudio/Drop-logo-officiel_3a364bf8.png';
+const OFFICIAL_DROP_LOGO_SRC = '/drop-logo.webp';
 
 // Dimensions réduites du logo officiel DROP sur le canvas 1080×1920 (plus discret + opacité à 31%)
 const DROP_LOGO_W = 188;

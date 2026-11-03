@@ -1,4 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import {
+  optimizeImageAuto,
+  optimizeForStorageUpload,
+} from './imageOptimizer';
 
 // ============================================================================
 // CONFIGURATION SUPABASE & FALLBACK HYBRIDE LOCAL PERSISTANT
@@ -215,45 +219,26 @@ export interface AdBannerSettings {
  */
 export async function fileToPersistentDataUrl(
   file: File,
-  maxWidth = 900,
-  maxHeight = 900,
+  maxWidth = 1080,
+  maxHeight = 1080,
   quality = 0.84
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Impossible de lire le fichier image'));
-    reader.onload = () => {
-      const rawDataUrl = reader.result as string;
-      const img = new Image();
-      img.onload = () => {
-        try {
-          let width = img.width || 600;
-          let height = img.height || 600;
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(rawDataUrl);
-            return;
-          }
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL('image/jpeg', quality);
-          resolve(compressed || rawDataUrl);
-        } catch {
-          resolve(rawDataUrl);
-        }
-      };
-      img.onerror = () => resolve(rawDataUrl);
-      img.src = rawDataUrl;
-    };
-    reader.readAsDataURL(file);
-  });
+  try {
+    const res = await optimizeImageAuto(file, {
+      maxWidth,
+      maxHeight,
+      quality,
+      targetMaxKBytes: 260,
+    });
+    return res.dataUrl;
+  } catch {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  }
 }
 
 /**
@@ -495,32 +480,35 @@ export async function getAllTracks(): Promise<SupabaseTrackRow[]> {
 
 export async function uploadCoverFile(
   coverFile: File,
-  maxWidth = 900,
-  maxHeight = 900,
-  quality = 0.88
+  maxWidth = 1080,
+  maxHeight = 1080,
+  quality = 0.84
 ): Promise<{
   coverUrl: string;
   coverStoragePath: string;
 }> {
-  const cleanName = sanitizeStorageFileName(coverFile.name);
-  const coverPath = `covers/${Date.now()}_${cleanName}`;
-
-  // On génère toujours une DataURL compressée persistante en garantie immédiate
-  const persistentDataUrl = await fileToPersistentDataUrl(
+  // Compression et optimisation automatique en WebP haute fidélité
+  const { fileToUpload, dataUrl } = await optimizeForStorageUpload(
     coverFile,
     maxWidth,
-    maxHeight,
-    quality
+    maxHeight
   );
+
+  const cleanName = sanitizeStorageFileName(fileToUpload.name);
+  const coverPath = `covers/${Date.now()}_${cleanName}`;
+
+  // On génère toujours une DataURL compressée WebP persistante en garantie immédiate
+  const persistentDataUrl =
+    dataUrl || (await fileToPersistentDataUrl(coverFile, maxWidth, maxHeight, quality));
 
   if (supabase) {
     try {
       const { error: uploadError } = await supabase.storage
         .from('cover_files')
-        .upload(coverPath, coverFile, {
-          cacheControl: '3600',
+        .upload(coverPath, fileToUpload, {
+          cacheControl: '31536000',
           upsert: false,
-          contentType: coverFile.type || 'image/jpeg',
+          contentType: fileToUpload.type || 'image/webp',
         });
 
       if (!uploadError) {

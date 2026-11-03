@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Disc } from 'lucide-react';
 
 export type ArtworkType =
@@ -37,6 +37,8 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
         alt={title}
         draggable={false}
         referrerPolicy="no-referrer"
+        loading="lazy"
+        decoding="async"
         onError={() => setImgError(true)}
         className={className}
       />
@@ -481,9 +483,10 @@ export const DropOfficialLogo: React.FC<{ className?: string }> = ({
 }) => {
   return (
     <img
-      src="/assets/aistudio/Drop-logo-officiel_3a364bf8.png"
+      src="/drop-logo.webp"
       alt="DROP"
       draggable={false}
+      decoding="async"
       className={`${className} object-contain select-none drop-shadow-[0_2px_10px_rgba(255,255,255,0.22)]`}
     />
   );
