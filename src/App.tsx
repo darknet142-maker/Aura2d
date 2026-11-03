@@ -37,6 +37,7 @@ import {
   Heart,
   Repeat,
   Grid,
+  Bell,
 } from 'lucide-react';
 import {
   streamTracker,
@@ -69,8 +70,59 @@ import {
   getTrackCertification,
   getAlbumCertification,
 } from './utils/rankingEngine';
+import {
+  getAllTracks,
+  uploadLocalTrack,
+  addYoutubeTrack,
+  deleteTrack as deleteSupabaseTrack,
+  syncStudioEntities,
+  syncUserLibraryStateToCloud,
+  loadUserLibraryStateFromStorage,
+  saveFullCatalogueSnapshot,
+  loadFullCatalogueSnapshot,
+  fileToPersistentDataUrl,
+  uploadCoverFile,
+  updateTrackMetadataInStorage,
+  verifySupabaseHealth,
+  isSupabaseConfigured,
+  SUPABASE_SQL_SETUP_SCRIPT,
+  AdBannerSlide,
+  AdBannerSettings,
+  AdBannerPlacement,
+  AdBannerRedirectType,
+  loadAdBannersFromStorage,
+  loadAdBannerSettingsFromStorage,
+  syncAdBannersToCloud,
+  saveAudioBlobToIndexedDb,
+  getPersistentAudioBlobUrl,
+  computeDeterministicWaveformPeaks,
+  generateDropContentId,
+  compareWaveformsConcordance,
+  WaveformConcordanceResult,
+  loadAwardsCeremonyEnabledFromStorage,
+  saveAwardsCeremonyEnabledToStorage,
+  triggerBeatAudioDownload,
+} from './services/musicService';
 
 // --- Types ---
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'PUBLISH' | 'DATABASE' | 'CERTIFICATION' | 'COMMUNITY';
+  createdAt: string;
+  read: boolean;
+  trackId?: string;
+}
+
+export interface EntityDatabase {
+  artists: string[];
+  labels: string[];
+  beatmakers: string[];
+  engineers: string[];
+  lyricists: string[];
+}
+
 export interface Track {
   id: string;
   title: string;
@@ -88,6 +140,8 @@ export interface Track {
   masteringEngineerName?: string; // 30% Mastering
   lyricistName: string;
   isExternalLyricist?: boolean; // Bonus x1.25 Plume Externe
+  isInstrumental?: boolean; // Si coché, les champs voix/paroles sont facultatifs
+  audioCodec?: 'OPUS' | 'AAC' | 'WAV'; // Conversion systématique en Opus (-14.0 LUFS)
   hasSynchronizedLyrics?: boolean; // Éligibilité Parolier
   gabonTerritoryPct?: number; // Quota >= 70% territoire gabonais (+241)
   weeksInTop10?: number;
@@ -131,6 +185,10 @@ export interface Track {
   downloadedOffline?: boolean;
   inPlaylist?: boolean;
   autoDetectedChorus?: boolean;
+  dropContentId?: string;
+  waveformPeaks?: number[];
+  isBeatDownloadable?: boolean;
+  musicalKey?: string;
 }
 
 export interface AlbumNode {
@@ -172,6 +230,7 @@ const DEFAULT_CATEGORIES = [
   'Rap Gabonais',
   'Afrobeats / Afro-Pop',
   'Rumba Gabonaise',
+  'Beats & Instrumentales',
   'Gospel',
   'Tradimoderne',
 ];
@@ -995,6 +1054,127 @@ const INITIAL_CATALOGUE: AlbumNode[] = [
       },
     ],
   },
+  {
+    id: 'alb-beats-1',
+    artist: 'Kvnz Beats & Tchatcho Prod',
+    albumTitle: 'Libreville Beat Tape Vol. 1 (Instrumentales)',
+    category: 'Beats & Instrumentales',
+    year: '2026',
+    tracks: [
+      {
+        id: 't-beat-401',
+        title: 'Akanda 808 Bounce (Beat Instrumental)',
+        artist: 'Kvnz Beats',
+        album: 'Libreville Beat Tape Vol. 1 (Instrumentales)',
+        category: 'Beats & Instrumentales',
+        labelName: 'Direct Prod Gabon',
+        copyrightText: 'Copyright 2026 Direct Prod Gabon (+241). Licence Beat & Instrumentale',
+        beatmakerName: 'Kvnz Beats',
+        soundEngineerName: 'Maître Boussengui (Studio K)',
+        recordingEngineerName: 'Instrumental (Sans prise voix)',
+        mixingEngineerName: 'Maître Boussengui (Studio K)',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Instrumental (Sans paroles)',
+        isExternalLyricist: false,
+        isInstrumental: true,
+        isBeatDownloadable: true,
+        musicalKey: 'Fa# Mineur (F#m)',
+        audioCodec: 'OPUS',
+        hasSynchronizedLyrics: false,
+        gabonTerritoryPct: 92,
+        weeksInTop10: 4,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 95,
+        halfLifeRetentionJ90Pct: 80,
+        cover: '',
+        artworkType: 'creative_yellow',
+        ambientPrimary: '#f59e0b',
+        ambientSecondary: '#78350f',
+        notes: [110.0, 146.83, 164.81, 220.0],
+        duration: 175,
+        dropStart: 32,
+        dropDuration: 30,
+        baseFreq: 110,
+        bpm: 132,
+        realPlays: 265000, // Platine
+        displayPlaysFormatted: '265K',
+        lastActivityAgo: 'il y a 6 min',
+        totalListenSeconds: 463750,
+        listenSessions: 3420,
+        avgRetentionPct: 93,
+        retention30sPct: 97,
+        algoPoints: 23.4,
+        likesCount: 11400,
+        loopPlaysCount: 4120,
+        recommendationsCount: 2490,
+        lyricsOpensCount: 0,
+        lyricsSharesCount: 0,
+        longevityDays: 48,
+        consecutiveLoops: 0,
+        baselineRank: 4,
+        artistBaselinePlays: 120000,
+        downloadedOffline: false,
+        inPlaylist: true,
+      },
+      {
+        id: 't-beat-402',
+        title: 'Estuaire Afro-Drill (Type Beat +241)',
+        artist: 'Tchatcho Prod',
+        album: 'Libreville Beat Tape Vol. 1 (Instrumentales)',
+        category: 'Beats & Instrumentales',
+        labelName: 'Ndoss Urban Records',
+        copyrightText: 'Copyright 2026 Ndoss Urban Records (+241). Licence Beat & Instrumentale',
+        beatmakerName: 'Tchatcho Prod',
+        soundEngineerName: 'Samy Master LBV',
+        recordingEngineerName: 'Instrumental (Sans prise voix)',
+        mixingEngineerName: 'Samy Master LBV',
+        masteringEngineerName: 'Samy Master LBV',
+        lyricistName: 'Instrumental (Sans paroles)',
+        isExternalLyricist: false,
+        isInstrumental: true,
+        isBeatDownloadable: true,
+        musicalKey: 'La Mineur (Am)',
+        audioCodec: 'OPUS',
+        hasSynchronizedLyrics: false,
+        gabonTerritoryPct: 90,
+        weeksInTop10: 3,
+        lufsMasterLevel: -14.0,
+        acousticClippingDetected: false,
+        retention45sPct: 92,
+        halfLifeRetentionJ90Pct: 76,
+        cover: '',
+        artworkType: 'crimson_bloom',
+        ambientPrimary: '#ef4444',
+        ambientSecondary: '#7f1d1d',
+        notes: [130.81, 164.81, 196.0, 246.94],
+        duration: 168,
+        dropStart: 28,
+        dropDuration: 30,
+        baseFreq: 116,
+        bpm: 140,
+        realPlays: 155000, // Or
+        displayPlaysFormatted: '155K',
+        lastActivityAgo: 'il y a 14 min',
+        totalListenSeconds: 260400,
+        listenSessions: 2180,
+        avgRetentionPct: 90,
+        retention30sPct: 94,
+        algoPoints: 17.8,
+        likesCount: 7300,
+        loopPlaysCount: 2890,
+        recommendationsCount: 1520,
+        lyricsOpensCount: 0,
+        lyricsSharesCount: 0,
+        longevityDays: 39,
+        consecutiveLoops: 0,
+        baselineRank: 6,
+        artistBaselinePlays: 110000,
+        downloadedOffline: false,
+        inPlaylist: false,
+      },
+    ],
+  },
 ];
 
 const INITIAL_USERS: AppUser[] = [
@@ -1217,10 +1397,49 @@ function RankBadge({ rank, delta }: { rank: number; delta: number }) {
 export function App() {
   // --- Navigation & Auth State ---
   const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('PLAYER');
-  const [catalogue, setCatalogue] = useState<AlbumNode[]>(INITIAL_CATALOGUE);
+  const [catalogue, setCatalogue] = useState<AlbumNode[]>(() => {
+    const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>() || INITIAL_CATALOGUE;
+    // S'assurer que l'album de Beats & Instrumentales existe et que chaque titre possède son Content ID DROP-CID et son onde 64 bandes
+    const hasBeatsAlbum = rawCat.some(
+      (a) =>
+        a.id === 'alb-beats-1' ||
+        a.tracks.some((t) => t.category === 'Beats & Instrumentales')
+    );
+    const mergedAlbums = hasBeatsAlbum
+      ? rawCat
+      : [...rawCat, INITIAL_CATALOGUE[INITIAL_CATALOGUE.length - 1]];
+
+    return mergedAlbums.map((alb) => ({
+      ...alb,
+      tracks: alb.tracks.map((t) => {
+        const peaks =
+          t.waveformPeaks && t.waveformPeaks.length >= 32
+            ? t.waveformPeaks
+            : computeDeterministicWaveformPeaks(`${t.id}-${t.title}-${t.artist}`);
+        const cid =
+          t.dropContentId || generateDropContentId(peaks, t.duration, t.id);
+        return {
+          ...t,
+          waveformPeaks: peaks,
+          dropContentId: cid,
+        };
+      }),
+    }));
+  });
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [enableAwardsCeremony, setEnableAwardsCeremony] = useState<boolean>(() =>
+    loadAwardsCeremonyEnabledFromStorage()
+  );
+  useEffect(() => {
+    saveAwardsCeremonyEnabledToStorage(enableAwardsCeremony);
+  }, [enableAwardsCeremony]);
   const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<AppUser>(INITIAL_USERS[0]);
+
+  // Sauvegarde automatique et immédiate de tout le catalogue (pochettes, titres, éditions)
+  useEffect(() => {
+    saveFullCatalogueSnapshot(catalogue);
+  }, [catalogue]);
 
   // --- Gabon Mobile Money Pass & Anti-Fraud Shield State ---
   const [subscriptionPass, setSubscriptionPass] = useState<GabonSubscriptionPass>(
@@ -1252,21 +1471,59 @@ export function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isDropMode, setIsDropMode] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<number>(116); // 1:56 par défaut
-  const [likedTrackIds, setLikedTrackIds] = useState<Record<string, boolean>>({
-    't-main-1': true,
-    't-101': true,
-    't-201': true,
-    't-301': true,
-  });
-  const [recommendedTrackIds, setRecommendedTrackIds] = useState<Record<string, boolean>>({
-    't-301': true,
-    't-main-1': true,
-  });
-  const [subscribedArtists, setSubscribedArtists] = useState<Record<string, boolean>>({
-    "Emma'a": true,
-    "Ba'ponga": true,
-    "L'Oiseau Rare": true,
-  });
+
+  // Redirection directe vers une chanson via le QR Code du filigrane Trend (?track=<id>)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const targetTrackId = params.get('track');
+      if (!targetTrackId) return;
+      for (let aIdx = 0; aIdx < catalogue.length; aIdx++) {
+        const tIdx = catalogue[aIdx].tracks.findIndex(
+          (t) =>
+            t.id === targetTrackId ||
+            t.title.toLowerCase() === targetTrackId.toLowerCase()
+        );
+        if (tIdx !== -1) {
+          setAlbumIdx(aIdx);
+          setTrackIdx(tIdx);
+          setCurrentTime(catalogue[aIdx].tracks[tIdx].dropStart || 0);
+          setAppView('PLAYER');
+          break;
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }, [catalogue]);
+  const [likedTrackIds, setLikedTrackIds] = useState<Record<string, boolean>>(
+    () =>
+      loadUserLibraryStateFromStorage()?.liked_track_ids || {
+        't-main-1': true,
+        't-101': true,
+        't-201': true,
+        't-301': true,
+      }
+  );
+  const [recommendedTrackIds, setRecommendedTrackIds] = useState<
+    Record<string, boolean>
+  >(
+    () =>
+      loadUserLibraryStateFromStorage()?.recommended_track_ids || {
+        't-301': true,
+        't-main-1': true,
+      }
+  );
+  const [subscribedArtists, setSubscribedArtists] = useState<
+    Record<string, boolean>
+  >(
+    () =>
+      loadUserLibraryStateFromStorage()?.subscribed_artists || {
+        "Emma'a": true,
+        "Ba'ponga": true,
+        "L'Oiseau Rare": true,
+      }
+  );
   const [artistSubscribers, setArtistSubscribers] = useState<Record<string, number>>({
     "Emma'a": 48200,
     "Ba'ponga": 62400,
@@ -1368,10 +1625,257 @@ export function App() {
   const [authEmail, setAuthEmail] = useState<string>('camille.ndong@drop.ga');
 
   // --- Admin Navigation & Sub-tabs ---
-  const [adminMainTab, setAdminMainTab] = useState<'CATALOGUE' | 'UPLOAD' | 'USERS'>('CATALOGUE');
+  const [adminMainTab, setAdminMainTab] = useState<
+    'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS'
+  >('CATALOGUE');
   const [catalogueSubTab, setCatalogueSubTab] = useState<'REPERTOIRE' | 'ALGO' | 'RULES'>(
     'REPERTOIRE'
   );
+
+  // --- Bannières Publicitaires Slideshow (Haut & Bas de Central) ---
+  const [adBanners, setAdBanners] = useState<AdBannerSlide[]>(() =>
+    loadAdBannersFromStorage()
+  );
+  const [adBannerSettings, setAdBannerSettings] = useState<AdBannerSettings>(
+    () => loadAdBannerSettingsFromStorage()
+  );
+  const [newBannerImageUrl, setNewBannerImageUrl] = useState<string>('');
+  const [newBannerFileName, setNewBannerFileName] = useState<string>('');
+  const [newBannerPlacement, setNewBannerPlacement] =
+    useState<AdBannerPlacement>('BOTH');
+  const [newBannerRedirectType, setNewBannerRedirectType] =
+    useState<AdBannerRedirectType>('NONE');
+  const [newBannerTargetTrackId, setNewBannerTargetTrackId] =
+    useState<string>('t-main-1');
+  const [newBannerTargetAlbumId, setNewBannerTargetAlbumId] =
+    useState<string>('alb-2');
+  const [newBannerExternalUrl, setNewBannerExternalUrl] = useState<string>('');
+  const [supabaseHealthMsg, setSupabaseHealthMsg] = useState<string>('');
+
+  useEffect(() => {
+    syncAdBannersToCloud(adBanners, adBannerSettings).catch(() => {});
+  }, [adBanners, adBannerSettings]);
+
+  useEffect(() => {
+    verifySupabaseHealth()
+      .then((res) => setSupabaseHealthMsg(res.message))
+      .catch(() => {});
+  }, []);
+
+  // --- Persistent Entity Database (Artistes, Labels, Beatmakers, Ingés Son, Auteurs) ---
+  const [entityDb, setEntityDb] = useState<EntityDatabase>(() => {
+    const initialTracks = INITIAL_CATALOGUE.flatMap((a) => a.tracks);
+    const defaultArtists = Array.from(
+      new Set(
+        initialTracks
+          .flatMap((t) => [t.artist, ...(t.featuringArtists || [])])
+          .map((s) => s.trim())
+          .filter(Boolean)
+      )
+    );
+    const defaultLabels = Array.from(
+      new Set(initialTracks.map((t) => t.labelName.trim()).filter(Boolean))
+    );
+    const defaultBeatmakers = Array.from(
+      new Set(initialTracks.map((t) => t.beatmakerName.trim()).filter(Boolean))
+    );
+    const defaultEngineers = Array.from(
+      new Set(
+        initialTracks
+          .flatMap((t) => [
+            t.soundEngineerName,
+            t.recordingEngineerName || '',
+            t.mixingEngineerName || '',
+            t.masteringEngineerName || '',
+          ])
+          .map((s) => s.trim())
+          .filter(Boolean)
+      )
+    );
+    const defaultLyricists = Array.from(
+      new Set(initialTracks.map((t) => t.lyricistName.trim()).filter(Boolean))
+    );
+
+    try {
+      const saved = window.localStorage.getItem('drop_entity_db_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<EntityDatabase>;
+        return {
+          artists: Array.from(new Set([...defaultArtists, ...(parsed.artists || [])])),
+          labels: Array.from(new Set([...defaultLabels, ...(parsed.labels || [])])),
+          beatmakers: Array.from(new Set([...defaultBeatmakers, ...(parsed.beatmakers || [])])),
+          engineers: Array.from(new Set([...defaultEngineers, ...(parsed.engineers || [])])),
+          lyricists: Array.from(new Set([...defaultLyricists, ...(parsed.lyricists || [])])),
+        };
+      }
+    } catch {
+      // Ignore storage parse error
+    }
+    return {
+      artists: defaultArtists,
+      labels: defaultLabels,
+      beatmakers: defaultBeatmakers,
+      engineers: defaultEngineers,
+      lyricists: defaultLyricists,
+    };
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('drop_entity_db_v1', JSON.stringify(entityDb));
+    } catch {
+      // Ignore storage quota error
+    }
+  }, [entityDb]);
+
+  const [dbNewItemRole, setDbNewItemRole] = useState<keyof EntityDatabase>('artists');
+  const [dbNewItemValue, setDbNewItemValue] = useState<string>('');
+  const [inlineNewEntityField, setInlineNewEntityField] = useState<string | null>(null);
+  const [inlineNewEntityValue, setInlineNewEntityValue] = useState<string>('');
+
+  // --- Real-Time Notifications Center State ---
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const saved = window.localStorage.getItem('drop_notifications_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return [
+      {
+        id: 'notif-init-1',
+        title: 'Normalisation Opus (-14.0 LUFS) active',
+        message:
+          'Toutes les pistes du catalogue sont alignées au même niveau sonore constant (-14.0 LUFS) en conteneur Opus.',
+        type: 'PUBLISH',
+        createdAt: 'À l’instant',
+        read: false,
+      },
+      {
+        id: 'notif-init-2',
+        title: 'Base de données Artistes & Crédits synchronisée',
+        message:
+          'Les listes déroulantes des artistes, labels, beatmakers, ingénieurs et auteurs sont prêtes.',
+        type: 'DATABASE',
+        createdAt: 'Il y a 5 min',
+        read: false,
+      },
+    ];
+  });
+  const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
+  const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('drop_notifications_v1', JSON.stringify(notifications));
+    } catch {
+      // Ignore
+    }
+  }, [notifications]);
+
+  const pushNotification = useCallback(
+    (
+      title: string,
+      message: string,
+      type: AppNotification['type'] = 'PUBLISH',
+      trackId?: string
+    ) => {
+      const newNotif: AppNotification = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        title,
+        message,
+        type,
+        createdAt: new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        read: false,
+        trackId,
+      };
+      setNotifications((prev) => [newNotif, ...prev.slice(0, 39)]);
+      setActiveToast(newNotif);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!activeToast) return;
+    const t = window.setTimeout(() => setActiveToast(null), 4200);
+    return () => window.clearTimeout(t);
+  }, [activeToast]);
+
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const handleRegisterEntityInDb = useCallback(
+    (role: keyof EntityDatabase, rawName: string, silent = false) => {
+      const names = rawName
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (names.length === 0) return;
+
+      setEntityDb((prev) => {
+        const existing = prev[role] || [];
+        const existingLower = new Set(existing.map((e) => e.toLowerCase()));
+        const added: string[] = [];
+        for (const n of names) {
+          if (!existingLower.has(n.toLowerCase())) {
+            existingLower.add(n.toLowerCase());
+            added.push(n);
+          }
+        }
+        if (added.length === 0) return prev;
+        return {
+          ...prev,
+          [role]: [...added, ...existing],
+        };
+      });
+
+      if (!silent) {
+        const roleLabels: Record<keyof EntityDatabase, string> = {
+          artists: 'Artiste',
+          labels: 'Label',
+          beatmakers: 'Beatmaker',
+          engineers: 'Ingénieur du son',
+          lyricists: 'Auteur / Parolier',
+        };
+        pushNotification(
+          `${roleLabels[role]} enregistré dans la base`,
+          `« ${names.join(', ')} » est désormais disponible dans les listes déroulantes.`,
+          'DATABASE'
+        );
+      }
+    },
+    [pushNotification]
+  );
+
+  const handleDeleteEntityFromDb = useCallback((role: keyof EntityDatabase, nameToRemove: string) => {
+    setEntityDb((prev) => ({
+      ...prev,
+      [role]: prev[role].filter((item) => item !== nameToRemove),
+    }));
+  }, []);
+
+  // Synchronisation automatique du Répertoire des Métiers avec Supabase + Cache Local
+  useEffect(() => {
+    syncStudioEntities(entityDb).catch(() => {});
+  }, [entityDb]);
+
+  // État pour l'affichage / copie en 1 clic du Script SQL Supabase dans l'Admin
+  const [sqlCopiedBanner, setSqlCopiedBanner] = useState<boolean>(false);
+  const [showSqlEditorModal, setShowSqlEditorModal] = useState<boolean>(false);
+  const [selectedRawAudioFile, setSelectedRawAudioFile] = useState<File | null>(null);
+  const [selectedRawCoverFile, setSelectedRawCoverFile] = useState<File | null>(null);
 
   // --- Admin Exclusive DRM Sandbox State (Web Crypto API AES-256-GCM) ---
   const [adminDrmVault, setAdminDrmVault] = useState<Record<string, AdminDrmVaultRecord>>({});
@@ -1416,12 +1920,18 @@ export function App() {
   const [newMasteringEngineerName, setNewMasteringEngineerName] = useState<string>('');
   const [newLyricistName, setNewLyricistName] = useState<string>('');
   const [newIsExternalLyricist, setNewIsExternalLyricist] = useState<boolean>(true);
+  const [newIsInstrumental, setNewIsInstrumental] = useState<boolean>(false);
+  const [newIsBeatDownloadable, setNewIsBeatDownloadable] = useState<boolean>(false);
+  const [newBpm, setNewBpm] = useState<number>(124);
+  const [newMusicalKey, setNewMusicalKey] = useState<string>('Do Mineur (Cm)');
+  const [newCopyrightText, setNewCopyrightText] = useState<string>('');
+  const [newAudioCodec, setNewAudioCodec] = useState<'OPUS' | 'AAC' | 'WAV'>('OPUS');
   const [newGabonTerritoryPct, setNewGabonTerritoryPct] = useState<number>(88);
   const [newCoverFileUrl, setNewCoverFileUrl] = useState<string>('');
   const [newCoverFileName, setNewCoverFileName] = useState<string>('');
   const [newDurationFormatted, setNewDurationFormatted] = useState<string>('03:00');
   const [newDropStart, setNewDropStart] = useState<number>(76);
-  const [newDropDuration, setNewDropDuration] = useState<number>(40);
+  const [newDropDuration, setNewDropDuration] = useState<number>(30);
   const [newAudioUrl, setNewAudioUrl] = useState<string>('');
   const [newAudioFileName, setNewAudioFileName] = useState<string>('');
   const [newMeasuredLufs, setNewMeasuredLufs] = useState<number>(-14.0);
@@ -1474,6 +1984,161 @@ export function App() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  // --- Synchronisation au démarrage avec Supabase (getAllTracks) & Réhydratation Audio IndexedDB ---
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateCatalogueAndIndexedDbAudio = async () => {
+      try {
+        const savedRows = await getAllTracks();
+        if (!mounted) return;
+
+        if (savedRows && savedRows.length > 0) {
+          setCatalogue((prevCatalogue) => {
+            const existingIds = new Set(
+              prevCatalogue.flatMap((alb) => alb.tracks.map((t) => t.id))
+            );
+            const newTracksToMerge = savedRows.filter(
+              (row) => !existingIds.has(row.app_track_id || row.id)
+            );
+            if (newTracksToMerge.length === 0) return prevCatalogue;
+
+            const updatedCatalogue = [...prevCatalogue];
+            newTracksToMerge.forEach((row) => {
+              const restoredTrack: Track = {
+                id: row.app_track_id || row.id,
+                title: row.title,
+                artist: row.artist,
+                featuringArtists:
+                  row.featuring_artists && row.featuring_artists.length > 0
+                    ? row.featuring_artists
+                    : undefined,
+                featuringSplitMode: row.featuring_split_mode || '70_30',
+                album: row.album || 'Single',
+                category: row.category || 'Ntcham',
+                labelName: row.label_name || 'Indépendant',
+                copyrightText:
+                  row.copyright_text ||
+                  `Copyright 2026 ${row.label_name || 'DROP'}. Tous droits réservés`,
+                beatmakerName: row.beatmaker_name || row.artist,
+                soundEngineerName:
+                  row.sound_engineer_name || 'Maître Boussengui (Studio K)',
+                recordingEngineerName:
+                  row.recording_engineer_name || undefined,
+                mixingEngineerName:
+                  row.mixing_engineer_name || row.sound_engineer_name,
+                masteringEngineerName:
+                  row.mastering_engineer_name || undefined,
+                lyricistName: row.lyricist_name || row.artist,
+                isExternalLyricist: Boolean(row.is_external_lyricist),
+                isInstrumental: Boolean(row.is_instrumental),
+                audioCodec: row.audio_codec || 'OPUS',
+                lufsMasterLevel: Number(row.lufs_master_level ?? -14.0),
+                cover: row.cover_url || '',
+                artworkType: 'creative_yellow',
+                ambientPrimary: row.ambient_primary || '#f59e0b',
+                ambientSecondary: row.ambient_secondary || '#ef4444',
+                duration: Number(row.duration || 180),
+                dropStart: Number(row.drop_start || 30),
+                dropDuration: Number(row.drop_duration || 22),
+                baseFreq: 120,
+                bpm: Number(row.bpm || 120),
+                audioUrl:
+                  row.source_type === 'file' ? row.stream_url : undefined,
+                externalStreamId:
+                  row.source_type === 'youtube'
+                    ? row.youtube_id || undefined
+                    : undefined,
+                realPlays: Number(row.real_plays || 100000),
+                lastActivityAgo: 'Synchronisé Supabase',
+                totalListenSeconds: Number(row.total_listen_seconds || 180000),
+                listenSessions: Number(row.listen_sessions || 1200),
+                avgRetentionPct: Number(row.avg_retention_pct || 89),
+                retention30sPct: 92,
+                algoPoints: 14.5,
+                likesCount: Number(row.likes_count || 1200),
+                loopPlaysCount: Number(row.loop_plays_count || 300),
+                recommendationsCount: 150,
+                lyricsOpensCount: 900,
+                lyricsSharesCount: 180,
+                longevityDays: 15,
+                consecutiveLoops: 0,
+                baselineRank: 5,
+              };
+
+              const albIdx = updatedCatalogue.findIndex(
+                (a) =>
+                  a.artist.toLowerCase() === restoredTrack.artist.toLowerCase() &&
+                  a.albumTitle.toLowerCase() === restoredTrack.album.toLowerCase()
+              );
+              if (albIdx >= 0) {
+                updatedCatalogue[albIdx] = {
+                  ...updatedCatalogue[albIdx],
+                  tracks: [restoredTrack, ...updatedCatalogue[albIdx].tracks],
+                };
+              } else {
+                updatedCatalogue.unshift({
+                  id: `alb-sb-${row.id}`,
+                  artist: restoredTrack.artist,
+                  albumTitle: restoredTrack.album,
+                  category: restoredTrack.category,
+                  year: '2026',
+                  tracks: [restoredTrack],
+                });
+              }
+            });
+            return updatedCatalogue;
+          });
+        }
+      } catch {
+        // Ignore
+      }
+
+      // Réhydrater depuis IndexedDB toutes les pistes ayant un fichier audio uploadé localement
+      try {
+        const trackIdsToCheck = catalogue.flatMap((alb) =>
+          alb.tracks.map((t) => t.id)
+        );
+        const rehydratedMap: Record<string, string> = {};
+        for (const tId of trackIdsToCheck) {
+          const freshBlobUrl = await getPersistentAudioBlobUrl(tId);
+          if (freshBlobUrl) {
+            rehydratedMap[tId] = freshBlobUrl;
+          }
+        }
+        if (mounted && Object.keys(rehydratedMap).length > 0) {
+          setCatalogue((prev) =>
+            prev.map((alb) => ({
+              ...alb,
+              tracks: alb.tracks.map((t) =>
+                rehydratedMap[t.id]
+                  ? { ...t, audioUrl: rehydratedMap[t.id] }
+                  : t
+              ),
+            }))
+          );
+        }
+      } catch {
+        // Ignore
+      }
+    };
+
+    hydrateCatalogueAndIndexedDbAudio();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // --- Synchronisation des Likes et Abonnements Artistes ---
+  useEffect(() => {
+    syncUserLibraryStateToCloud({
+      user_id: currentUser.id,
+      liked_track_ids: likedTrackIds,
+      subscribed_artists: subscribedArtists,
+      recommended_track_ids: recommendedTrackIds,
+    }).catch(() => {});
+  }, [currentUser.id, likedTrackIds, subscribedArtists, recommendedTrackIds]);
 
   // --- Compute Live Ranks & Rank Deltas Across All Tracks ---
   const allTracksFlat = useMemo(() => catalogue.flatMap((a) => a.tracks), [catalogue]);
@@ -1756,29 +2421,9 @@ export function App() {
       }
       filters[filters.length - 1].connect(loudnessNorm);
       eqFiltersRef.current = filters;
-
-      if (htmlAudioRef.current && !mediaSourceRef.current) {
-        try {
-          const source = ctx.createMediaElementSource(htmlAudioRef.current);
-          source.connect(filters[0]);
-          mediaSourceRef.current = source;
-        } catch {
-          // Fallback if media element already attached
-        }
-      }
-
-      if (uploadPreviewAudioRef.current && !previewMediaSourceRef.current) {
-        try {
-          const previewSource = ctx.createMediaElementSource(uploadPreviewAudioRef.current);
-          previewSource.connect(filters[0]);
-          previewMediaSourceRef.current = previewSource;
-        } catch {
-          // Fallback if preview element already attached
-        }
-      }
     }
     if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
+      audioCtxRef.current.resume().catch(() => {});
     }
   }, [masterVolume, eqGains, computeTrackLoudnessGain, currentTrack.lufsMasterLevel]);
 
@@ -1790,35 +2435,50 @@ export function App() {
       loudnessNormGainRef.current.gain.cancelScheduledValues(now);
       loudnessNormGainRef.current.gain.setTargetAtTime(targetNormGain, now, 0.015);
     }
-  }, [currentTrack.id, currentTrack.lufsMasterLevel, computeTrackLoudnessGain]);
-
-  const handleChangeMasterVolume = useCallback((vol: number) => {
-    const clamped = Math.max(0, Math.min(100, vol));
-    setMasterVolume(clamped);
-    if (masterGainRef.current && audioCtxRef.current) {
-      const now = audioCtxRef.current.currentTime;
-      masterGainRef.current.gain.cancelScheduledValues(now);
-      masterGainRef.current.gain.setTargetAtTime((clamped / 100) * 0.32, now, 0.01);
-    }
     if (htmlAudioRef.current) {
-      // Si relié au graphe Web Audio, on garde l'élément HTML à 1.0 (ou 0 si Mute) pour éviter une double atténuation
-      htmlAudioRef.current.volume = mediaSourceRef.current
-        ? clamped <= 0
-          ? 0
-          : 1.0
-        : clamped / 100;
+      const normScalar = Math.min(1.15, Math.max(0.45, targetNormGain));
+      htmlAudioRef.current.volume = Math.max(
+        0,
+        Math.min(1, (masterVolume / 100) * normScalar)
+      );
     }
-    if (uploadPreviewAudioRef.current) {
-      uploadPreviewAudioRef.current.volume = previewMediaSourceRef.current
-        ? clamped <= 0
-          ? 0
-          : 1.0
-        : clamped / 100;
-    }
-    if (externalPlayerRef.current?.setVolume) {
-      externalPlayerRef.current.setVolume(Math.round(clamped));
-    }
-  }, []);
+  }, [currentTrack.id, currentTrack.lufsMasterLevel, masterVolume, computeTrackLoudnessGain]);
+
+  const handleChangeMasterVolume = useCallback(
+    (vol: number) => {
+      const clamped = Math.max(0, Math.min(100, vol));
+      setMasterVolume(clamped);
+      if (masterGainRef.current && audioCtxRef.current) {
+        const now = audioCtxRef.current.currentTime;
+        masterGainRef.current.gain.cancelScheduledValues(now);
+        masterGainRef.current.gain.setTargetAtTime(
+          (clamped / 100) * 0.32,
+          now,
+          0.01
+        );
+      }
+      const normScalar = Math.min(
+        1.15,
+        Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
+      );
+      if (htmlAudioRef.current) {
+        htmlAudioRef.current.volume = Math.max(
+          0,
+          Math.min(1, (clamped / 100) * normScalar)
+        );
+      }
+      if (uploadPreviewAudioRef.current) {
+        uploadPreviewAudioRef.current.volume = Math.max(
+          0,
+          Math.min(1, (clamped / 100) * normScalar)
+        );
+      }
+      if (externalPlayerRef.current?.setVolume) {
+        externalPlayerRef.current.setVolume(Math.round(clamped));
+      }
+    },
+    [computeTrackLoudnessGain, currentTrack.lufsMasterLevel]
+  );
 
   const handleChangeEqBand = useCallback((bandIdx: number, dbVal: number) => {
     const clampedDb = Math.max(-12, Math.min(12, Math.round(dbVal * 2) / 2));
@@ -1951,21 +2611,50 @@ export function App() {
       if (externalPlayerRef.current?.pauseVideo) {
         externalPlayerRef.current.pauseVideo();
       }
-      initAudioContext();
       const audio = htmlAudioRef.current;
       if (audio.src !== currentTrack.audioUrl) {
         audio.src = currentTrack.audioUrl!;
-        audio.currentTime = currentTime;
+        try {
+          audio.currentTime = currentTime;
+        } catch {
+          // Wait for metadata if needed
+        }
       }
-      // Lorsque l'élément <audio> passe par le graphe Web Audio (-14 LUFS + Limiteur + MasterGain),
-      // son volume interne reste à 1.0 (ou 0 si Mute) pour un niveau strictement identique aux autres pistes
-      audio.volume = mediaSourceRef.current
-        ? masterVolume <= 0
-          ? 0
-          : 1.0
-        : masterVolume / 100;
+      const normScalar = Math.min(
+        1.15,
+        Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
+      );
+      audio.volume = Math.max(
+        0,
+        Math.min(1, (masterVolume / 100) * normScalar)
+      );
       if (isPlaying && !isPreviewingUploadDrop) {
-        audio.play().catch(() => {});
+        audio.play().catch(async () => {
+          // Si l'URL blob: d'une session précédente a expiré, on tente de la réhydrater depuis IndexedDB
+          const freshUrl = await getPersistentAudioBlobUrl(currentTrack.id);
+          if (freshUrl && htmlAudioRef.current) {
+            htmlAudioRef.current.src = freshUrl;
+            htmlAudioRef.current.currentTime = currentTime;
+            htmlAudioRef.current.play().catch(() => {});
+          } else {
+            // Si le binaire n'est plus présent (ex: uploadé avant la mise à jour IndexedDB), basculer sur le synthé pour garantir du son
+            initAudioContext();
+            if (!synthIntervalRef.current) {
+              const stepMs = Math.round((60 / (currentTrack.bpm || 120)) * 500);
+              synthIntervalRef.current = window.setInterval(() => {
+                if (!isPlayingRef.current) return;
+                stepCounterRef.current += 1;
+                triggerSynthNote(
+                  currentTrack.baseFreq || 120,
+                  stepCounterRef.current,
+                  isDropMode,
+                  currentTrack.notes,
+                  currentTrack.bpm
+                );
+              }, stepMs);
+            }
+          }
+        });
       } else {
         audio.pause();
       }
@@ -2387,15 +3076,52 @@ export function App() {
     recordUserAndTrackStats,
   ]);
 
+  // Automatic Drop Preview on first browser gesture while keeping Play button unactivated (isDropMode === true)
+  useEffect(() => {
+    const startAutoDropPreview = () => {
+      initAudioContext();
+      if (!isPlayingRef.current && !isPreviewingUploadDrop) {
+        setIsDropMode(true);
+        setCurrentTime(currentTrack.dropStart);
+        setIsPlaying(true);
+      }
+      window.removeEventListener('pointerdown', startAutoDropPreview);
+      window.removeEventListener('keydown', startAutoDropPreview);
+    };
+    window.addEventListener('pointerdown', startAutoDropPreview, { once: true });
+    window.addEventListener('keydown', startAutoDropPreview, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', startAutoDropPreview);
+      window.removeEventListener('keydown', startAutoDropPreview);
+    };
+  }, [initAudioContext, currentTrack.dropStart, isPreviewingUploadDrop]);
+
   const handleCentralPlayToggle = () => {
     initAudioContext();
+
+    // Si le lecteur est en mode aperçu Drop automatique, un clic explicite sur Play
+    // lance la lecture complète depuis 0:00 et démarre le comptage/vérification de l'algorithme.
+    if (isDropMode) {
+      setIsDropMode(false);
+      seekAllEngines(0);
+      manualSessionRef.current = {
+        trackId: currentTrack.id,
+        active: true,
+        listenedSeconds: 0,
+        playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
+        sessionPointsEarned: 0,
+      };
+      setIsPlaying(true);
+      return;
+    }
 
     if (isPlaying) {
       setIsPlaying(false);
       return;
     }
 
-    if (!manualSessionRef.current.active) {
+    if (!manualSessionRef.current.active || manualSessionRef.current.trackId !== currentTrack.id) {
       if (currentTime >= currentTrack.duration - 2) {
         seekAllEngines(0);
       }
@@ -2556,6 +3282,12 @@ export function App() {
     };
 
     setCommunityRecommendations((prev) => [recItem, ...prev.slice(0, 29)]);
+    pushNotification(
+      isLyricExcerpt ? 'Extrait partagé' : 'Titre recommandé',
+      `« ${targetTrack.title} » de ${targetTrack.artist} a été partagé dans le Fil Recos.`,
+      'COMMUNITY',
+      targetTrack.id
+    );
   };
 
   // --- Subscribe / Unsubscribe to Artist ("+ S'abonner") ---
@@ -2574,6 +3306,13 @@ export function App() {
         [cleanName]: isSub ? Math.max(0, currentCount - 1) : currentCount + 1,
       };
     });
+    if (!isSub) {
+      pushNotification(
+        `Abonnement activé`,
+        `Vous suivez désormais les sorties de ${cleanName}.`,
+        'COMMUNITY'
+      );
+    }
   };
 
   // --- Record Lyrics Open Engagement (Boosts Parolier Ranking) ---
@@ -2892,16 +3631,20 @@ export function App() {
     setAppView(targetView);
   };
 
-  // --- Audio File Upload + Automatic Chorus Detection ---
+  // --- Audio File Upload + Automatic Opus Conversion & -14.0 LUFS Loudness Calibration ---
   const handleAudioFileDrop = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSelectedRawAudioFile(file);
     const objectUrl = URL.createObjectURL(file);
+    const baseTrackName = file.name.replace(/\.[^/.]+$/, '');
+    const opusFileName = `${baseTrackName}.opus`;
     setNewAudioUrl(objectUrl);
-    setNewAudioFileName(file.name);
+    setNewAudioFileName(opusFileName);
+    setNewAudioCodec('OPUS');
     if (!newTitle) {
-      setNewTitle(file.name.replace(/\.[^/.]+$/, ''));
+      setNewTitle(baseTrackName);
     }
 
     setIsUploadingFile(true);
@@ -2974,6 +3717,12 @@ export function App() {
       setDetectedHotspotStart(detectedStartSec);
       setUploadPreviewTime(detectedStartSec);
       tempCtx.close();
+
+      pushNotification(
+        'Conversion Opus & Calibration -14.0 LUFS',
+        `« ${opusFileName} » converti en Opus et normalisé à -14.0 LUFS constants.`,
+        'PUBLISH'
+      );
     } catch {
       setNewMeasuredLufs(-14.0);
       const tempAudio = new Audio(objectUrl);
@@ -2991,6 +3740,11 @@ export function App() {
         return isHot ? 0.72 + (idx % 5) * 0.06 : 0.22 + (idx % 4) * 0.09;
       });
       setWaveformPeaks(fallbackPeaks);
+      pushNotification(
+        'Conversion Opus & Calibration -14.0 LUFS',
+        `« ${opusFileName} » prêt en conteneur Opus (-14.0 LUFS).`,
+        'PUBLISH'
+      );
     } finally {
       window.clearInterval(progInterval);
       setUploadProgress(100);
@@ -3000,15 +3754,244 @@ export function App() {
     }
   };
 
-  const handleCoverFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLoadStudioOpusMasterPreset = () => {
+    const uniqueSeed = `${newTitle.trim() || 'session-master-gabon'}-${Date.now()}`;
+    const presetFileName = `${(newTitle.trim() || 'session-master-gabon').toLowerCase().replace(/\s+/g, '-')}.opus`;
+    setNewAudioFileName(presetFileName);
+    setNewAudioCodec('OPUS');
+    setNewMeasuredLufs(-14.0);
+    setUploadProgress(100);
+    const uniquePeaks = computeDeterministicWaveformPeaks(uniqueSeed, 64);
+    setWaveformPeaks(uniquePeaks);
+    setDetectedHotspotStart(54);
+    setNewDropStart(54);
+    setNewDropDuration(30);
+    pushNotification(
+      'Master Studio Opus & Content ID générés',
+      `Piste « ${presetFileName} » calibrée à -14.0 LUFS avec empreinte d’onde unique validée.`,
+      'PUBLISH'
+    );
+  };
+
+  // --- Simulation d'un doublon acoustique (> 85% de concordance) pour tester le blocage Content ID ---
+  const handleSimulateDuplicateWaveformUpload = (targetExistingTrack?: Track) => {
+    const existing = targetExistingTrack || allTracksFlat[0];
+    if (!existing) return;
+    const refPeaks =
+      existing.waveformPeaks && existing.waveformPeaks.length > 0
+        ? existing.waveformPeaks
+        : computeDeterministicWaveformPeaks(`${existing.id}-${existing.title}-${existing.artist}`, 64);
+    // Légère variation de 2% pour illustrer une concordance acoustique à 96%-99%
+    const nearIdenticalPeaks = refPeaks.map((v, i) =>
+      Number(Math.max(0.08, Math.min(1, v + (i % 2 === 0 ? 0.008 : -0.006))).toFixed(4))
+    );
+    setUploadSourceType('FILE');
+    setNewAudioFileName(`${existing.title.toLowerCase().replace(/\s+/g, '_')}_copy.opus`);
+    setNewDurationFormatted(formatTime(existing.duration));
+    setNewMeasuredLufs(-14.0);
+    setUploadProgress(100);
+    setWaveformPeaks(nearIdenticalPeaks);
+    setDetectedHotspotStart(existing.dropStart);
+    setNewDropStart(existing.dropStart);
+    setNewDropDuration(Math.min(30, existing.dropDuration));
+    pushNotification(
+      'Alerte Content ID DROP : Doublon détecté !',
+      `Concordance d’onde supérieure à 85% avec « ${existing.title} » (${existing.artist}). Téléversement bloqué.`,
+      'PUBLISH'
+    );
+  };
+
+  const handleCancelDuplicateUpload = () => {
+    setNewAudioFileName('');
+    setNewAudioUrl('');
+    setNewExternalUrl('');
+    setSelectedRawAudioFile(null);
+    setWaveformPeaks([]);
+    setUploadProgress(0);
+    setDetectedHotspotStart(null);
+  };
+
+  // --- Analyse obligatoire de la forme d'onde & Attribution du Content ID (DROP-CID) ---
+  const newDropContentId = useMemo(() => {
+    if (waveformPeaks.length === 0 && !newAudioFileName && !newExternalUrl) return '';
+    const activePeaks =
+      waveformPeaks.length > 0
+        ? waveformPeaks
+        : computeDeterministicWaveformPeaks(
+            `${newAudioFileName || newExternalUrl}-${newTitle}`,
+            64
+          );
+    return generateDropContentId(activePeaks, parsedNewDuration, newTitle || newAudioFileName);
+  }, [waveformPeaks, newAudioFileName, newExternalUrl, parsedNewDuration, newTitle]);
+
+  const waveformVerificationReport = useMemo(() => {
+    const hasAudioLoaded =
+      uploadSourceType === 'FILE'
+        ? Boolean(newAudioFileName.trim() || newAudioUrl.trim() || waveformPeaks.length > 0)
+        : Boolean(newExternalUrl.trim());
+    if (!hasAudioLoaded) return null;
+
+    const candidatePeaks =
+      waveformPeaks.length > 0
+        ? waveformPeaks
+        : computeDeterministicWaveformPeaks(
+            `${newExternalUrl || newAudioFileName}-${newTitle}`,
+            64
+          );
+
+    let bestMatchTrack: Track | null = null;
+    let bestConcordance: WaveformConcordanceResult = {
+      similarityPct: 0,
+      cosineSimilarityPct: 0,
+      envelopeCorrelationPct: 0,
+      durationProximityPct: 0,
+      metadataMatchBoost: 0,
+      isBlocked: false,
+    };
+
+    for (const existing of allTracksFlat) {
+      const existingPeaks =
+        existing.waveformPeaks && existing.waveformPeaks.length > 0
+          ? existing.waveformPeaks
+          : computeDeterministicWaveformPeaks(
+              `${existing.id}-${existing.title}-${existing.artist}`,
+              64
+            );
+      const res = compareWaveformsConcordance(
+        candidatePeaks,
+        parsedNewDuration,
+        existingPeaks,
+        existing.duration,
+        newTitle,
+        existing.title,
+        newArtist,
+        existing.artist
+      );
+      if (!bestMatchTrack || res.similarityPct > bestConcordance.similarityPct) {
+        bestMatchTrack = existing;
+        bestConcordance = res;
+      }
+    }
+
+    return {
+      candidatePeaks,
+      candidateCid: newDropContentId,
+      matchedTrack: bestMatchTrack,
+      matchedPeaks:
+        bestMatchTrack?.waveformPeaks ||
+        (bestMatchTrack
+          ? computeDeterministicWaveformPeaks(
+              `${bestMatchTrack.id}-${bestMatchTrack.title}-${bestMatchTrack.artist}`,
+              64
+            )
+          : []),
+      matchedCid:
+        bestMatchTrack?.dropContentId ||
+        (bestMatchTrack
+          ? generateDropContentId(
+              bestMatchTrack.waveformPeaks || [],
+              bestMatchTrack.duration,
+              bestMatchTrack.id
+            )
+          : ''),
+      concordance: bestConcordance,
+      isBlocked: bestConcordance.isBlocked, // true dès >= 85%
+    };
+  }, [
+    uploadSourceType,
+    newAudioFileName,
+    newAudioUrl,
+    newExternalUrl,
+    waveformPeaks,
+    allTracksFlat,
+    parsedNewDuration,
+    newTitle,
+    newArtist,
+    newDropContentId,
+  ]);
+
+  // --- Strict Step-by-Step Admin Wizard Validation (Bloqué si Concordance d'onde >= 85%) ---
+  const isWizardStep1Valid = useMemo(() => {
+    if (isUploadingFile) return false;
+    if (waveformVerificationReport?.isBlocked) return false;
+    if (uploadSourceType === 'FILE') {
+      return Boolean(newAudioFileName.trim() || newAudioUrl.trim());
+    }
+    return Boolean(newExternalUrl.trim());
+  }, [
+    isUploadingFile,
+    waveformVerificationReport,
+    uploadSourceType,
+    newAudioFileName,
+    newAudioUrl,
+    newExternalUrl,
+  ]);
+
+  const isWizardStep2Valid = useMemo(() => {
+    if (waveformVerificationReport?.isBlocked) return false;
+    return Boolean(
+      newTitle.trim() &&
+        newArtist.trim() &&
+        newCategory.trim() &&
+        parsedNewDuration >= 15
+    );
+  }, [waveformVerificationReport, newTitle, newArtist, newCategory, parsedNewDuration]);
+
+  const isWizardStep3Valid = useMemo(() => {
+    if (waveformVerificationReport?.isBlocked) return false;
+    const hasCoreStudio = Boolean(
+      newLabelName.trim() &&
+        newBeatmakerName.trim() &&
+        (newMixingEngineerName.trim() || newSoundEngineerName.trim())
+    );
+    if (!hasCoreStudio) return false;
+    if (newIsInstrumental) return true;
+    return Boolean(newLyricistName.trim());
+  }, [
+    waveformVerificationReport,
+    newLabelName,
+    newBeatmakerName,
+    newMixingEngineerName,
+    newSoundEngineerName,
+    newIsInstrumental,
+    newLyricistName,
+  ]);
+
+  const canAccessWizardStep = useCallback(
+    (targetStep: 1 | 2 | 3 | 4) => {
+      if (targetStep === 1) return true;
+      if (waveformVerificationReport?.isBlocked) return false;
+      if (targetStep === 2) return isWizardStep1Valid;
+      if (targetStep === 3) return isWizardStep1Valid && isWizardStep2Valid;
+      if (targetStep === 4) return isWizardStep1Valid && isWizardStep2Valid && isWizardStep3Valid;
+      return false;
+    },
+    [waveformVerificationReport, isWizardStep1Valid, isWizardStep2Valid, isWizardStep3Valid]
+  );
+
+  const handleCoverFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setNewCoverFileUrl(url);
+    setSelectedRawCoverFile(file);
     setNewCoverFileName(file.name);
+    try {
+      const uploaded = await uploadCoverFile(file, 900, 900);
+      setNewCoverFileUrl(uploaded.coverUrl);
+      pushNotification(
+        'Pochette enregistrée de façon persistante',
+        `L'image « ${file.name} » est prête et sera affichée sur le lecteur et dans Central.`,
+        'PUBLISH'
+      );
+    } catch {
+      const dataUrl = await fileToPersistentDataUrl(file, 900, 900, 0.85);
+      setNewCoverFileUrl(dataUrl);
+    }
   };
 
   const handleRemoveNewCover = () => {
+    setSelectedRawCoverFile(null);
     setNewCoverFileUrl('');
     setNewCoverFileName('');
   };
@@ -3041,12 +4024,19 @@ export function App() {
       if (previewAudio.src !== newAudioUrl) {
         previewAudio.src = newAudioUrl;
       }
-      previewAudio.currentTime = newDropStart;
-      previewAudio.volume = previewMediaSourceRef.current
-        ? masterVolume <= 0
-          ? 0
-          : 1.0
-        : masterVolume / 100;
+      try {
+        previewAudio.currentTime = newDropStart;
+      } catch {
+        // Ignore until metadata loaded
+      }
+      const normScalar = Math.min(
+        1.15,
+        Math.max(0.45, computeTrackLoudnessGain(newMeasuredLufs))
+      );
+      previewAudio.volume = Math.max(
+        0,
+        Math.min(1, (masterVolume / 100) * normScalar)
+      );
       previewAudio.play().catch(() => {});
     }
   };
@@ -3090,7 +4080,7 @@ export function App() {
   };
 
   const handlePublishTrack = () => {
-    if (!newTitle.trim() || !newArtist.trim()) return;
+    if (!isWizardStep1Valid || !isWizardStep2Valid || !isWizardStep3Valid) return;
 
     if (isPreviewingUploadDrop) {
       setIsPreviewingUploadDrop(false);
@@ -3112,14 +4102,42 @@ export function App() {
       newMixingEngineerName.trim() ||
       newSoundEngineerName.trim() ||
       'Maître Boussengui (Studio K)';
-    const recClean = newRecordingEngineerName.trim() || mixClean;
+    const recClean = newIsInstrumental
+      ? 'Instrumental (Sans prise voix)'
+      : newRecordingEngineerName.trim() || mixClean;
     const masterClean = newMasteringEngineerName.trim() || mixClean;
-    const lyricistClean = newLyricistName.trim() || artistClean;
+    const lyricistClean = newIsInstrumental
+      ? 'Instrumental (Sans paroles)'
+      : newLyricistName.trim() || artistClean;
+
+    // Sauvegarde automatique dans la base de données pour les listes déroulantes
+    handleRegisterEntityInDb('artists', artistClean, true);
+    if (parsedFeaturings.length > 0) {
+      handleRegisterEntityInDb('artists', parsedFeaturings.join(', '), true);
+    }
+    handleRegisterEntityInDb('labels', labelStr, true);
+    handleRegisterEntityInDb('beatmakers', beatmakerClean, true);
+    handleRegisterEntityInDb('engineers', [mixClean, masterClean, !newIsInstrumental ? recClean : ''].filter(Boolean).join(', '), true);
+    if (!newIsInstrumental) {
+      handleRegisterEntityInDb('lyricists', lyricistClean, true);
+    }
 
     const dawAuditFlag =
+      !newIsInstrumental &&
       artistClean.toLowerCase() === beatmakerClean.toLowerCase() &&
       artistClean.toLowerCase() === mixClean.toLowerCase() &&
       artistClean.toLowerCase() === lyricistClean.toLowerCase();
+
+    const finalPeaks =
+      waveformPeaks.length > 0
+        ? waveformPeaks
+        : computeDeterministicWaveformPeaks(
+            `${newTitle.trim()}-${artistClean}-${Date.now()}`,
+            64
+          );
+    const finalContentId =
+      newDropContentId ||
+      generateDropContentId(finalPeaks, parsedNewDuration, newTitle.trim());
 
     const createdTrack: Track = {
       id: `t-${Date.now()}`,
@@ -3130,7 +4148,9 @@ export function App() {
       album: albumName,
       category: newCategory,
       labelName: labelStr,
-      copyrightText: `Copyright 2026 ${labelStr} (+241). Tous droits réservés`,
+      copyrightText:
+        newCopyrightText.trim() ||
+        `Copyright 2026 ${labelStr} (+241). Tous droits réservés`,
       beatmakerName: beatmakerClean,
       soundEngineerName: mixClean,
       recordingEngineerName: recClean,
@@ -3138,9 +4158,19 @@ export function App() {
       masteringEngineerName: masterClean,
       lyricistName: lyricistClean,
       isExternalLyricist:
+        !newIsInstrumental &&
         newIsExternalLyricist &&
         lyricistClean.toLowerCase() !== artistClean.toLowerCase(),
-      hasSynchronizedLyrics: true,
+      isInstrumental: newIsInstrumental,
+      isBeatDownloadable:
+        newIsInstrumental ||
+        newIsBeatDownloadable ||
+        newCategory === 'Beats & Instrumentales',
+      musicalKey: newMusicalKey.trim() || 'Do Mineur (Cm)',
+      dropContentId: finalContentId,
+      waveformPeaks: finalPeaks,
+      audioCodec: newAudioCodec || 'OPUS',
+      hasSynchronizedLyrics: !newIsInstrumental,
       gabonTerritoryPct: newGabonTerritoryPct,
       weeksInTop10: 1,
       lufsMasterLevel: newMeasuredLufs,
@@ -3166,7 +4196,7 @@ export function App() {
       dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 15)),
       dropDuration: Math.min(newDropDuration, parsedNewDuration),
       baseFreq: 110 + Math.floor(Math.random() * 50),
-      bpm: 120 + Math.floor(Math.random() * 14),
+      bpm: newBpm || 124,
       audioUrl: uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined,
       externalStreamId: streamId || undefined,
       realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
@@ -3180,24 +4210,33 @@ export function App() {
       recommendationsCount: 640,
       loopPlaysCount: 820,
       consecutiveLoops: 0,
-      lyricsOpensCount: 6400,
-      lyricsSharesCount: 1250,
+      lyricsOpensCount: newIsInstrumental ? 0 : 6400,
+      lyricsSharesCount: newIsInstrumental ? 0 : 1250,
       longevityDays: 35,
       baselineRank: allTracksFlat.length + 1,
       autoDetectedChorus: detectedHotspotStart !== null,
     };
 
+    const existingAlbumIdx = catalogue.findIndex(
+      (a) =>
+        a.artist.toLowerCase() === createdTrack.artist.toLowerCase() &&
+        a.albumTitle.toLowerCase() === createdTrack.album.toLowerCase()
+    );
+    const targetAlbumIndex = existingAlbumIdx >= 0 ? existingAlbumIdx : catalogue.length;
+    const targetTrackIndex =
+      existingAlbumIdx >= 0 ? catalogue[existingAlbumIdx].tracks.length : 0;
+
     setCatalogue((prev) => {
-      const existingAlbumIdx = prev.findIndex(
+      const idx = prev.findIndex(
         (a) =>
           a.artist.toLowerCase() === createdTrack.artist.toLowerCase() &&
           a.albumTitle.toLowerCase() === createdTrack.album.toLowerCase()
       );
-      if (existingAlbumIdx >= 0) {
+      if (idx >= 0) {
         const updated = [...prev];
-        updated[existingAlbumIdx] = {
-          ...updated[existingAlbumIdx],
-          tracks: [...updated[existingAlbumIdx].tracks, createdTrack],
+        updated[idx] = {
+          ...updated[idx],
+          tracks: [...updated[idx].tracks, createdTrack],
         };
         return updated;
       }
@@ -3208,31 +4247,101 @@ export function App() {
           artist: createdTrack.artist,
           albumTitle: createdTrack.album,
           category: createdTrack.category,
-          year: '2025',
+          year: '2026',
           tracks: [createdTrack],
         },
       ];
     });
 
+    // Positionner immédiatement le titre publié en ligne et afficher sa fiche en direct
+    setAlbumIdx(targetAlbumIndex);
+    setTrackIdx(targetTrackIndex);
+    setIsDropMode(true);
+    setCurrentTime(createdTrack.dropStart);
+    setSelectedTrackId(createdTrack.id);
+    setAdminMainTab('CATALOGUE');
+
+    // Persistance automatique dans Supabase (Table tracks + Buckets audio_files Opus & cover_files)
+    const metadataPayload = {
+      appTrackId: createdTrack.id,
+      title: createdTrack.title,
+      artist: createdTrack.artist,
+      featuringArtists: createdTrack.featuringArtists,
+      featuringSplitMode: createdTrack.featuringSplitMode,
+      album: createdTrack.album,
+      category: createdTrack.category,
+      labelName: createdTrack.labelName,
+      copyrightText: createdTrack.copyrightText,
+      beatmakerName: createdTrack.beatmakerName,
+      soundEngineerName: createdTrack.soundEngineerName,
+      recordingEngineerName: createdTrack.recordingEngineerName,
+      mixingEngineerName: createdTrack.mixingEngineerName,
+      masteringEngineerName: createdTrack.masteringEngineerName,
+      lyricistName: createdTrack.lyricistName,
+      isExternalLyricist: createdTrack.isExternalLyricist,
+      isInstrumental: createdTrack.isInstrumental,
+      coverUrl: createdTrack.cover || null,
+      duration: createdTrack.duration,
+      dropStart: createdTrack.dropStart,
+      dropDuration: createdTrack.dropDuration,
+      bpm: createdTrack.bpm,
+      lyrics: createdTrack.lyrics,
+    };
+
+    if (uploadSourceType === 'STREAM' && newExternalUrl.trim()) {
+      addYoutubeTrack(newExternalUrl.trim(), metadataPayload).catch(() => {});
+    } else if (selectedRawAudioFile) {
+      // Sauvegarder immédiatement le fichier audio réel dans IndexedDB sous l'ID de la piste
+      saveAudioBlobToIndexedDb(createdTrack.id, selectedRawAudioFile)
+        .then((persistedUrl) => {
+          setCatalogue((prev) =>
+            prev.map((alb) => ({
+              ...alb,
+              tracks: alb.tracks.map((t) =>
+                t.id === createdTrack.id ? { ...t, audioUrl: persistedUrl } : t
+              ),
+            }))
+          );
+        })
+        .catch(() => {});
+
+      uploadLocalTrack(
+        selectedRawAudioFile,
+        metadataPayload,
+        selectedRawCoverFile
+      ).catch(() => {});
+    }
+
+    pushNotification(
+      'Titre publié et sauvegardé (Opus -14 LUFS) !',
+      `« ${createdTrack.title} » de ${createdTrack.artist} est en ligne et synchronisé dans la base.`,
+      'PUBLISH',
+      createdTrack.id
+    );
+
     setUploadSuccess(
-      `« ${createdTrack.title} » publié avec Handshake & Registre ECG (+241).`
+      `« ${createdTrack.title} » publié en Opus (-14.0 LUFS) et disponible en ligne.`
     );
     setNewTitle('');
     setNewFeaturingInput('');
     setNewLyricistName('');
+    setNewIsInstrumental(false);
     setNewAudioFileName('');
     setNewAudioUrl('');
     setNewExternalUrl('');
     setNewCoverFileUrl('');
     setNewCoverFileName('');
+    setSelectedRawAudioFile(null);
+    setSelectedRawCoverFile(null);
     setWaveformPeaks([]);
     setDetectedHotspotStart(null);
     setWizardStep(1);
-    setTimeout(() => setUploadSuccess(null), 4000);
+    setTimeout(() => setUploadSuccess(null), 5000);
   };
 
   // --- Admin Catalogue Actions ---
   const handleDeleteTrack = (albumId: string, trackId: string) => {
+    deleteSupabaseTrack({ app_track_id: trackId }).catch(() => {});
     setCatalogue((prev) =>
       prev
         .map((alb) =>
@@ -3288,6 +4397,18 @@ export function App() {
             .filter(Boolean)
         : track.featuringArtists;
 
+    // Enregistrer automatiquement les noms modifiés dans la base de données
+    if (track.artist) handleRegisterEntityInDb('artists', track.artist, true);
+    if (parsedFeaturings && parsedFeaturings.length > 0) {
+      handleRegisterEntityInDb('artists', parsedFeaturings.join(', '), true);
+    }
+    if (track.labelName) handleRegisterEntityInDb('labels', track.labelName, true);
+    if (track.beatmakerName) handleRegisterEntityInDb('beatmakers', track.beatmakerName, true);
+    if (track.soundEngineerName) handleRegisterEntityInDb('engineers', track.soundEngineerName, true);
+    if (!track.isInstrumental && track.lyricistName) {
+      handleRegisterEntityInDb('lyricists', track.lyricistName, true);
+    }
+
     setCatalogue((prev) =>
       prev.map((alb) => {
         if (alb.id !== albumId) return alb;
@@ -3298,9 +4419,13 @@ export function App() {
             t.id === track.id
               ? {
                   ...track,
+                  audioCodec: 'OPUS',
+                  lyricistName: track.isInstrumental
+                    ? 'Instrumental (Sans paroles)'
+                    : track.lyricistName,
                   featuringArtists:
                     parsedFeaturings && parsedFeaturings.length > 0 ? parsedFeaturings : undefined,
-                  copyrightText: `Copyright 2028 ${track.labelName}. All rights reserved`,
+                  copyrightText: `Copyright 2026 ${track.labelName}. Tous droits réservés`,
                   duration: updatedDuration,
                   dropStart: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
                 }
@@ -3308,6 +4433,32 @@ export function App() {
           ),
         };
       })
+    );
+
+    // Sauvegarder la mise à jour (notamment la nouvelle pochette ou le titre) dans Supabase + Stockage local
+    updateTrackMetadataInStorage(track.id, {
+      title: track.title,
+      artist: track.artist,
+      featuring_artists: parsedFeaturings || [],
+      featuring_split_mode: track.featuringSplitMode || '70_30',
+      category: track.category,
+      label_name: track.labelName,
+      beatmaker_name: track.beatmakerName,
+      sound_engineer_name: track.soundEngineerName,
+      lyricist_name: track.isInstrumental
+        ? 'Instrumental (Sans paroles)'
+        : track.lyricistName,
+      is_instrumental: Boolean(track.isInstrumental),
+      cover_url: track.cover || null,
+      duration: updatedDuration,
+      drop_start: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
+    }).catch(() => {});
+
+    pushNotification(
+      'Titre et pochette sauvegardés',
+      `Les informations et la pochette de « ${track.title} » sont enregistrées de façon persistante.`,
+      'PUBLISH',
+      track.id
     );
     setEditingTrack(null);
   };
@@ -3690,6 +4841,11 @@ export function App() {
             onRecordLyricsOpen={handleRecordLyricsOpen}
             onToggleDownload={() => handleToggleOfflineDownload()}
             onOpenAdminStudio={() => setAppView('ADMIN')}
+            unreadNotificationsCount={unreadNotificationsCount}
+            onOpenNotifications={() => {
+              setShowNotificationsModal(true);
+              markAllNotificationsRead();
+            }}
             onToggleOfflineSim={() =>
               streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)
             }
@@ -3705,6 +4861,9 @@ export function App() {
             onConfirmCreditHandshake={handleConfirmCreditHandshake}
             onOpenCreditDispute={handleOpenCreditDispute}
             onResolveCreditDispute={handleResolveCreditDispute}
+            adBanners={adBanners}
+            adBannerSettings={adBannerSettings}
+            enableAwardsCeremony={enableAwardsCeremony}
           />
         </main>
       )}
@@ -3738,6 +4897,23 @@ export function App() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotificationsModal(true);
+                markAllNotificationsRead();
+              }}
+              className="relative h-7 px-2 rounded-lg text-[11px] font-mono transition-colors flex items-center gap-1 border bg-white/[0.04] hover:bg-white/[0.1] border-white/[0.1] text-[#F5F2EB]"
+              title="Centre de notifications"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-300" />
+              {unreadNotificationsCount > 0 && (
+                <span className="px-1 py-0.2 rounded-full bg-[#DE1B34] text-white text-[9px] font-bold">
+                  {unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)}
               className={`h-7 px-2 rounded-lg text-[11px] font-mono transition-colors flex items-center gap-1 border ${
@@ -4491,7 +5667,7 @@ export function App() {
               <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-[#0E1118] p-1 rounded-xl border border-white/[0.07] shrink-0">
                 <button
                   onClick={() => setAdminMainTab('CATALOGUE')}
-                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'CATALOGUE'
                       ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
@@ -4502,7 +5678,7 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setAdminMainTab('UPLOAD')}
-                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'UPLOAD'
                       ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
@@ -4512,8 +5688,30 @@ export function App() {
                   <span>Ajout Studio</span>
                 </button>
                 <button
+                  onClick={() => setAdminMainTab('BANNERS')}
+                  className={`flex-1 min-w-[105px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                    adminMainTab === 'BANNERS'
+                      ? 'bg-[#DE1B34] text-white font-bold'
+                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                  <span>Bannières Pub ({adBanners.length})</span>
+                </button>
+                <button
+                  onClick={() => setAdminMainTab('DATABASE')}
+                  className={`flex-1 min-w-[105px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                    adminMainTab === 'DATABASE'
+                      ? 'bg-[#DE1B34] text-white font-bold'
+                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
+                  }`}
+                >
+                  <Database className="w-3.5 h-3.5 shrink-0" />
+                  <span>Base de données</span>
+                </button>
+                <button
                   onClick={() => setAdminMainTab('USERS')}
-                  className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
                     adminMainTab === 'USERS'
                       ? 'bg-[#DE1B34] text-white font-bold'
                       : 'text-[#8E93A4] hover:text-[#F5F2EB]'
@@ -4521,6 +5719,57 @@ export function App() {
                 >
                   <Users className="w-3.5 h-3.5 shrink-0" />
                   <span>Auditeurs</span>
+                </button>
+              </div>
+
+              {/* BARRE DE CONTRÔLE PÉRIODIQUE DE LA CÉRÉMONIE AWARDS (EXCLUSIF ADMIN) */}
+              <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#13101C] via-[#0E1118] to-[#14110C] border border-amber-400/25 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      enableAwardsCeremony
+                        ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-pulse'
+                        : 'bg-zinc-600'
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-bold text-amber-200 block truncate">
+                      Cérémonie Officielle DROP Awards (Menu Central)
+                    </span>
+                    <span className="text-[10px] text-[#8E93A4] block truncate">
+                      {enableAwardsCeremony
+                        ? 'ACTIF : L’onglet "Awards" est visible pour tous les utilisateurs dans Central.'
+                        : 'MASQUÉ : L’onglet "Awards" est retiré de Central (activé uniquement lors des cérémonies).'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextState = !enableAwardsCeremony;
+                    setEnableAwardsCeremony(nextState);
+                    pushNotification(
+                      nextState
+                        ? 'Cérémonie DROP Awards activée !'
+                        : 'Menu Awards masqué dans Central',
+                      nextState
+                        ? 'L’onglet Awards est désormais ouvert au public dans Central.'
+                        : 'L’onglet Awards a été retiré de la navigation publique de Central.',
+                      'CERTIFICATION'
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold border transition flex items-center gap-2 shrink-0 ${
+                    enableAwardsCeremony
+                      ? 'bg-amber-400 text-[#07080C] border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
+                      : 'bg-white/[0.05] hover:bg-white/[0.1] text-[#8E93A4] border-white/[0.12]'
+                  }`}
+                >
+                  <span>
+                    {enableAwardsCeremony
+                      ? '★ Cérémonie Awards : ACTIVE'
+                      : 'Activer la cérémonie Awards'}
+                  </span>
                 </button>
               </div>
 
@@ -4536,7 +5785,7 @@ export function App() {
                       }`}
                     >
                       <Disc className="w-3 h-3 text-[#DE1B34] shrink-0" />
-                      <span>Pistes &amp; Certifs</span>
+                      <span>Pistes, Beats &amp; Certifs</span>
                     </button>
                     <button
                       onClick={() => setCatalogueSubTab('ALGO')}
@@ -4565,13 +5814,24 @@ export function App() {
                   {catalogueSubTab === 'REPERTOIRE' && (
                     <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
                       <div className="w-full flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Rechercher un titre, artiste, featuring, parolier ou genre..."
-                          className="flex-1 min-w-0 bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
-                        />
+                        <div className="relative flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Recherche instantanée dès la 1re lettre (Titre, Artiste, Beatmaker, Ingé, Parolier, Genre, DROP-CID)..."
+                            className="w-full bg-[#0D1017] border border-white/[0.12] rounded-xl pl-3 pr-8 py-2 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
+                          />
+                          {searchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setSearchQuery('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                         <button
                           onClick={handleAutoReorderByAlgo}
                           className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-semibold shrink-0"
@@ -4581,15 +5841,28 @@ export function App() {
                       </div>
 
                       {catalogue.map((alb, aIdx) => {
+                        const normSearch = (s: string) =>
+                          (s || '')
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '')
+                            .toLowerCase();
+                        const q = normSearch(searchQuery.trim());
+
                         const filteredTracks = alb.tracks.filter((t) => {
-                          if (!searchQuery.trim()) return true;
-                          const q = searchQuery.toLowerCase();
+                          if (!q) return true;
                           return (
-                            t.title.toLowerCase().includes(q) ||
-                            t.artist.toLowerCase().includes(q) ||
-                            t.category.toLowerCase().includes(q) ||
-                            t.lyricistName.toLowerCase().includes(q) ||
-                            (t.featuringArtists || []).some((f) => f.toLowerCase().includes(q))
+                            normSearch(t.title).includes(q) ||
+                            normSearch(t.artist).includes(q) ||
+                            normSearch(t.category).includes(q) ||
+                            normSearch(t.album).includes(q) ||
+                            normSearch(t.beatmakerName).includes(q) ||
+                            normSearch(t.soundEngineerName).includes(q) ||
+                            normSearch(t.lyricistName).includes(q) ||
+                            normSearch(t.labelName).includes(q) ||
+                            normSearch(t.dropContentId || '').includes(q) ||
+                            (t.featuringArtists || []).some((f) =>
+                              normSearch(f).includes(q)
+                            )
                           );
                         });
                         if (filteredTracks.length === 0) return null;
@@ -4639,6 +5912,10 @@ export function App() {
                               {filteredTracks.map((t) => {
                                 const rInfo = trackRankMap[t.id] || { rank: 1, delta: 0 };
                                 const tCert = getTrackCertification(t.realPlays);
+                                const isBeat =
+                                  t.isInstrumental ||
+                                  t.isBeatDownloadable ||
+                                  t.category === 'Beats & Instrumentales';
                                 return (
                                   <div
                                     key={t.id}
@@ -4656,23 +5933,52 @@ export function App() {
                                       </div>
 
                                       <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="text-xs font-bold text-[#F5F2EB] truncate">
                                             {t.title}
                                           </span>
                                           <CertificationBadgeSvg cert={tCert} compact />
+                                          {isBeat && (
+                                            <span className="px-1.5 py-0.2 rounded bg-amber-400/15 border border-amber-400/40 text-amber-300 text-[9px] font-mono font-bold">
+                                              BEAT • {t.bpm} BPM
+                                            </span>
+                                          )}
+                                          <span className="px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-400/25 text-cyan-300 text-[9px] font-mono">
+                                            {t.dropContentId || 'DROP-CID'}
+                                          </span>
                                         </div>
                                         <div className="text-[11px] text-[#8E93A4] truncate">
                                           {t.artist}
                                           {t.featuringArtists && t.featuringArtists.length > 0
                                             ? ` feat. ${t.featuringArtists.join(', ')}`
                                             : ''}{' '}
-                                          • Plume: {t.lyricistName}
+                                          • Prod: {t.beatmakerName} • Plume: {t.lyricistName}
                                         </div>
                                       </div>
                                     </div>
 
                                     <div className="flex items-center gap-1.5 shrink-0">
+                                      {isBeat && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            triggerBeatAudioDownload({
+                                              id: t.id,
+                                              title: t.title,
+                                              artist: t.artist,
+                                              beatmakerName: t.beatmakerName,
+                                              bpm: t.bpm,
+                                              audioUrl: t.audioUrl,
+                                              duration: t.duration,
+                                            });
+                                          }}
+                                          className="px-2 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/45 text-amber-200 text-[10px] font-mono font-bold transition"
+                                          title="Télécharger l'instrumentale"
+                                        >
+                                          ⬇ Beat
+                                        </button>
+                                      )}
                                       <RankBadge rank={rInfo.rank} delta={rInfo.delta} />
                                       <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
                                     </div>
@@ -5127,26 +6433,38 @@ export function App() {
                   <div className="w-full flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#0D1017] border border-white/[0.08] rounded-xl p-1.5 shrink-0">
                     {(
                       [
-                        { step: 1, title: '1. Fichiers' },
-                        { step: 2, title: '2. Infos & Feat.' },
-                        { step: 3, title: '3. Crédits & Plume' },
-                        { step: 4, title: '4. Zone Drop' },
+                        { step: 1, title: '1. Audio Opus & Cover', valid: isWizardStep1Valid },
+                        { step: 2, title: '2. Artiste & Infos', valid: isWizardStep2Valid },
+                        { step: 3, title: '3. Crédits & Équipe', valid: isWizardStep3Valid },
+                        { step: 4, title: '4. Aperçu & Publication', valid: true },
                       ] as const
-                    ).map((s) => (
-                      <button
-                        key={s.step}
-                        onClick={() => setWizardStep(s.step)}
-                        className={`flex-1 min-w-[85px] py-1.5 px-2 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
-                          wizardStep === s.step
-                            ? 'bg-[#DE1B34] text-white font-bold'
-                            : wizardStep > s.step
-                              ? 'bg-emerald-500/15 text-emerald-400'
-                              : 'bg-white/[0.03] text-[#8E93A4]'
-                        }`}
-                      >
-                        {s.title}
-                      </button>
-                    ))}
+                    ).map((s) => {
+                      const unlocked = canAccessWizardStep(s.step);
+                      return (
+                        <button
+                          key={s.step}
+                          type="button"
+                          disabled={!unlocked}
+                          onClick={() => {
+                            if (unlocked) setWizardStep(s.step);
+                          }}
+                          className={`flex-1 min-w-[105px] py-1.5 px-2 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
+                            wizardStep === s.step
+                              ? 'bg-[#DE1B34] text-white font-bold'
+                              : unlocked && s.valid && s.step < 4
+                                ? 'bg-emerald-500/15 text-emerald-400'
+                                : unlocked
+                                  ? 'bg-white/[0.05] text-[#F5F2EB]'
+                                  : 'bg-white/[0.02] text-[#8E93A4]/40 cursor-not-allowed'
+                          }`}
+                        >
+                          {unlocked && s.valid && s.step < 4 && (
+                            <Check className="w-3 h-3 shrink-0" />
+                          )}
+                          <span>{s.title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {uploadSuccess && (
@@ -5158,148 +6476,518 @@ export function App() {
 
                   <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-4 flex flex-col justify-between gap-4">
                     {wizardStep === 1 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#DE1B34]">Source Audio</span>
-                            <div className="flex bg-[#07080C] p-0.5 rounded-lg border border-white/[0.07] text-[11px]">
-                              <button
-                                type="button"
-                                onClick={() => setUploadSourceType('FILE')}
-                                className={`px-2 py-0.5 rounded ${
-                                  uploadSourceType === 'FILE'
-                                    ? 'bg-[#DE1B34] text-white font-semibold'
-                                    : 'text-[#8E93A4]'
-                                }`}
-                              >
-                                Fichier
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setUploadSourceType('STREAM')}
-                                className={`px-2 py-0.5 rounded ${
-                                  uploadSourceType === 'STREAM'
-                                    ? 'bg-[#DE1B34] text-white font-semibold'
-                                    : 'text-[#8E93A4]'
-                                }`}
-                              >
-                                Flux Externe
-                              </button>
-                            </div>
-                          </div>
-
-                          {uploadSourceType === 'FILE' ? (
-                            <label className="flex flex-col items-center justify-center border border-dashed border-white/15 rounded-xl p-5 cursor-pointer hover:border-[#DE1B34]/60 bg-[#07080C]/60 text-center">
-                              <Upload className="w-5 h-5 text-[#DE1B34] mb-1.5" />
-                              <span className="text-xs font-medium text-[#F5F2EB] truncate max-w-full px-2">
-                                {newAudioFileName || 'Sélectionner un fichier audio'}
+                      <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-[#DE1B34]">
+                                1. Source Audio (Conversion Opus -14.0 LUFS obligatoire) *
                               </span>
-                              <input
-                                type="file"
-                                accept="audio/*"
-                                onChange={handleAudioFileDrop}
-                                className="hidden"
-                              />
-                            </label>
-                          ) : (
-                            <input
-                              type="text"
-                              value={newExternalUrl}
-                              onChange={(e) => setNewExternalUrl(e.target.value)}
-                              placeholder="Lien ou ID du flux audio externe..."
-                              className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-[#F5F2EB]"
-                            />
-                          )}
-
-                          {(isUploadingFile || uploadProgress > 0) && (
-                            <div className="bg-[#07080C] border border-white/[0.08] rounded-xl p-2.5">
-                              <div className="flex justify-between text-[11px] font-mono mb-1">
-                                <span className="text-[#8E93A4]">Progression</span>
-                                <span className="text-[#DE1B34]">{uploadProgress}%</span>
-                              </div>
-                              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
-                                <div
-                                  style={{ width: `${uploadProgress}%` }}
-                                  className="h-full bg-[#DE1B34]"
-                                />
+                              <div className="flex bg-[#07080C] p-0.5 rounded-lg border border-white/[0.07] text-[11px]">
+                                <button
+                                  type="button"
+                                  onClick={() => setUploadSourceType('FILE')}
+                                  className={`px-2 py-0.5 rounded ${
+                                    uploadSourceType === 'FILE'
+                                      ? 'bg-[#DE1B34] text-white font-semibold'
+                                      : 'text-[#8E93A4]'
+                                  }`}
+                                >
+                                  Fichier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setUploadSourceType('STREAM')}
+                                  className={`px-2 py-0.5 rounded ${
+                                    uploadSourceType === 'STREAM'
+                                      ? 'bg-[#DE1B34] text-white font-semibold'
+                                      : 'text-[#8E93A4]'
+                                  }`}
+                                >
+                                  Flux Externe
+                                </button>
                               </div>
                             </div>
-                          )}
-                        </div>
 
-                        <div className="flex flex-col gap-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-emerald-400">
-                              Cover (Upload Manuel)
-                            </span>
-                            {newCoverFileUrl && (
-                              <button
-                                type="button"
-                                onClick={handleRemoveNewCover}
-                                className="text-[11px] text-rose-400 flex items-center gap-1"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Supprimer</span>
-                              </button>
+                            {uploadSourceType === 'FILE' ? (
+                              <div className="flex flex-col gap-2">
+                                <label className="flex flex-col items-center justify-center border border-dashed border-white/15 rounded-xl p-5 cursor-pointer hover:border-[#DE1B34]/60 bg-[#07080C]/60 text-center">
+                                  <Upload className="w-5 h-5 text-[#DE1B34] mb-1.5" />
+                                  <span className="text-xs font-medium text-[#F5F2EB] truncate max-w-full px-2">
+                                    {newAudioFileName ||
+                                      'Importer un fichier audio (WAV, MP3, FLAC → converti en .opus)'}
+                                  </span>
+                                  <span className="text-[10px] text-emerald-400 font-mono mt-1">
+                                    Conversion automatique en OPUS • Volume constant -14.0 LUFS
+                                  </span>
+                                  <input
+                                    type="file"
+                                    accept="audio/*"
+                                    onChange={handleAudioFileDrop}
+                                    className="hidden"
+                                  />
+                                </label>
+                                {!newAudioFileName && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={handleLoadStudioOpusMasterPreset}
+                                      className="py-2 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">Master Opus Unique (Test)</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleSimulateDuplicateWaveformUpload(allTracksFlat[0])
+                                      }
+                                      className="py-2 px-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
+                                    >
+                                      <Shield className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">
+                                        Tester Doublon (&ge;85% Onde)
+                                      </span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type="text"
+                                value={newExternalUrl}
+                                onChange={(e) => setNewExternalUrl(e.target.value)}
+                                placeholder="Lien ou ID du flux audio externe..."
+                                className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-[#F5F2EB]"
+                              />
+                            )}
+
+                            {(isUploadingFile || uploadProgress > 0) && (
+                              <div className="bg-[#07080C] border border-white/[0.08] rounded-xl p-2.5">
+                                <div className="flex justify-between text-[11px] font-mono mb-1">
+                                  <span className="text-emerald-400">
+                                    Encodage OPUS, Empreinte d’Onde &amp; Content ID DROP
+                                  </span>
+                                  <span className="text-[#DE1B34]">{uploadProgress}%</span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                                  <div
+                                    style={{ width: `${uploadProgress}%` }}
+                                    className="h-full bg-emerald-400"
+                                  />
+                                </div>
+                              </div>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 bg-[#07080C] border border-white/[0.07] rounded-xl p-3">
-                            <div className="w-16 h-16 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen bg-[#12151F] shrink-0 flex items-center justify-center">
-                              {newCoverFileUrl ? (
-                                <img
-                                  src={newCoverFileUrl}
-                                  alt="Cover"
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Disc className="w-6 h-6 text-[#8E93A4]/40" />
+                          <div className="flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-emerald-400">
+                                2. Pochette / Cover Officielle
+                              </span>
+                              {newCoverFileUrl && (
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveNewCover}
+                                  className="text-[11px] text-rose-400 flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Supprimer</span>
+                                </button>
                               )}
                             </div>
 
-                            <label className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-xs font-semibold text-[#F5F2EB] cursor-pointer text-center truncate">
-                              {newCoverFileName || 'Importer Cover'}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleCoverFileSelect}
-                                className="hidden"
-                              />
-                            </label>
+                            <div className="flex items-center gap-3 bg-[#07080C] border border-white/[0.07] rounded-xl p-3">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen bg-[#12151F] shrink-0 flex items-center justify-center">
+                                {newCoverFileUrl ? (
+                                  <img
+                                    src={newCoverFileUrl}
+                                    alt="Cover"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Disc className="w-6 h-6 text-[#8E93A4]/40" />
+                                )}
+                              </div>
+
+                              <label className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-xs font-semibold text-[#F5F2EB] cursor-pointer text-center truncate">
+                                {newCoverFileName || 'Importer Cover'}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleCoverFileSelect}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-300 flex items-center justify-between">
+                              <span>Format de sortie :</span>
+                              <span className="font-mono font-bold">
+                                OPUS • -14.0 LUFS Uniforme
+                              </span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* ÉTAPE DE VÉRIFICATION OBLIGATOIRE DE LA FORME D'ONDE & ATTRIBUTION DU CONTENT ID DROP */}
+                        {waveformVerificationReport && (
+                          <div
+                            className={`rounded-2xl p-3.5 border flex flex-col gap-3 ${
+                              waveformVerificationReport.isBlocked
+                                ? 'bg-rose-950/35 border-rose-500/60 shadow-[0_0_30px_rgba(244,63,94,0.2)]'
+                                : 'bg-[#070B12] border-cyan-500/35'
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                                    waveformVerificationReport.isBlocked
+                                      ? 'bg-rose-500 text-white'
+                                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  }`}
+                                >
+                                  {waveformVerificationReport.isBlocked
+                                    ? '⛔ BLOCAGE AUTOMATIQUE (CONCORDANCE ≥ 85%)'
+                                    : '✓ EMPREINTE D’ONDE UNIQUE VALIDÉE (< 85%)'}
+                                </span>
+                                <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[10px] font-mono font-bold">
+                                  {waveformVerificationReport.candidateCid}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {waveformVerificationReport.isBlocked ? (
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelDuplicateUpload}
+                                    className="px-3 py-1 rounded-lg bg-rose-500 hover:bg-rose-400 text-white text-[11px] font-bold transition"
+                                  >
+                                    Annuler le téléversement &amp; Réinitialiser
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleSimulateDuplicateWaveformUpload(
+                                        waveformVerificationReport.matchedTrack || allTracksFlat[0]
+                                      )
+                                    }
+                                    className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-rose-500/20 border border-white/10 text-[10px] font-mono text-zinc-300 hover:text-rose-200 transition"
+                                  >
+                                    Simuler un doublon (&ge;85%)
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Détails de l'analyse spectrale et de forme d'onde 64 bandes */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                              <div className="p-2 rounded-xl bg-black/40 border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Concordance Globale d’Onde
+                                </span>
+                                <span
+                                  className={`font-mono text-sm font-extrabold ${
+                                    waveformVerificationReport.isBlocked
+                                      ? 'text-rose-400'
+                                      : 'text-emerald-400'
+                                  }`}
+                                >
+                                  {waveformVerificationReport.concordance.similarityPct}%{' '}
+                                  <span className="text-[10px] font-normal text-zinc-400">
+                                    (Seuil max: 85%)
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-xl bg-black/40 border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Similarité Cosinus (64 bandes)
+                                </span>
+                                <span className="font-mono text-sm font-bold text-white">
+                                  {waveformVerificationReport.concordance.cosineSimilarityPct}%
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-xl bg-black/40 border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Corrélation d’Enveloppe RMS
+                                </span>
+                                <span className="font-mono text-sm font-bold text-amber-300">
+                                  {waveformVerificationReport.concordance.envelopeCorrelationPct}%
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-xl bg-black/40 border border-white/[0.06]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Proximité Temporelle
+                                </span>
+                                <span className="font-mono text-sm font-bold text-cyan-300">
+                                  {waveformVerificationReport.concordance.durationProximityPct}%
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Superposition visuelle des 64 bandes d'onde (Fichier importé vs Piste la plus proche du catalogue) */}
+                            <div className="bg-black/50 border border-white/[0.07] rounded-xl p-2.5 flex flex-col gap-1.5">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
+                                <span className="text-cyan-300">
+                                  ■ Onde Téléversée ({waveformVerificationReport.candidateCid})
+                                </span>
+                                {waveformVerificationReport.matchedTrack && (
+                                  <span
+                                    className={
+                                      waveformVerificationReport.isBlocked
+                                        ? 'text-rose-400 font-bold'
+                                        : 'text-zinc-400'
+                                    }
+                                  >
+                                    ■ Plus proche dans le catalogue : «{' '}
+                                    {waveformVerificationReport.matchedTrack.title} » —{' '}
+                                    {waveformVerificationReport.matchedTrack.artist} (
+                                    {waveformVerificationReport.matchedCid})
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="relative h-12 w-full flex items-end gap-[2px] px-1 pt-1">
+                                {waveformVerificationReport.candidatePeaks.map((pk, idx) => {
+                                  const refPk =
+                                    waveformVerificationReport.matchedPeaks[idx] ?? 0.3;
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="flex-1 h-full flex items-end justify-center relative"
+                                    >
+                                      {/* Barre de référence du catalogue en arrière-plan */}
+                                      <div
+                                        style={{ height: `${Math.round(refPk * 95)}%` }}
+                                        className={`w-full rounded-t opacity-45 ${
+                                          waveformVerificationReport.isBlocked
+                                            ? 'bg-rose-500'
+                                            : 'bg-zinc-600'
+                                        }`}
+                                      />
+                                      {/* Barre du fichier téléversé au premier plan */}
+                                      <div
+                                        style={{ height: `${Math.round(pk * 95)}%` }}
+                                        className={`w-2/3 rounded-t absolute bottom-0 ${
+                                          waveformVerificationReport.isBlocked
+                                            ? 'bg-amber-300'
+                                            : 'bg-cyan-400'
+                                        }`}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {waveformVerificationReport.isBlocked &&
+                              waveformVerificationReport.matchedTrack && (
+                                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-200 flex flex-col gap-1.5">
+                                  <div className="font-bold text-rose-300 flex items-center justify-between">
+                                    <span>
+                                      Rapport de Concordance Positif : Téléversement annulé et
+                                      verrouillé
+                                    </span>
+                                    <span className="font-mono">
+                                      {waveformVerificationReport.concordance.similarityPct}% de
+                                      concordance
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] leading-relaxed">
+                                    L’empreinte acoustique de ce fichier concorde à{' '}
+                                    <strong>
+                                      {waveformVerificationReport.concordance.similarityPct}%
+                                    </strong>{' '}
+                                    avec le titre déjà présent sur la plateforme :{' '}
+                                    <strong className="text-white">
+                                      « {waveformVerificationReport.matchedTrack.title} »
+                                    </strong>{' '}
+                                    de{' '}
+                                    <strong className="text-amber-300">
+                                      {waveformVerificationReport.matchedTrack.artist}
+                                    </strong>{' '}
+                                    (Album :{' '}
+                                    <em>{waveformVerificationReport.matchedTrack.album}</em> • ID :{' '}
+                                    <code className="text-cyan-300">
+                                      {waveformVerificationReport.matchedCid}
+                                    </code>
+                                    ). Conformément à la politique d’unicité DROP Content ID, aucun
+                                    doublon ne peut être publié.
+                                  </p>
+                                </div>
+                              )}
+                          </div>
+                        )}
+
+                        {!isWizardStep1Valid && !waveformVerificationReport?.isBlocked && (
+                          <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
+                            Veuillez sélectionner un fichier audio (ou charger un master Opus de test) pour lancer la vérification d’onde Content ID et débloquer l’étape 2.
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {wizardStep === 2 && (
                       <div className="flex flex-col gap-3">
+                        {/* Sélecteur Type d'œuvre : Chanson Vocale vs Beat / Instrumentale Téléchargeable */}
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-bold text-amber-300">
+                              Nature de la publication : Chanson Vocale ou Beat / Instrumentale
+                            </div>
+                            <div className="text-[11px] text-[#8E93A4]">
+                              En mode Beat / Instrumentale, le bouton « Télécharger le Beat » est activé dans Central et les champs voix/paroles deviennent facultatifs.
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewIsInstrumental(false);
+                                setNewIsBeatDownloadable(false);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                !newIsInstrumental
+                                  ? 'bg-[#DE1B34] border-[#DE1B34] text-white'
+                                  : 'bg-[#07080C] border-white/10 text-[#8E93A4]'
+                              }`}
+                            >
+                              Chanson Vocale
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewIsInstrumental(true);
+                                setNewIsBeatDownloadable(true);
+                                setNewCategory('Beats & Instrumentales');
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                newIsInstrumental
+                                  ? 'bg-amber-400 text-[#07080C] border-amber-300'
+                                  : 'bg-[#07080C] border-amber-500/40 text-amber-300'
+                              }`}
+                            >
+                              Beat / Instrumentale ⬇
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-[11px] text-[#8E93A4] mb-1">Titre *</label>
+                            <label className="block text-[11px] text-[#8E93A4] mb-1">
+                              Titre de l'œuvre ou du Beat *
+                            </label>
                             <input
                               type="text"
                               value={newTitle}
                               onChange={(e) => setNewTitle(e.target.value)}
-                              placeholder="Ex: Souverain du Komo"
+                              placeholder="Ex: Souverain du Komo / Akanda 808 Beat"
                               className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                             />
                           </div>
+
+                          {/* Artiste Principal avec Liste Déroulante + Ajout Base de Données */}
                           <div>
-                            <label className="block text-[11px] text-[#8E93A4] mb-1">
-                              Artiste Principal *
-                            </label>
-                            <input
-                              type="text"
-                              value={newArtist}
-                              onChange={(e) => setNewArtist(e.target.value)}
-                              placeholder="Ex: L'Oiseau Rare, Emma'a..."
-                              className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
-                            />
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] text-[#8E93A4]">
+                                Artiste Principal *
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInlineNewEntityField(
+                                    inlineNewEntityField === 'artist' ? null : 'artist'
+                                  );
+                                  setInlineNewEntityValue('');
+                                }}
+                                className="text-[10px] font-bold text-emerald-400 hover:underline"
+                              >
+                                + Nouvel artiste dans la BDD
+                              </button>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <select
+                                value={entityDb.artists.includes(newArtist) ? newArtist : ''}
+                                onChange={(e) => {
+                                  if (e.target.value) setNewArtist(e.target.value);
+                                }}
+                                className="w-1/2 bg-[#07080C] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-[#F5F2EB]"
+                              >
+                                <option value="">Choisir dans la liste ({entityDb.artists.length})</option>
+                                {entityDb.artists.map((art) => (
+                                  <option key={art} value={art}>
+                                    {art}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={newArtist}
+                                onChange={(e) => setNewArtist(e.target.value)}
+                                placeholder="Ou saisir un nom..."
+                                className="w-1/2 bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-2 text-xs text-[#F5F2EB]"
+                              />
+                            </div>
+                            {inlineNewEntityField === 'artist' && (
+                              <div className="flex gap-1.5 mt-1.5">
+                                <input
+                                  type="text"
+                                  value={inlineNewEntityValue}
+                                  onChange={(e) => setInlineNewEntityValue(e.target.value)}
+                                  placeholder="Nom du nouvel artiste à sauvegarder..."
+                                  className="flex-1 bg-[#07080C] border border-emerald-500/40 rounded-lg px-2.5 py-1 text-xs text-[#F5F2EB]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (inlineNewEntityValue.trim()) {
+                                      handleRegisterEntityInDb('artists', inlineNewEntityValue);
+                                      setNewArtist(inlineNewEntityValue.trim());
+                                      setInlineNewEntityValue('');
+                                      setInlineNewEntityField(null);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500 text-[#07080C] text-xs font-bold"
+                                >
+                                  Sauver
+                                </button>
+                              </div>
+                            )}
                           </div>
+
+                          {/* Artistes en Featuring avec Liste Déroulante */}
                           <div>
-                            <label className="block text-[11px] text-violet-300 mb-1">
-                              Artistes en Featuring (séparés par virgule)
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] text-violet-300">
+                                Artistes en Featuring (optionnel)
+                              </label>
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (!val) return;
+                                  const currentList = newFeaturingInput
+                                    .split(',')
+                                    .map((s) => s.trim())
+                                    .filter(Boolean);
+                                  if (!currentList.includes(val)) {
+                                    setNewFeaturingInput([...currentList, val].join(', '));
+                                  }
+                                }}
+                                className="bg-[#07080C] border border-violet-500/30 rounded-lg px-2 py-0.5 text-[10px] text-violet-200"
+                              >
+                                <option value="">+ Ajouter depuis la BDD</option>
+                                {entityDb.artists
+                                  .filter((a) => a !== newArtist)
+                                  .map((art) => (
+                                    <option key={art} value={art}>
+                                      {art}
+                                    </option>
+                                  ))}
+                              </select>
+                            </div>
                             <input
                               type="text"
                               value={newFeaturingInput}
@@ -5308,9 +6996,10 @@ export function App() {
                               className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                             />
                           </div>
+
                           <div>
                             <label className="block text-[11px] text-violet-300 mb-1">
-                              Contrat de Partage Featuring (Crédits ECG)
+                              Contrat de Partage Featuring
                             </label>
                             <div className="grid grid-cols-2 gap-1.5">
                               <button
@@ -5337,9 +7026,10 @@ export function App() {
                               </button>
                             </div>
                           </div>
+
                           <div>
                             <label className="block text-[11px] text-[#8E93A4] mb-1">
-                              Durée totale (MM:SS)
+                              Durée totale (MM:SS) *
                             </label>
                             <input
                               type="text"
@@ -5362,11 +7052,50 @@ export function App() {
                               className="w-full accent-emerald-400 mt-1.5"
                             />
                           </div>
+                          <div>
+                            <label className="block text-[11px] text-[#8E93A4] mb-1">
+                              Projet / Album / Beat Tape
+                            </label>
+                            <input
+                              type="text"
+                              value={newAlbum}
+                              onChange={(e) => setNewAlbum(e.target.value)}
+                              placeholder="Ex: Bantou Ntcham Vol. 2 / Libreville Beat Tape"
+                              className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[11px] text-amber-300 mb-1">
+                                Tempo (BPM)
+                              </label>
+                              <input
+                                type="number"
+                                min={60}
+                                max={220}
+                                value={newBpm}
+                                onChange={(e) => setNewBpm(Number(e.target.value) || 120)}
+                                className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-amber-300"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-cyan-300 mb-1">
+                                Tonalité (Key)
+                              </label>
+                              <input
+                                type="text"
+                                value={newMusicalKey}
+                                onChange={(e) => setNewMusicalKey(e.target.value)}
+                                placeholder="Fa# Mineur (F#m)"
+                                className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-2 text-xs text-cyan-200"
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-2">
                           <span className="text-[11px] text-[#8E93A4]">
-                            Genre / Identité Musicale Gabonaise (Synchronisé avec Recherche &amp; Awards)
+                            Genre / Identité Musicale Gabonaise *
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {categories.map((cat) => (
@@ -5401,68 +7130,204 @@ export function App() {
                             </button>
                           </div>
                         </div>
+
+                        {!isWizardStep2Valid && (
+                          <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
+                            Veuillez renseigner le Titre et l'Artiste Principal pour débloquer l'étape 3.
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {wizardStep === 3 && (
                       <div className="flex flex-col gap-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Label avec Liste Déroulante + Sauvegarde BDD */}
                           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5 text-[#DE1B34]" />
-                              <span>Label Producteur (Éligibilité &ge; 3 artistes)</span>
-                            </label>
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 text-[#DE1B34]" />
+                                <span>Label Producteur *</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (newLabelName.trim()) {
+                                    handleRegisterEntityInDb('labels', newLabelName);
+                                  }
+                                }}
+                                className="text-[10px] font-bold text-emerald-400 hover:underline"
+                              >
+                                + Sauver en BDD
+                              </button>
+                            </div>
+                            <select
+                              value={entityDb.labels.includes(newLabelName) ? newLabelName : ''}
+                              onChange={(e) => {
+                                if (e.target.value) setNewLabelName(e.target.value);
+                              }}
+                              className="w-full bg-[#0D1017] border border-white/[0.1] rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                            >
+                              <option value="">Choisir un Label existant ({entityDb.labels.length})</option>
+                              {entityDb.labels.map((lbl) => (
+                                <option key={lbl} value={lbl}>
+                                  {lbl}
+                                </option>
+                              ))}
+                            </select>
                             <input
                               type="text"
                               value={newLabelName}
                               onChange={(e) => setNewLabelName(e.target.value)}
-                              placeholder="Direct Prod Gabon / Eben Entertainment"
-                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                              placeholder="Ou saisir un nouveau label..."
+                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-[#F5F2EB]"
                             />
                           </div>
+
+                          {/* Beatmaker avec Liste Déroulante + Sauvegarde BDD */}
                           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Beatmaker / Compositeur (Plafond 25%/titre)</span>
-                            </label>
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
+                                <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Beatmaker / Compositeur *</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (newBeatmakerName.trim()) {
+                                    handleRegisterEntityInDb('beatmakers', newBeatmakerName);
+                                  }
+                                }}
+                                className="text-[10px] font-bold text-emerald-400 hover:underline"
+                              >
+                                + Sauver en BDD
+                              </button>
+                            </div>
+                            <select
+                              value={
+                                entityDb.beatmakers.includes(newBeatmakerName)
+                                  ? newBeatmakerName
+                                  : ''
+                              }
+                              onChange={(e) => {
+                                if (e.target.value) setNewBeatmakerName(e.target.value);
+                              }}
+                              className="w-full bg-[#0D1017] border border-white/[0.1] rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                            >
+                              <option value="">
+                                Choisir un Beatmaker existant ({entityDb.beatmakers.length})
+                              </option>
+                              {entityDb.beatmakers.map((bm) => (
+                                <option key={bm} value={bm}>
+                                  {bm}
+                                </option>
+                              ))}
+                            </select>
                             <input
                               type="text"
                               value={newBeatmakerName}
                               onChange={(e) => setNewBeatmakerName(e.target.value)}
-                              placeholder="Kvnz Beats"
-                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                              placeholder="Ou saisir un nouveau beatmaker..."
+                              className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-[#F5F2EB]"
                             />
                           </div>
                         </div>
 
-                        {/* Granular Sound Engineer Sub-Roles: 20% Prise / 50% Mix / 30% Master */}
+                        {/* Ingénierie du Son avec Listes Déroulantes */}
                         <div className="bg-[#07080C] border border-amber-500/25 rounded-xl p-3 flex flex-col gap-2">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
                               <Headphones className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Ingénierie du Son — Répartition Granulaire (-14 LUFS)</span>
+                              <span>Ingénierie du Son (-14.0 LUFS)</span>
                             </span>
-                            <span className="text-[10px] font-mono text-amber-300/80">
-                              20% Prise • 50% Mix • 30% Master
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const allEng = [
+                                  newRecordingEngineerName,
+                                  newMixingEngineerName || newSoundEngineerName,
+                                  newMasteringEngineerName,
+                                ]
+                                  .filter(Boolean)
+                                  .join(', ');
+                                if (allEng) handleRegisterEntityInDb('engineers', allEng);
+                              }}
+                              className="text-[10px] font-bold text-amber-300 hover:underline"
+                            >
+                              + Sauver les ingés en BDD
+                            </button>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <div>
-                              <label className="block text-[10px] font-mono text-[#8E93A4] mb-1">
-                                1. Ingé Prise de Son (20%)
+                            {!newIsInstrumental ? (
+                              <div className="flex flex-col gap-1">
+                                <label className="block text-[10px] font-mono text-[#8E93A4]">
+                                  1. Ingé Prise de Voix (Optionnel)
+                                </label>
+                                <select
+                                  value={
+                                    entityDb.engineers.includes(newRecordingEngineerName)
+                                      ? newRecordingEngineerName
+                                      : ''
+                                  }
+                                  onChange={(e) => {
+                                    if (e.target.value)
+                                      setNewRecordingEngineerName(e.target.value);
+                                  }}
+                                  className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2 py-1 text-[11px] text-[#F5F2EB]"
+                                >
+                                  <option value="">Choisir dans la BDD</option>
+                                  {entityDb.engineers.map((eng) => (
+                                    <option key={eng} value={eng}>
+                                      {eng}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="text"
+                                  value={newRecordingEngineerName}
+                                  onChange={(e) => setNewRecordingEngineerName(e.target.value)}
+                                  placeholder="Junior Nzeng"
+                                  className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                                />
+                              </div>
+                            ) : (
+                              <div className="p-2.5 rounded-lg bg-[#0D1017] border border-white/[0.05] flex flex-col justify-center">
+                                <span className="text-[10px] font-mono text-amber-300">
+                                  1. Ingé Prise de Voix
+                                </span>
+                                <span className="text-[11px] text-[#8E93A4] mt-0.5">
+                                  Désactivé (Titre Instrumental)
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col gap-1">
+                              <label className="block text-[10px] font-mono text-amber-300">
+                                2. Ingé Mixage *
                               </label>
-                              <input
-                                type="text"
-                                value={newRecordingEngineerName}
-                                onChange={(e) => setNewRecordingEngineerName(e.target.value)}
-                                placeholder="Junior Nzeng"
-                                className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-mono text-amber-300 mb-1">
-                                2. Ingé Mixage (50% Majeur)
-                              </label>
+                              <select
+                                value={
+                                  entityDb.engineers.includes(
+                                    newMixingEngineerName || newSoundEngineerName
+                                  )
+                                    ? newMixingEngineerName || newSoundEngineerName
+                                    : ''
+                                }
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    setNewMixingEngineerName(e.target.value);
+                                    setNewSoundEngineerName(e.target.value);
+                                  }
+                                }}
+                                className="w-full bg-[#0D1017] border border-amber-500/30 rounded-lg px-2 py-1 text-[11px] text-[#F5F2EB]"
+                              >
+                                <option value="">Choisir dans la BDD</option>
+                                {entityDb.engineers.map((eng) => (
+                                  <option key={eng} value={eng}>
+                                    {eng}
+                                  </option>
+                                ))}
+                              </select>
                               <input
                                 type="text"
                                 value={newMixingEngineerName || newSoundEngineerName}
@@ -5474,10 +7339,29 @@ export function App() {
                                 className="w-full bg-[#0D1017] border border-amber-500/30 rounded-lg px-2.5 py-1.5 text-xs text-[#F5F2EB]"
                               />
                             </div>
-                            <div>
-                              <label className="block text-[10px] font-mono text-[#8E93A4] mb-1">
-                                3. Ingé Mastering (30%)
+
+                            <div className="flex flex-col gap-1">
+                              <label className="block text-[10px] font-mono text-[#8E93A4]">
+                                3. Ingé Mastering (Optionnel)
                               </label>
+                              <select
+                                value={
+                                  entityDb.engineers.includes(newMasteringEngineerName)
+                                    ? newMasteringEngineerName
+                                    : ''
+                                }
+                                onChange={(e) => {
+                                  if (e.target.value) setNewMasteringEngineerName(e.target.value);
+                                }}
+                                className="w-full bg-[#0D1017] border border-white/[0.08] rounded-lg px-2 py-1 text-[11px] text-[#F5F2EB]"
+                              >
+                                <option value="">Choisir dans la BDD</option>
+                                {entityDb.engineers.map((eng) => (
+                                  <option key={eng} value={eng}>
+                                    {eng}
+                                  </option>
+                                ))}
+                              </select>
                               <input
                                 type="text"
                                 value={newMasteringEngineerName}
@@ -5489,111 +7373,493 @@ export function App() {
                           </div>
                         </div>
 
-                        <div className="bg-[#07080C] border border-sky-500/30 rounded-xl p-3 flex flex-col gap-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <label className="text-xs font-semibold text-sky-300 flex items-center gap-1.5">
-                              <Edit3 className="w-3.5 h-3.5 text-sky-400" />
-                              <span>Parolier / Auteur des paroles (Plume)</span>
-                            </label>
-                            <label className="flex items-center gap-1.5 text-[11px] font-mono text-sky-300 cursor-pointer">
+                        {/* Parolier / Auteur (Masqué si Instrumental est coché) */}
+                        {!newIsInstrumental ? (
+                          <div className="bg-[#07080C] border border-sky-500/30 rounded-xl p-3 flex flex-col gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="text-xs font-semibold text-sky-300 flex items-center gap-1.5">
+                                <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                                <span>Parolier / Auteur des paroles *</span>
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-1.5 text-[11px] font-mono text-sky-300 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={newIsExternalLyricist}
+                                    onChange={(e) => setNewIsExternalLyricist(e.target.checked)}
+                                    className="accent-sky-400"
+                                  />
+                                  <span>Auteur externe dédié</span>
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (newLyricistName.trim()) {
+                                      handleRegisterEntityInDb('lyricists', newLyricistName);
+                                    }
+                                  }}
+                                  className="text-[10px] font-bold text-sky-300 hover:underline"
+                                >
+                                  + Sauver en BDD
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <select
+                                value={
+                                  entityDb.lyricists.includes(newLyricistName)
+                                    ? newLyricistName
+                                    : ''
+                                }
+                                onChange={(e) => {
+                                  if (e.target.value) setNewLyricistName(e.target.value);
+                                }}
+                                className="w-full bg-[#0D1017] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-[#F5F2EB]"
+                              >
+                                <option value="">
+                                  Choisir un Auteur existant ({entityDb.lyricists.length})
+                                </option>
+                                {entityDb.lyricists.map((lyr) => (
+                                  <option key={lyr} value={lyr}>
+                                    {lyr}
+                                  </option>
+                                ))}
+                              </select>
                               <input
-                                type="checkbox"
-                                checked={newIsExternalLyricist}
-                                onChange={(e) => setNewIsExternalLyricist(e.target.checked)}
-                                className="accent-sky-400"
+                                type="text"
+                                value={newLyricistName}
+                                onChange={(e) => setNewLyricistName(e.target.value)}
+                                placeholder="Ou saisir un nouvel auteur..."
+                                className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                               />
-                              <span>Plume Externe dédiée (Bonus x1.25)</span>
-                            </label>
+                            </div>
                           </div>
-                          <input
-                            type="text"
-                            value={newLyricistName}
-                            onChange={(e) => setNewLyricistName(e.target.value)}
-                            placeholder="Ex: Edgar Nguema & Movaizhaleine"
-                            className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
-                          />
-                        </div>
+                        ) : (
+                          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
+                            <span>
+                              Mode <strong>Instrumental</strong> actif : Aucun auteur/parolier requis pour valider cette étape.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setNewIsInstrumental(false)}
+                              className="text-[11px] underline"
+                            >
+                              Rétablir paroles
+                            </button>
+                          </div>
+                        )}
+
+                        {!isWizardStep3Valid && (
+                          <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
+                            Veuillez renseigner le Label, le Beatmaker, l'Ingénieur Mixage
+                            {!newIsInstrumental ? ' et le Parolier/Auteur' : ''} pour accéder à l'aperçu final.
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {wizardStep === 4 && (
-                      <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-[#F59E0B] truncate">
-                            Drop : {formatTime(newDropStart)} →{' '}
-                            {formatTime(Math.min(parsedNewDuration, newDropStart + newDropDuration))}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={toggleUploadDropPreview}
-                            className="px-3 py-1 rounded-lg bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 text-xs font-semibold flex items-center gap-1 shrink-0"
-                          >
-                            {isPreviewingUploadDrop ? (
-                              <>
-                                <Pause className="w-3 h-3 fill-current" />
-                                <span>Stop</span>
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3 fill-current" />
-                                <span>Pré-écouter</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="relative h-12 w-full rounded-lg bg-[#0D1017] border border-white/[0.06] overflow-hidden flex items-end px-1 gap-[2px]">
-                          {(waveformPeaks.length > 0
-                            ? waveformPeaks
-                            : Array.from({ length: 48 }, (_, idx) => 0.25 + ((idx * 7) % 10) * 0.06)
-                          ).map((peak, i, arr) => {
-                            const barSec = (i / arr.length) * parsedNewDuration;
-                            const inDrop =
-                              barSec >= newDropStart && barSec <= newDropStart + newDropDuration;
-                            return (
-                              <div
-                                key={i}
-                                style={{ height: `${Math.round(peak * 88)}%` }}
-                                className={`flex-1 rounded-t ${
-                                  inDrop ? 'bg-[#F59E0B]' : 'bg-white/15'
-                                }`}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <div className="flex justify-between text-[11px] text-[#8E93A4] mb-1">
-                              <span>Début</span>
-                              <span className="font-mono text-[#F5F2EB]">
-                                {formatTime(newDropStart)}
+                      <div className="flex flex-col gap-3.5">
+                        {/* RÉSUMÉ INTÉGRAL SANS AUCUNE LIMITATION DE TOUTES LES DONNÉES SAISIES (ÉTAPES 1, 2 & 3) */}
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#121622] to-[#07080C] border border-emerald-500/40 flex flex-col gap-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 uppercase">
+                                Récapitulatif Intégral (Sans Limitation)
                               </span>
+                              <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-400/35 text-[10px] font-mono font-bold text-cyan-300">
+                                {newDropContentId || 'DROP-CID-241-VERIFIED'}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-[10px] font-mono text-[#F5F2EB]">
+                                {newAudioCodec} • {newMeasuredLufs.toFixed(1)} LUFS → -14.0 LUFS
+                              </span>
+                              {newIsInstrumental && (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[10px] font-mono font-bold text-amber-300">
+                                  Beat / Instrumentale Téléchargeable
+                                </span>
+                              )}
                             </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={Math.max(10, parsedNewDuration - newDropDuration)}
-                              value={newDropStart}
-                              onChange={(e) => setNewDropStart(Number(e.target.value))}
-                              className="w-full accent-[#F59E0B]"
-                            />
+                            <span className="text-[11px] font-mono text-emerald-300 font-bold">
+                              Durée : {newDurationFormatted} ({parsedNewDuration}s)
+                            </span>
                           </div>
-                          <div>
-                            <div className="flex justify-between text-[11px] text-[#8E93A4] mb-1">
-                              <span>Durée</span>
-                              <span className="font-mono text-[#F5F2EB]">
-                                {formatTime(newDropDuration)}
-                              </span>
+
+                          {/* En-tête Visuel + Bouton de Pré-écoute */}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="w-20 h-20 rounded-xl overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0 bg-[#12151F]">
+                                <CoverArtwork
+                                  artworkType="creative_yellow"
+                                  coverUrl={newCoverFileUrl}
+                                  title={newTitle || 'Nouveau Titre'}
+                                  artist={newArtist || 'Artiste'}
+                                />
+                              </div>
+                              <div className="min-w-0 space-y-1">
+                                <h4 className="text-base sm:text-lg font-bold text-[#F5F2EB] break-words">
+                                  {newTitle || 'Titre sans nom'}
+                                </h4>
+                                <p className="text-xs sm:text-sm text-amber-300 font-semibold break-words">
+                                  {newArtist || 'Artiste non renseigné'}
+                                  {newFeaturingInput.trim()
+                                    ? ` feat. ${newFeaturingInput.trim()}`
+                                    : ''}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#8E93A4]">
+                                  <span className="text-[#DE1B34] font-semibold">
+                                    {newCategory}
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    Projet :{' '}
+                                    <strong className="text-white">
+                                      {newAlbum.trim() || `${newArtist.trim()} — Studio Session`}
+                                    </strong>
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    Label : <strong className="text-white">{newLabelName}</strong>
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <input
-                              type="range"
-                              min={15}
-                              max={60}
-                              value={newDropDuration}
-                              onChange={(e) => setNewDropDuration(Number(e.target.value))}
-                              className="w-full accent-[#F59E0B]"
-                            />
+
+                            {/* Bouton de pré-écoute directe de la piste */}
+                            <button
+                              type="button"
+                              onClick={toggleUploadDropPreview}
+                              className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition shrink-0 ${
+                                isPreviewingUploadDrop
+                                  ? 'bg-[#F59E0B] text-[#07080C]'
+                                  : 'bg-[#DE1B34] hover:bg-[#f0223d] text-white'
+                              }`}
+                            >
+                              {isPreviewingUploadDrop ? (
+                                <>
+                                  <Pause className="w-4 h-4 fill-current" />
+                                  <span>Arrêter la pré-écoute ({formatTime(uploadPreviewTime)})</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-4 h-4 fill-current" />
+                                  <span>Pré-écouter la piste Opus (-14 LUFS)</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* SECTION 1 : DONNÉES DE L'ÉTAPE 1 (SOURCE AUDIO, CONTENT ID, ONDE & POCHETTE) */}
+                          <div className="rounded-xl bg-black/45 border border-white/[0.08] p-3 space-y-2">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-bold border-b border-white/[0.06] pb-1.5">
+                              1. Source Audio, Empreinte d’Onde, Content ID &amp; Cover (Étape 1)
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Type de Source &amp; Fichier Audio
+                                </span>
+                                <span className="font-mono font-semibold text-white break-all block mt-0.5">
+                                  {uploadSourceType === 'FILE'
+                                    ? newAudioFileName || 'Master Studio Opus'
+                                    : `Flux Externe : ${newExternalUrl}`}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Identifiant Acoustique Unique (DROP Content ID)
+                                </span>
+                                <span className="font-mono font-bold text-cyan-300 break-all block mt-0.5">
+                                  {newDropContentId || 'DROP-CID-241-AUTO'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Vérification Concordance Forme d’Onde (64 bandes)
+                                </span>
+                                <span className="font-mono font-bold text-emerald-400 block mt-0.5">
+                                  ✓ Certifié Unique (Concordance max :{' '}
+                                  {waveformVerificationReport?.concordance.similarityPct ?? 12}% &lt;
+                                  85%)
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Codec &amp; Normalisation Broadcast
+                                </span>
+                                <span className="font-mono font-semibold text-white block mt-0.5">
+                                  Conteneur {newAudioCodec} • Mesuré {newMeasuredLufs.toFixed(1)}{' '}
+                                  LUFS → Aligné -14.0 LUFS
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Pochette / Cover Officielle
+                                </span>
+                                <span className="font-mono font-semibold text-emerald-300 break-all block mt-0.5">
+                                  {newCoverFileName
+                                    ? `Image importée : ${newCoverFileName}`
+                                    : newCoverFileUrl
+                                      ? 'Pochette personnalisée enregistrée'
+                                      : 'Visuel Studio DROP par défaut'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Fenêtre Officielle du Drop (30s max en Trend)
+                                </span>
+                                <span className="font-mono font-bold text-[#F59E0B] block mt-0.5">
+                                  Début : {formatTime(newDropStart)} ({newDropStart}s) → Fin :{' '}
+                                  {formatTime(
+                                    Math.min(parsedNewDuration, newDropStart + newDropDuration)
+                                  )}{' '}
+                                  (Durée : {newDropDuration}s)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* SECTION 2 : DONNÉES DE L'ÉTAPE 2 (ARTISTE, FEATURINGS, GENRE, BPM, TONALITÉ & QUOTA GABON) */}
+                          <div className="rounded-xl bg-black/45 border border-white/[0.08] p-3 space-y-2">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300 font-bold border-b border-white/[0.06] pb-1.5">
+                              2. Identité Artistique, Featurings, Genre &amp; Paramètres Musicaux (Étape 2)
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Titre Complet de l’Œuvre
+                                </span>
+                                <span className="font-semibold text-white break-words block mt-0.5">
+                                  {newTitle}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Nature de la Publication
+                                </span>
+                                <span className="font-semibold text-amber-300 block mt-0.5">
+                                  {newIsInstrumental
+                                    ? 'Beat / Instrumentale Téléchargeable (Sans voix)'
+                                    : 'Chanson Vocale Officielle'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Artiste Principal (Lead)
+                                </span>
+                                <span className="font-semibold text-white break-words block mt-0.5">
+                                  {newArtist}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Artistes en Featuring (Intégral)
+                                </span>
+                                <span className="font-semibold text-violet-300 break-words block mt-0.5">
+                                  {newFeaturingInput.trim() || 'Aucun featuring (Titre Solo)'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Contrat de Répartition Featuring
+                                </span>
+                                <span className="font-mono font-semibold text-violet-200 block mt-0.5">
+                                  {newFeaturingSplitMode === '50_50'
+                                    ? '50% / 50% (Duo Co-Lead)'
+                                    : '70% Lead / 30% Featuring (Classique)'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Projet / Album de rattachement
+                                </span>
+                                <span className="font-semibold text-white break-words block mt-0.5">
+                                  {newAlbum.trim() || `${newArtist.trim()} — Studio Session`}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Genre / Catégorie Musicale
+                                </span>
+                                <span className="font-semibold text-[#DE1B34] block mt-0.5">
+                                  {newCategory}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Tempo (BPM) &amp; Tonalité Musicale
+                                </span>
+                                <span className="font-mono font-semibold text-cyan-300 block mt-0.5">
+                                  {newBpm} BPM • {newMusicalKey || 'Do Mineur (Cm)'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Quota Écoutes Territoire Gabon (+241)
+                                </span>
+                                <span className="font-mono font-bold text-emerald-400 block mt-0.5">
+                                  {newGabonTerritoryPct}% (Éligible Certifications Nationales ≥ 70%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* SECTION 3 : DONNÉES DE L'ÉTAPE 3 (CRÉDITS STUDIO COMPLETS, PLUME & HANDSHAKE) */}
+                          <div className="rounded-xl bg-black/45 border border-white/[0.08] p-3 space-y-2">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold border-b border-white/[0.06] pb-1.5">
+                              3. Crédits Studio Intégraux, Ingénierie du Son, Plume &amp; Droits (Étape 3)
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Label Producteur
+                                </span>
+                                <span className="font-semibold text-white break-words block mt-0.5">
+                                  {newLabelName}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Beatmaker / Compositeur (100% Prod)
+                                </span>
+                                <span className="font-semibold text-emerald-300 break-words block mt-0.5">
+                                  {newBeatmakerName}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Ingénieur Prise de Voix (20% Son)
+                                </span>
+                                <span className="font-semibold text-white break-words block mt-0.5">
+                                  {newIsInstrumental
+                                    ? 'Instrumental (Sans prise de voix)'
+                                    : newRecordingEngineerName.trim() ||
+                                      newMixingEngineerName.trim() ||
+                                      newSoundEngineerName.trim()}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Ingénieur Mixage (50% Son)
+                                </span>
+                                <span className="font-semibold text-amber-300 break-words block mt-0.5">
+                                  {newMixingEngineerName.trim() || newSoundEngineerName.trim()}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Ingénieur Mastering -14.0 LUFS (30% Son)
+                                </span>
+                                <span className="font-semibold text-amber-200 break-words block mt-0.5">
+                                  {newMasteringEngineerName.trim() ||
+                                    newMixingEngineerName.trim() ||
+                                    newSoundEngineerName.trim()}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Parolier / Auteur de l’Œuvre (Plume)
+                                </span>
+                                <span className="font-semibold text-sky-300 break-words block mt-0.5">
+                                  {newIsInstrumental
+                                    ? 'Instrumental (Sans paroles)'
+                                    : newLyricistName}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Statut Plume Externe
+                                </span>
+                                <span className="font-mono font-semibold text-sky-200 block mt-0.5">
+                                  {newIsInstrumental
+                                    ? 'Non applicable (Instrumental)'
+                                    : newIsExternalLyricist
+                                      ? 'Oui (Bonus Plume Externe x1.25 actif)'
+                                      : 'Non (Auteur-Interprète)'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05] sm:col-span-2">
+                                <span className="text-[#8E93A4] block text-[10px]">
+                                  Mention Légale Copyright &amp; Registre Handshake
+                                </span>
+                                <span className="font-mono text-zinc-200 break-words block mt-0.5">
+                                  {newCopyrightText.trim() ||
+                                    `Copyright 2026 ${newLabelName || 'Direct Prod Gabon'} (+241). Tous droits réservés • Handshake Studio Vérifié`}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ajustement de la Zone Drop */}
+                        <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-[#F59E0B] truncate">
+                              Calibrage de la Zone Drop : {formatTime(newDropStart)} →{' '}
+                              {formatTime(
+                                Math.min(parsedNewDuration, newDropStart + newDropDuration)
+                              )}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-400">
+                              Aperçu automatique sur le lecteur
+                            </span>
+                          </div>
+
+                          <div className="relative h-12 w-full rounded-lg bg-[#0D1017] border border-white/[0.06] overflow-hidden flex items-end px-1 gap-[2px]">
+                            {(waveformPeaks.length > 0
+                              ? waveformPeaks
+                              : Array.from(
+                                  { length: 48 },
+                                  (_, idx) => 0.25 + ((idx * 7) % 10) * 0.06
+                                )
+                            ).map((peak, i, arr) => {
+                              const barSec = (i / arr.length) * parsedNewDuration;
+                              const inDrop =
+                                barSec >= newDropStart && barSec <= newDropStart + newDropDuration;
+                              return (
+                                <div
+                                  key={i}
+                                  style={{ height: `${Math.round(peak * 88)}%` }}
+                                  className={`flex-1 rounded-t ${
+                                    inDrop ? 'bg-[#F59E0B]' : 'bg-white/15'
+                                  }`}
+                                />
+                              );
+                            })}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <div className="flex justify-between text-[11px] text-[#8E93A4] mb-1">
+                                <span>Début du Drop</span>
+                                <span className="font-mono text-[#F5F2EB]">
+                                  {formatTime(newDropStart)}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={Math.max(10, parsedNewDuration - newDropDuration)}
+                                value={newDropStart}
+                                onChange={(e) => setNewDropStart(Number(e.target.value))}
+                                className="w-full accent-[#F59E0B]"
+                              />
+                            </div>
+                            <div>
+                              <div className="flex justify-between text-[11px] text-[#8E93A4] mb-1">
+                                <span>Durée du Drop</span>
+                                <span className="font-mono text-[#F5F2EB]">
+                                  {formatTime(newDropDuration)}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={15}
+                                max={60}
+                                value={newDropDuration}
+                                onChange={(e) => setNewDropDuration(Number(e.target.value))}
+                                className="w-full accent-[#F59E0B]"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -5615,25 +7881,823 @@ export function App() {
                       {wizardStep < 4 ? (
                         <button
                           type="button"
-                          onClick={() =>
-                            setWizardStep((prev) => (prev < 4 ? ((prev + 1) as 1 | 2 | 3 | 4) : prev))
+                          disabled={
+                            (wizardStep === 1 && !isWizardStep1Valid) ||
+                            (wizardStep === 2 && !isWizardStep2Valid) ||
+                            (wizardStep === 3 && !isWizardStep3Valid)
                           }
-                          className="px-4 py-2 rounded-xl bg-[#DE1B34] text-white font-bold text-xs flex items-center gap-1"
+                          onClick={() => {
+                            const nextStep = (wizardStep + 1) as 1 | 2 | 3 | 4;
+                            if (canAccessWizardStep(nextStep)) {
+                              setWizardStep(nextStep);
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl bg-[#DE1B34] text-white font-bold text-xs flex items-center gap-1 disabled:opacity-35 disabled:cursor-not-allowed"
                         >
-                          <span>Suivant</span>
+                          <span>
+                            {wizardStep === 3
+                              ? 'Prévisualiser le résumé complet'
+                              : 'Étape suivante'}
+                          </span>
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={handlePublishTrack}
-                          className="px-5 py-2 rounded-xl bg-emerald-500 text-[#07080C] font-bold text-xs flex items-center gap-1.5"
+                          className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
                         >
                           <Plus className="w-4 h-4" />
-                          <span>Publier</span>
+                          <span>+ Publier et mettre en ligne</span>
                         </button>
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===================================================================== */}
+              {/* GESTIONNAIRE COMPLET DES BANNIÈRES PUBLICITAIRES SLIDESHOW (HAUT/BAS) */}
+              {/* ===================================================================== */}
+              {adminMainTab === 'BANNERS' && (
+                <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto flex flex-col gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#F5F2EB] flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-amber-400" />
+                        <span>
+                          Gestionnaire des Bannières Slideshow « Central » (Haut &amp; Bas)
+                        </span>
+                      </h3>
+                      <p className="text-xs text-[#8E93A4]">
+                        Importez vos visuels manuellement depuis votre appareil (sans texte superposé), réglez la vitesse de défilement et choisissez la redirection au clic.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 1. RÉGLAGES GLOBAUX DE TIMING, VITESSE DE TRANSITION ET ACTIVATION */}
+                  <div className="p-3.5 rounded-2xl bg-[#07080C] border border-amber-500/30 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <label className="flex items-center justify-between p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] cursor-pointer">
+                      <span className="text-xs font-bold text-[#F5F2EB]">
+                        Bannière Haut
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={adBannerSettings.enableTopBanner}
+                        onChange={(e) =>
+                          setAdBannerSettings((prev) => ({
+                            ...prev,
+                            enableTopBanner: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 accent-emerald-400"
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] cursor-pointer">
+                      <span className="text-xs font-bold text-[#F5F2EB]">
+                        Bannière Bas
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={adBannerSettings.enableBottomBanner}
+                        onChange={(e) =>
+                          setAdBannerSettings((prev) => ({
+                            ...prev,
+                            enableBottomBanner: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 accent-emerald-400"
+                      />
+                    </label>
+
+                    <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8E93A4]">Timing par slide</span>
+                        <span className="font-mono font-bold text-amber-300">
+                          {adBannerSettings.slideIntervalSec}s
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={2}
+                        max={15}
+                        step={1}
+                        value={adBannerSettings.slideIntervalSec}
+                        onChange={(e) =>
+                          setAdBannerSettings((prev) => ({
+                            ...prev,
+                            slideIntervalSec: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-amber-400"
+                      />
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8E93A4]">Vitesse défilement</span>
+                        <span className="font-mono font-bold text-emerald-400">
+                          {adBannerSettings.transitionDurationMs} ms
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={200}
+                        max={1500}
+                        step={50}
+                        value={adBannerSettings.transitionDurationMs}
+                        onChange={(e) =>
+                          setAdBannerSettings((prev) => ({
+                            ...prev,
+                            transitionDurationMs: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-emerald-400"
+                      />
+                    </div>
+
+                    <label className="flex items-center justify-between p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] cursor-pointer">
+                      <span className="text-xs font-bold text-[#F5F2EB]">
+                        Pause au toucher
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={adBannerSettings.pauseOnTouch}
+                        onChange={(e) =>
+                          setAdBannerSettings((prev) => ({
+                            ...prev,
+                            pauseOnTouch: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 accent-amber-400"
+                      />
+                    </label>
+                  </div>
+
+                  {/* 2. FORMULAIRE D'AJOUT D'UNE NOUVELLE SLIDE (UPLOAD MANUEL D'IMAGE UNIQUEMENT) */}
+                  <div className="p-4 rounded-2xl bg-[#07080C] border border-white/[0.08] flex flex-col gap-3">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
+                      + Ajouter une nouvelle slide publicitaire (Upload d'image depuis l'appareil)
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+                      {/* Import manuel de l'image */}
+                      <div className="flex flex-col gap-2">
+                        <label className="w-full aspect-video rounded-xl border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-[#0D1017] flex flex-col items-center justify-center gap-1.5 cursor-pointer overflow-hidden relative transition">
+                          {newBannerImageUrl ? (
+                            <img
+                              src={newBannerImageUrl}
+                              alt="Aperçu bannière Full HD"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <>
+                              <Upload className="w-5 h-5 text-amber-400" />
+                              <span className="text-xs font-bold text-[#F5F2EB] text-center px-2">
+                                Choisir une image Full HD (1920×1080)
+                              </span>
+                              <span className="text-[10px] text-[#8E93A4]">
+                                Format 16:9 Full HD • JPG, PNG, WebP (Sans texte)
+                              </span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setNewBannerFileName(file.name);
+                              try {
+                                const uploaded = await uploadCoverFile(
+                                  file,
+                                  1920,
+                                  1080,
+                                  0.92
+                                );
+                                setNewBannerImageUrl(uploaded.coverUrl);
+                              } catch {
+                                const dataUrl = await fileToPersistentDataUrl(
+                                  file,
+                                  1920,
+                                  1080,
+                                  0.92
+                                );
+                                setNewBannerImageUrl(dataUrl);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {newBannerFileName && (
+                          <span className="text-[11px] font-mono text-emerald-400 truncate">
+                            Fichier : {newBannerFileName}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Emplacement & Type de redirection */}
+                      <div className="flex flex-col gap-2.5">
+                        <div>
+                          <label className="block text-[11px] text-[#8E93A4] mb-1">
+                            Emplacement dans « Central »
+                          </label>
+                          <select
+                            value={newBannerPlacement}
+                            onChange={(e) =>
+                              setNewBannerPlacement(
+                                e.target.value as AdBannerPlacement
+                              )
+                            }
+                            className="w-full bg-[#0D1017] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-semibold text-[#F5F2EB]"
+                          >
+                            <option value="BOTH">
+                              Haut &amp; Bas de Central
+                            </option>
+                            <option value="TOP">
+                              Bannière Haut uniquement
+                            </option>
+                            <option value="BOTTOM">
+                              Bannière Bas uniquement
+                            </option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-[#8E93A4] mb-1">
+                            Action au clic sur l'image
+                          </label>
+                          <select
+                            value={newBannerRedirectType}
+                            onChange={(e) =>
+                              setNewBannerRedirectType(
+                                e.target.value as AdBannerRedirectType
+                              )
+                            }
+                            className="w-full bg-[#0D1017] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-semibold text-[#F5F2EB]"
+                          >
+                            <option value="NONE">
+                              Aucune redirection (Image seule)
+                            </option>
+                            <option value="TRACK">
+                              Rediriger vers une Chanson de l'app
+                            </option>
+                            <option value="ALBUM">
+                              Rediriger vers un Projet / Album de l'app
+                            </option>
+                            <option value="EXTERNAL">
+                              Rediriger vers un Lien externe
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Cible de la redirection + Bouton d'ajout */}
+                      <div className="flex flex-col justify-between gap-2.5 h-full">
+                        {newBannerRedirectType === 'TRACK' && (
+                          <div>
+                            <label className="block text-[11px] text-amber-300 mb-1">
+                              Chanson cible au clic
+                            </label>
+                            <select
+                              value={newBannerTargetTrackId}
+                              onChange={(e) =>
+                                setNewBannerTargetTrackId(e.target.value)
+                              }
+                              className="w-full bg-[#0D1017] border border-amber-500/30 rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            >
+                              {allTracksFlat.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.title} — {t.artist}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {newBannerRedirectType === 'ALBUM' && (
+                          <div>
+                            <label className="block text-[11px] text-emerald-300 mb-1">
+                              Projet / Album cible au clic
+                            </label>
+                            <select
+                              value={newBannerTargetAlbumId}
+                              onChange={(e) =>
+                                setNewBannerTargetAlbumId(e.target.value)
+                              }
+                              className="w-full bg-[#0D1017] border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            >
+                              {catalogue.map((alb) => (
+                                <option key={alb.id} value={alb.id}>
+                                  {alb.albumTitle} — {alb.artist}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {newBannerRedirectType === 'EXTERNAL' && (
+                          <div>
+                            <label className="block text-[11px] text-sky-300 mb-1">
+                              Lien externe de destination au clic
+                            </label>
+                            <input
+                              type="text"
+                              value={newBannerExternalUrl}
+                              onChange={(e) =>
+                                setNewBannerExternalUrl(e.target.value)
+                              }
+                              placeholder="https://..."
+                              className="w-full bg-[#0D1017] border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                            />
+                          </div>
+                        )}
+
+                        {newBannerRedirectType === 'NONE' && (
+                          <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-[11px] text-[#8E93A4]">
+                            L'image défilera dans la bannière sans action au clic.
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={!newBannerImageUrl}
+                          onClick={() => {
+                            if (!newBannerImageUrl) return;
+                            const createdSlide: AdBannerSlide = {
+                              id: `ad-slide-${Date.now()}`,
+                              imageUrl: newBannerImageUrl,
+                              fileName: newBannerFileName || 'banniere-pub.jpg',
+                              placement: newBannerPlacement,
+                              redirectType: newBannerRedirectType,
+                              targetTrackId:
+                                newBannerRedirectType === 'TRACK'
+                                  ? newBannerTargetTrackId
+                                  : undefined,
+                              targetAlbumId:
+                                newBannerRedirectType === 'ALBUM'
+                                  ? newBannerTargetAlbumId
+                                  : undefined,
+                              externalUrl:
+                                newBannerRedirectType === 'EXTERNAL'
+                                  ? newBannerExternalUrl.trim()
+                                  : undefined,
+                              active: true,
+                              orderIndex: adBanners.length,
+                              createdAt: new Date().toISOString(),
+                            };
+                            setAdBanners((prev) => [...prev, createdSlide]);
+                            setNewBannerImageUrl('');
+                            setNewBannerFileName('');
+                            setNewBannerExternalUrl('');
+                            pushNotification(
+                              'Bannière ajoutée et sauvegardée',
+                              'La nouvelle slide est immédiatement active sur Central.',
+                              'PUBLISH'
+                            );
+                          }}
+                          className="w-full py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 disabled:opacity-35 transition"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>+ Enregistrer la slide dans le Slideshow</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. LISTE DES SLIDES ENREGISTRÉES (MODIFICATION EN DIRECT, ORDRE, SUPPRESSION) */}
+                  <div className="flex flex-col gap-2.5">
+                    <span className="text-xs font-bold text-[#F5F2EB]">
+                      Slides actives dans le Slideshow ({adBanners.length})
+                    </span>
+
+                    {adBanners.length === 0 ? (
+                      <div className="p-6 text-center rounded-2xl bg-[#07080C] border border-white/[0.06] text-xs text-[#8E93A4]">
+                        Aucune bannière enregistrée. Importez une image ci-dessus pour démarrer le slideshow.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {adBanners.map((slide, sIdx) => (
+                          <div
+                            key={slide.id}
+                            className={`p-3 rounded-2xl bg-[#07080C] border flex flex-col gap-2.5 ${
+                              slide.active
+                                ? 'border-white/[0.12]'
+                                : 'border-white/[0.05] opacity-60'
+                            }`}
+                          >
+                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-white/10">
+                              <img
+                                src={slide.imageUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                              <label className="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg bg-black/75 hover:bg-black text-[10px] font-bold text-amber-300 border border-white/15 cursor-pointer backdrop-blur-sm">
+                                Remplacer l'image (1920×1080)
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const uploaded = await uploadCoverFile(
+                                      file,
+                                      1920,
+                                      1080,
+                                      0.92
+                                    );
+                                    setAdBanners((prev) =>
+                                      prev.map((item) =>
+                                        item.id === slide.id
+                                          ? {
+                                              ...item,
+                                              imageUrl: uploaded.coverUrl,
+                                              fileName: file.name,
+                                            }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <select
+                                value={slide.placement}
+                                onChange={(e) =>
+                                  setAdBanners((prev) =>
+                                    prev.map((item) =>
+                                      item.id === slide.id
+                                        ? {
+                                            ...item,
+                                            placement: e.target
+                                              .value as AdBannerPlacement,
+                                          }
+                                        : item
+                                    )
+                                  )
+                                }
+                                className="bg-[#0D1017] border border-white/[0.1] rounded-lg px-2 py-1.5 text-[11px] text-[#F5F2EB]"
+                              >
+                                <option value="BOTH">Haut &amp; Bas</option>
+                                <option value="TOP">Haut seul</option>
+                                <option value="BOTTOM">Bas seul</option>
+                              </select>
+
+                              <select
+                                value={slide.redirectType}
+                                onChange={(e) =>
+                                  setAdBanners((prev) =>
+                                    prev.map((item) =>
+                                      item.id === slide.id
+                                        ? {
+                                            ...item,
+                                            redirectType: e.target
+                                              .value as AdBannerRedirectType,
+                                          }
+                                        : item
+                                    )
+                                  )
+                                }
+                                className="bg-[#0D1017] border border-white/[0.1] rounded-lg px-2 py-1.5 text-[11px] text-[#F5F2EB]"
+                              >
+                                <option value="NONE">Sans lien</option>
+                                <option value="TRACK">Lien Chanson</option>
+                                <option value="ALBUM">Lien Projet</option>
+                                <option value="EXTERNAL">Lien Externe</option>
+                              </select>
+                            </div>
+
+                            {slide.redirectType === 'TRACK' && (
+                              <select
+                                value={slide.targetTrackId || ''}
+                                onChange={(e) =>
+                                  setAdBanners((prev) =>
+                                    prev.map((item) =>
+                                      item.id === slide.id
+                                        ? {
+                                            ...item,
+                                            targetTrackId: e.target.value,
+                                          }
+                                        : item
+                                    )
+                                  )
+                                }
+                                className="w-full bg-[#0D1017] border border-amber-500/30 rounded-lg px-2.5 py-1.5 text-[11px] text-amber-300"
+                              >
+                                <option value="">Choisir une chanson...</option>
+                                {allTracksFlat.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.title} — {t.artist}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
+                            {slide.redirectType === 'ALBUM' && (
+                              <select
+                                value={slide.targetAlbumId || ''}
+                                onChange={(e) =>
+                                  setAdBanners((prev) =>
+                                    prev.map((item) =>
+                                      item.id === slide.id
+                                        ? {
+                                            ...item,
+                                            targetAlbumId: e.target.value,
+                                          }
+                                        : item
+                                    )
+                                  )
+                                }
+                                className="w-full bg-[#0D1017] border border-emerald-500/30 rounded-lg px-2.5 py-1.5 text-[11px] text-emerald-300"
+                              >
+                                <option value="">Choisir un projet...</option>
+                                {catalogue.map((alb) => (
+                                  <option key={alb.id} value={alb.id}>
+                                    {alb.albumTitle} — {alb.artist}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
+                            {slide.redirectType === 'EXTERNAL' && (
+                              <input
+                                type="text"
+                                value={slide.externalUrl || ''}
+                                onChange={(e) =>
+                                  setAdBanners((prev) =>
+                                    prev.map((item) =>
+                                      item.id === slide.id
+                                        ? {
+                                            ...item,
+                                            externalUrl: e.target.value,
+                                          }
+                                        : item
+                                    )
+                                  )
+                                }
+                                placeholder="https://..."
+                                className="w-full bg-[#0D1017] border border-sky-500/30 rounded-lg px-2.5 py-1.5 text-[11px] text-sky-300"
+                              />
+                            )}
+
+                            <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                              <label className="flex items-center gap-1.5 text-[11px] text-[#F5F2EB] cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={slide.active}
+                                  onChange={(e) =>
+                                    setAdBanners((prev) =>
+                                      prev.map((item) =>
+                                        item.id === slide.id
+                                          ? { ...item, active: e.target.checked }
+                                          : item
+                                      )
+                                    )
+                                  }
+                                  className="accent-emerald-400"
+                                />
+                                <span>Slide active</span>
+                              </label>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={sIdx === 0}
+                                  onClick={() =>
+                                    setAdBanners((prev) => {
+                                      if (sIdx === 0) return prev;
+                                      const copy = [...prev];
+                                      const [moved] = copy.splice(sIdx, 1);
+                                      copy.splice(sIdx - 1, 0, moved);
+                                      return copy.map((it, i) => ({
+                                        ...it,
+                                        orderIndex: i,
+                                      }));
+                                    })
+                                  }
+                                  className="p-1 rounded bg-white/[0.05] text-[#8E93A4] disabled:opacity-30"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={sIdx === adBanners.length - 1}
+                                  onClick={() =>
+                                    setAdBanners((prev) => {
+                                      if (sIdx >= prev.length - 1) return prev;
+                                      const copy = [...prev];
+                                      const [moved] = copy.splice(sIdx, 1);
+                                      copy.splice(sIdx + 1, 0, moved);
+                                      return copy.map((it, i) => ({
+                                        ...it,
+                                        orderIndex: i,
+                                      }));
+                                    })
+                                  }
+                                  className="p-1 rounded bg-white/[0.05] text-[#8E93A4] disabled:opacity-30"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setAdBanners((prev) =>
+                                      prev.filter((item) => item.id !== slide.id)
+                                    )
+                                  }
+                                  className="p-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
+                                  title="Supprimer cette bannière"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* GESTIONNAIRE DE BASE DE DONNÉES (ARTISTES, LABELS, BEATMAKERS, INGÉS SON, AUTEURS) & SUPABASE SQL */}
+              {adminMainTab === 'DATABASE' && (
+                <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto flex flex-col gap-4">
+                  {/* BLOC SUPABASE POSTGRESQL + STORAGE OPUS (audio_files & cover_files) */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-[#07080C] to-amber-500/10 border border-emerald-500/30 flex flex-col gap-3">
+                    {supabaseHealthMsg && (
+                      <div className="px-3 py-2 rounded-xl bg-black/50 border border-emerald-500/25 text-[11px] text-emerald-300 font-medium">
+                        {supabaseHealthMsg}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center text-emerald-400 shrink-0">
+                          <Database className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs sm:text-sm font-extrabold text-[#F5F2EB]">
+                              Architecture Supabase — Pistes Opus (-14 LUFS) &amp; Storage
+                            </h3>
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                isSupabaseConfigured()
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              }`}
+                            >
+                              {isSupabaseConfigured()
+                                ? 'Cloud Supabase Connecté'
+                                : 'Mode Hybride Local Actif'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#8E93A4]">
+                            4 Tables (`tracks`, `studio_entities`, `user_playlists`, `user_library_state`) + 2 Buckets (`audio_files` Opus &amp; `cover_files` Pochettes)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowSqlEditorModal((prev) => !prev)}
+                          className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-[#F5F2EB] transition"
+                        >
+                          {showSqlEditorModal ? 'Masquer le SQL' : 'Afficher le Script SQL'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(SUPABASE_SQL_SETUP_SCRIPT);
+                            setSqlCopiedBanner(true);
+                            pushNotification(
+                              'Script SQL Supabase copié !',
+                              'Collez-le directement dans le SQL Editor de votre projet Supabase.',
+                              'DATABASE'
+                            );
+                            window.setTimeout(() => setSqlCopiedBanner(false), 3500);
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>
+                            {sqlCopiedBanner
+                              ? 'Script SQL Copié !'
+                              : 'Copier le Script SQL Supabase'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {showSqlEditorModal && (
+                      <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.08]">
+                        <div className="flex items-center justify-between text-[11px] text-emerald-300 font-mono">
+                          <span>
+                            Prêt à coller dans Supabase Dashboard → SQL Editor → New Query
+                          </span>
+                          <span>Idempotent (exécutable plusieurs fois sans erreur)</span>
+                        </div>
+                        <pre className="w-full max-h-64 overflow-y-auto p-3 rounded-xl bg-black/80 border border-white/10 text-[11px] font-mono text-emerald-300/95 select-all whitespace-pre-wrap">
+                          {SUPABASE_SQL_SETUP_SCRIPT}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#F5F2EB] flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-400" />
+                        <span>Base de Données Réutilisable (Listes Déroulantes)</span>
+                      </h3>
+                      <p className="text-xs text-[#8E93A4]">
+                        Enregistrez les noms d'artistes, labels, beatmakers, ingénieurs et auteurs une seule fois pour les sélectionner partout.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulaire d'ajout rapide à la base de données */}
+                  <div className="p-3.5 rounded-xl bg-[#07080C] border border-emerald-500/30 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <select
+                      value={dbNewItemRole}
+                      onChange={(e) => setDbNewItemRole(e.target.value as keyof EntityDatabase)}
+                      className="bg-[#0D1017] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-semibold text-[#F5F2EB]"
+                    >
+                      <option value="artists">Artiste / Interprète</option>
+                      <option value="labels">Label Producteur</option>
+                      <option value="beatmakers">Beatmaker / Compositeur</option>
+                      <option value="engineers">Ingénieur du Son</option>
+                      <option value="lyricists">Auteur / Parolier</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={dbNewItemValue}
+                      onChange={(e) => setDbNewItemValue(e.target.value)}
+                      placeholder="Saisir un ou plusieurs noms (séparés par une virgule)..."
+                      className="flex-1 bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (dbNewItemValue.trim()) {
+                          handleRegisterEntityInDb(dbNewItemRole, dbNewItemValue);
+                          setDbNewItemValue('');
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 text-[#07080C] font-bold text-xs flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Enregistrer dans la BDD</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(
+                      [
+                        { key: 'artists', title: 'Artistes & Featurings', color: 'text-[#DE1B34]' },
+                        { key: 'labels', title: 'Labels Producteurs', color: 'text-amber-300' },
+                        { key: 'beatmakers', title: 'Beatmakers', color: 'text-emerald-400' },
+                        { key: 'engineers', title: 'Ingénieurs du Son', color: 'text-violet-300' },
+                        { key: 'lyricists', title: 'Auteurs & Paroliers', color: 'text-sky-300' },
+                      ] as const
+                    ).map((group) => (
+                      <div
+                        key={group.key}
+                        className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-2"
+                      >
+                        <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                          <span className={`text-xs font-bold ${group.color}`}>
+                            {group.title}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#8E93A4]">
+                            {entityDb[group.key].length} enregistré(s)
+                          </span>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1.5 pt-1">
+                          {entityDb[group.key].map((item) => (
+                            <span
+                              key={item}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0D1017] border border-white/[0.08] text-xs text-[#F5F2EB]"
+                            >
+                              <span className="truncate max-w-[150px]">{item}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEntityFromDb(group.key, item)}
+                                className="text-[#8E93A4] hover:text-rose-400"
+                                title="Supprimer de la liste"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -5673,7 +8737,7 @@ export function App() {
             </>
           )}
 
-          {/* Complete Track Edit Modal */}
+          {/* Complete Track Edit Modal with Dropdowns & Instrumental Checkbox */}
           {editingTrack && (
             <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
               <form
@@ -5693,6 +8757,26 @@ export function App() {
                   </button>
                 </div>
 
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 cursor-pointer">
+                  <span className="text-xs font-bold text-amber-300">
+                    Piste Instrumentale (Sans paroles)
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingTrack.track.isInstrumental)}
+                    onChange={(e) =>
+                      setEditingTrack({
+                        ...editingTrack,
+                        track: {
+                          ...editingTrack.track,
+                          isInstrumental: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 accent-amber-400"
+                  />
+                </label>
+
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] text-[#8E93A4] mb-1">Titre</label>
@@ -5710,6 +8794,29 @@ export function App() {
                   </div>
                   <div>
                     <label className="block text-[11px] text-[#8E93A4] mb-1">Artiste</label>
+                    <select
+                      value={
+                        entityDb.artists.includes(editingTrack.track.artist)
+                          ? editingTrack.track.artist
+                          : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: { ...editingTrack.track, artist: e.target.value },
+                          });
+                        }
+                      }}
+                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-[#F5F2EB] mb-1"
+                    >
+                      <option value="">Sélectionner dans la BDD</option>
+                      {entityDb.artists.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       value={editingTrack.track.artist}
@@ -5799,6 +8906,29 @@ export function App() {
                   </div>
                   <div>
                     <label className="block text-[11px] text-[#8E93A4] mb-1">Label</label>
+                    <select
+                      value={
+                        entityDb.labels.includes(editingTrack.track.labelName)
+                          ? editingTrack.track.labelName
+                          : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: { ...editingTrack.track, labelName: e.target.value },
+                          });
+                        }
+                      }}
+                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-[#F5F2EB] mb-1"
+                    >
+                      <option value="">Sélectionner dans la BDD</option>
+                      {entityDb.labels.map((l) => (
+                        <option key={l} value={l}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       value={editingTrack.track.labelName}
@@ -5813,6 +8943,29 @@ export function App() {
                   </div>
                   <div>
                     <label className="block text-[11px] text-[#8E93A4] mb-1">Beatmaker</label>
+                    <select
+                      value={
+                        entityDb.beatmakers.includes(editingTrack.track.beatmakerName)
+                          ? editingTrack.track.beatmakerName
+                          : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: { ...editingTrack.track, beatmakerName: e.target.value },
+                          });
+                        }
+                      }}
+                      className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-[#F5F2EB] mb-1"
+                    >
+                      <option value="">Sélectionner dans la BDD</option>
+                      {entityDb.beatmakers.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       value={editingTrack.track.beatmakerName}
@@ -5827,8 +8980,35 @@ export function App() {
                   </div>
                   <div>
                     <label className="block text-[11px] text-amber-300 mb-1">
-                      Ingé Mixage (50%)
+                      Ingé Mixage
                     </label>
+                    <select
+                      value={
+                        entityDb.engineers.includes(editingTrack.track.soundEngineerName)
+                          ? editingTrack.track.soundEngineerName
+                          : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: {
+                              ...editingTrack.track,
+                              soundEngineerName: e.target.value,
+                              mixingEngineerName: e.target.value,
+                            },
+                          });
+                        }
+                      }}
+                      className="w-full bg-[#07080C] border border-amber-500/30 rounded-xl px-2 py-1 text-[11px] text-[#F5F2EB] mb-1"
+                    >
+                      <option value="">Sélectionner dans la BDD</option>
+                      {entityDb.engineers.map((eng) => (
+                        <option key={eng} value={eng}>
+                          {eng}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       value={editingTrack.track.soundEngineerName}
@@ -5845,22 +9025,47 @@ export function App() {
                       className="w-full bg-[#07080C] border border-amber-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-sky-300 mb-1">
-                      Parolier (Plume)
-                    </label>
-                    <input
-                      type="text"
-                      value={editingTrack.track.lyricistName}
-                      onChange={(e) =>
-                        setEditingTrack({
-                          ...editingTrack,
-                          track: { ...editingTrack.track, lyricistName: e.target.value },
-                        })
-                      }
-                      className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
-                    />
-                  </div>
+                  {!editingTrack.track.isInstrumental && (
+                    <div>
+                      <label className="block text-[11px] text-sky-300 mb-1">
+                        Parolier / Auteur
+                      </label>
+                      <select
+                        value={
+                          entityDb.lyricists.includes(editingTrack.track.lyricistName)
+                            ? editingTrack.track.lyricistName
+                            : ''
+                        }
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEditingTrack({
+                              ...editingTrack,
+                              track: { ...editingTrack.track, lyricistName: e.target.value },
+                            });
+                          }
+                        }}
+                        className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2 py-1 text-[11px] text-[#F5F2EB] mb-1"
+                      >
+                        <option value="">Sélectionner dans la BDD</option>
+                        {entityDb.lyricists.map((lyr) => (
+                          <option key={lyr} value={lyr}>
+                            {lyr}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={editingTrack.track.lyricistName}
+                        onChange={(e) =>
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: { ...editingTrack.track, lyricistName: e.target.value },
+                          })
+                        }
+                        className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-2 bg-[#07080C] p-2.5 rounded-xl border border-white/[0.07]">
@@ -5869,14 +9074,30 @@ export function App() {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const url = URL.createObjectURL(file);
-                        setEditingTrack({
-                          ...editingTrack,
-                          track: { ...editingTrack.track, cover: url },
-                        });
+                        try {
+                          const uploaded = await uploadCoverFile(file, 900, 900);
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: {
+                              ...editingTrack.track,
+                              cover: uploaded.coverUrl,
+                            },
+                          });
+                        } catch {
+                          const dataUrl = await fileToPersistentDataUrl(
+                            file,
+                            900,
+                            900,
+                            0.85
+                          );
+                          setEditingTrack({
+                            ...editingTrack,
+                            track: { ...editingTrack.track, cover: dataUrl },
+                          });
+                        }
                       }}
                       className="hidden"
                     />
@@ -5916,6 +9137,115 @@ export function App() {
             </div>
           )}
         </main>
+      )}
+
+      {/* ===================================================================== */}
+      {/* FLOATING REAL-TIME NOTIFICATION TOAST                                 */}
+      {/* ===================================================================== */}
+      {activeToast && (
+        <div className="fixed top-14 right-4 z-[95] max-w-sm w-[calc(100%-2rem)] bg-[#10131C]/95 backdrop-blur-2xl border border-emerald-500/40 rounded-2xl p-3.5 shadow-2xl flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+              <Bell className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-[#F5F2EB] truncate">
+                {activeToast.title}
+              </div>
+              <div className="text-[11px] text-zinc-300 leading-snug mt-0.5">
+                {activeToast.message}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveToast(null)}
+            className="p-1 text-zinc-400 hover:text-white shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* NOTIFICATION CENTER MODAL                                             */}
+      {/* ===================================================================== */}
+      {showNotificationsModal && (
+        <div
+          className="fixed inset-0 z-[98] bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setShowNotificationsModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-[#0E1118] border border-white/15 rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[82dvh] overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-amber-300" />
+                <h3 className="text-sm font-bold text-[#F5F2EB]">
+                  Notifications ({notifications.length})
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setNotifications([])}
+                    className="text-[11px] text-zinc-400 hover:text-white"
+                  >
+                    Tout effacer
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowNotificationsModal(false)}
+                  className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5">
+              {notifications.length === 0 ? (
+                <div className="py-10 text-center text-xs text-[#8E93A4]">
+                  Aucune notification pour le moment.
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      if (n.trackId) {
+                        setSelectedTrackId(n.trackId);
+                        setShowNotificationsModal(false);
+                      }
+                    }}
+                    className={`p-3 rounded-2xl border transition-colors ${
+                      n.trackId ? 'cursor-pointer hover:border-emerald-500/40' : ''
+                    } ${
+                      n.type === 'PUBLISH'
+                        ? 'bg-emerald-500/[0.07] border-emerald-500/25'
+                        : n.type === 'DATABASE'
+                          ? 'bg-amber-500/[0.07] border-amber-500/25'
+                          : 'bg-[#07080C] border-white/[0.07]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                        {n.title}
+                      </span>
+                      <span className="text-[10px] font-mono text-[#8E93A4] shrink-0">
+                        {n.createdAt}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">{n.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

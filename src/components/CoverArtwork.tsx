@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Disc } from 'lucide-react';
 
 export type ArtworkType =
@@ -23,6 +23,26 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
   artist,
   className = 'w-full h-full object-cover',
 }) => {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [coverUrl]);
+
+  // PRIORITÉ ABSOLUE N°1 : Si une pochette a été téléchargée (DataURL ou URL Supabase), on l'affiche en priorité !
+  if (coverUrl && coverUrl.trim().length > 0 && !imgError) {
+    return (
+      <img
+        src={coverUrl}
+        alt={title}
+        draggable={false}
+        referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
+        className={className}
+      />
+    );
+  }
+
   if (artworkType === 'creative_yellow') {
     return (
       <svg
@@ -440,18 +460,6 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
           HORIZON
         </text>
       </svg>
-    );
-  }
-
-  if (coverUrl) {
-    return (
-      <img
-        src={coverUrl}
-        alt={title}
-        draggable={false}
-        referrerPolicy="no-referrer"
-        className={className}
-      />
     );
   }
 

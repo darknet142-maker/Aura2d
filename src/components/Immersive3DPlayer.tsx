@@ -11,6 +11,16 @@ import {
   GabonNetworkOperator,
 } from '../services/offlineStreamTracker';
 import {
+  syncUserPlaylistsToCloud,
+  AdBannerSlide,
+  AdBannerSettings,
+  DEFAULT_AD_BANNERS,
+  DEFAULT_AD_BANNER_SETTINGS,
+  triggerBeatAudioDownload,
+  generateDropContentId,
+  computeDeterministicWaveformPeaks,
+} from '../services/musicService';
+import {
   AnalyticsTrackItem,
   AnalyticsAlbumNode,
   AnalyticsAppUser,
@@ -23,6 +33,8 @@ import {
   RankBadgeSvg,
   CertificationBadgeSvg,
   OfficialQrCodeSvg,
+  AutoMarqueeText,
+  UserPlaylist,
 } from './ReusableAnalyticsSheets';
 import {
   ChartTimeframe,
@@ -37,6 +49,7 @@ import {
   getTrackCertification,
   getAlbumCertification,
 } from '../utils/rankingEngine';
+import { DropTrendMagazineStudio } from './DropTrendMagazineStudio';
 
 export interface LyricLine {
   time: number;
@@ -59,6 +72,14 @@ export interface PlayerTrackItem {
   mixingEngineerName?: string;
   masteringEngineerName?: string;
   lyricistName?: string;
+  isInstrumental?: boolean;
+  isBeatDownloadable?: boolean;
+  musicalKey?: string;
+  dropContentId?: string;
+  waveformPeaks?: number[];
+  audioCodec?: 'OPUS' | 'AAC' | 'WAV';
+  audioUrl?: string;
+  synthNotes?: number[];
   isExternalLyricist?: boolean;
   hasSynchronizedLyrics?: boolean;
   gabonTerritoryPct?: number;
@@ -235,15 +256,168 @@ export interface Immersive3DPlayerProps {
   ) => void;
   onOpenCreditDispute?: (trackId: string, reason: string) => void;
   onResolveCreditDispute?: (trackId: string) => void;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
+  adBanners?: AdBannerSlide[];
+  adBannerSettings?: AdBannerSettings;
+  enableAwardsCeremony?: boolean;
 }
 
-interface UserPlaylist {
-  id: string;
-  name: string;
-  count: number;
-  added: boolean;
-  iconType: 'sparkle' | 'moon' | 'studio' | 'flame';
-}
+const CentralAdSlideshowBanner: React.FC<{
+  position: 'TOP' | 'BOTTOM';
+  slides: AdBannerSlide[];
+  settings: AdBannerSettings;
+  onSelectTrackId: (trackId: string) => void;
+  onSelectAlbumId: (albumId: string) => void;
+}> = ({ position, slides, settings, onSelectTrackId, onSelectAlbumId }) => {
+  const isEnabled =
+    position === 'TOP' ? settings.enableTopBanner : settings.enableBottomBanner;
+
+  const matchingSlides = useMemo(
+    () =>
+      (slides || [])
+        .filter(
+          (s) =>
+            s.active &&
+            Boolean(s.imageUrl) &&
+            (s.placement === position || s.placement === 'BOTH')
+        )
+        .sort((a, b) => a.orderIndex - b.orderIndex),
+    [slides, position]
+  );
+
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (currentIdx >= matchingSlides.length) {
+      setCurrentIdx(0);
+    }
+  }, [matchingSlides.length, currentIdx]);
+
+  useEffect(() => {
+    if (!isEnabled || matchingSlides.length <= 1) return;
+    if (settings.pauseOnTouch && isPaused) return;
+    const intervalMs = Math.max(1500, (settings.slideIntervalSec || 5) * 1000);
+    const timer = window.setInterval(() => {
+      setCurrentIdx((prev) => (prev + 1) % matchingSlides.length);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [
+    isEnabled,
+    matchingSlides.length,
+    settings.slideIntervalSec,
+    settings.pauseOnTouch,
+    isPaused,
+  ]);
+
+  if (!isEnabled || matchingSlides.length === 0) return null;
+
+  const activeSlide = matchingSlides[currentIdx] || matchingSlides[0];
+  const transitionMs = Math.max(150, settings.transitionDurationMs || 500);
+
+  const handleSlideClick = () => {
+    if (!activeSlide) return;
+    if (activeSlide.redirectType === 'TRACK' && activeSlide.targetTrackId) {
+      onSelectTrackId(activeSlide.targetTrackId);
+    } else if (
+      activeSlide.redirectType === 'ALBUM' &&
+      activeSlide.targetAlbumId
+    ) {
+      onSelectAlbumId(activeSlide.targetAlbumId);
+    }
+  };
+
+  const bannerInner = (
+    <div
+      className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.55)] select-none bg-[#090d16]"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
+    >
+      <div
+        className="flex w-full h-full"
+        style={{
+          transform: `translateX(-${currentIdx * 100}%)`,
+          transition: `transform ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+        }}
+      >
+        {matchingSlides.map((slide) => (
+          <div key={slide.id} className="w-full h-full shrink-0 relative">
+            <img
+              src={slide.imageUrl}
+              alt=""
+              draggable={false}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
+      {matchingSlides.length > 1 && (
+        <div
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/45 backdrop-blur-sm z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {matchingSlides.map((s, idx) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCurrentIdx(idx);
+              }}
+              className={`h-1.5 rounded-full transition-all ${
+                idx === currentIdx
+                  ? 'w-5 bg-amber-400'
+                  : 'w-1.5 bg-white/45 hover:bg-white/80'
+              }`}
+              aria-label={`Slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (
+    activeSlide.redirectType === 'EXTERNAL' &&
+    activeSlide.externalUrl &&
+    activeSlide.externalUrl.trim()
+  ) {
+    const cleanHref = activeSlide.externalUrl.trim().startsWith('http')
+      ? activeSlide.externalUrl.trim()
+      : `https://${activeSlide.externalUrl.trim()}`;
+    return (
+      <a
+        href={cleanHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full cursor-pointer transition-transform active:scale-[0.99]"
+      >
+        {bannerInner}
+      </a>
+    );
+  }
+
+  if (
+    (activeSlide.redirectType === 'TRACK' && activeSlide.targetTrackId) ||
+    (activeSlide.redirectType === 'ALBUM' && activeSlide.targetAlbumId)
+  ) {
+    return (
+      <div
+        onClick={handleSlideClick}
+        className="w-full cursor-pointer transition-transform active:scale-[0.99]"
+      >
+        {bannerInner}
+      </div>
+    );
+  }
+
+  return <div className="w-full">{bannerInner}</div>;
+};
 
 function formatTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
@@ -278,7 +452,54 @@ function getArtworkDominantColors(artworkType?: ArtworkType): {
   }
 }
 
+function normalizeSearchStr(str?: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function highlightMatchedText(
+  text: string | undefined,
+  query: string
+): React.ReactNode {
+  if (!text) return '';
+  const cleanQuery = normalizeSearchStr(query.trim());
+  if (!cleanQuery) return text;
+  const normText = normalizeSearchStr(text);
+  const matchIdx = normText.indexOf(cleanQuery);
+  if (matchIdx === -1) return text;
+  const before = text.slice(0, matchIdx);
+  const match = text.slice(matchIdx, matchIdx + cleanQuery.length);
+  const after = text.slice(matchIdx + cleanQuery.length);
+  return (
+    <>
+      {before}
+      <mark className="bg-amber-400/35 text-amber-200 font-extrabold rounded px-0.5">
+        {match}
+      </mark>
+      {after}
+    </>
+  );
+}
+
 function normalizeToAnalyticsTrack(t: PlayerTrackItem): AnalyticsTrackItem {
+  const peaks =
+    t.waveformPeaks && t.waveformPeaks.length === 64
+      ? t.waveformPeaks
+      : computeDeterministicWaveformPeaks(
+          `${t.id}|${t.title}|${t.artist}`,
+          64
+        );
+  const cid =
+    t.dropContentId ||
+    generateDropContentId(
+      peaks,
+      t.duration,
+      `${t.id}|${t.title}|${t.artist}`
+    );
+
   return {
     id: t.id,
     title: t.title,
@@ -294,7 +515,16 @@ function normalizeToAnalyticsTrack(t: PlayerTrackItem): AnalyticsTrackItem {
     recordingEngineerName: t.recordingEngineerName,
     mixingEngineerName: t.mixingEngineerName,
     masteringEngineerName: t.masteringEngineerName,
-    lyricistName: t.lyricistName || t.artist,
+    lyricistName: t.isInstrumental ? 'Instrumental' : t.lyricistName || t.artist,
+    isInstrumental: t.isInstrumental,
+    isBeatDownloadable:
+      t.isBeatDownloadable ??
+      Boolean(t.isInstrumental || t.category === 'Beats & Instrumentales'),
+    musicalKey: t.musicalKey,
+    dropContentId: cid,
+    waveformPeaks: peaks,
+    audioUrl: t.audioUrl,
+    audioCodec: 'OPUS',
     isExternalLyricist: t.isExternalLyricist,
     hasSynchronizedLyrics: t.hasSynchronizedLyrics,
     gabonTerritoryPct: t.gabonTerritoryPct ?? 86,
@@ -476,6 +706,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   userPlan,
   onToggleUserPlan,
   onTogglePlay,
+  onForceStopPlay,
   onNavigateAlbum,
   onSelectAlbumIndex,
   onNavigateTrack,
@@ -501,6 +732,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   onConfirmCreditHandshake,
   onOpenCreditDispute,
   onResolveCreditDispute,
+  unreadNotificationsCount = 0,
+  onOpenNotifications,
+  adBanners = DEFAULT_AD_BANNERS,
+  adBannerSettings = DEFAULT_AD_BANNER_SETTINGS,
+  enableAwardsCeremony = false,
 }) => {
   const safeRankInfo = rankInfo || currentRankInfo || { rank: 4, delta: 3 };
   const isPro = userPlan === 'PRO';
@@ -510,6 +746,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   const [activeModal, setActiveModal] = useState<
     'NONE' | 'PLAYLIST' | 'EQ' | 'QUEUE' | 'OPTIONS' | 'MINI' | 'RECOMMEND'
   >('NONE');
+  const [showTrendStudioModal, setShowTrendStudioModal] = useState(false);
   const [recommendNote, setRecommendNote] = useState<string>('');
 
   // In-Player Reusable Analytics Sheets State (Zero redirection to Admin!)
@@ -524,6 +761,19 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   const [hubTab, setHubTab] = useState<
     'EXPLORER' | 'RANGS' | 'AWARDS' | 'RECOS' | 'ARTISTES' | 'PROFIL'
   >('EXPLORER');
+
+  useEffect(() => {
+    if (!enableAwardsCeremony && hubTab === 'AWARDS') {
+      setHubTab('EXPLORER');
+    }
+  }, [enableAwardsCeremony, hubTab]);
+  const [centralFullPageView, setCentralFullPageView] = useState<{
+    type: 'ROLE' | 'GENRE' | 'DROPS' | 'ARTISTS_CIRCLES' | 'ALBUMS';
+    title: string;
+    role?: StudioEntityRole | 'ALL';
+    genre?: string;
+    accentColor: string;
+  } | null>(null);
   const [hubGenreFilter, setHubGenreFilter] = useState<string>('ALL');
   const [hubRankDimension, setHubRankDimension] = useState<
     'ALL' | 'ARTIST' | 'BEATMAKER' | 'ENGINEER' | 'LYRICIST' | 'LABEL' | 'CATEGORY'
@@ -599,15 +849,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
     setInPlayerEntity({ name, role });
   };
 
-  // Open Listener Profile directly inside User View
+  // Open Listener Profile directly inside User View (100% safe, never crashes)
   const openUserListenerSheet = (userId: string) => {
-    if (!isPro) {
-      notifyProRequired('Profil Auditeur Pro');
-      return;
-    }
     setInPlayerTrackId(null);
     setInPlayerEntity(null);
-    setInPlayerUserId(userId);
+    setInPlayerUserId(userId || 'usr-fallback');
   };
 
   const closeAllAnalyticsSheets = () => {
@@ -854,16 +1100,16 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
     }
 
     const trackIdSet = new Set(matching.map((m) => m.track.id));
-    const topListeners = users
+    const topListeners = (users || [])
       .map((u) => {
         let listenSeconds = 0;
         let playsCount = 0;
         let loopsCount = 0;
-        for (const [tId, st] of Object.entries(u.trackStats)) {
-          if (trackIdSet.has(tId)) {
-            listenSeconds += st.listenSeconds;
-            playsCount += st.playsCount;
-            loopsCount += st.loopsCount;
+        for (const [tId, st] of Object.entries(u.trackStats || {})) {
+          if (trackIdSet.has(tId) && st) {
+            listenSeconds += st.listenSeconds || 0;
+            playsCount += st.playsCount || 0;
+            loopsCount += st.loopsCount || 0;
           }
         }
         return { user: u, listenSeconds, playsCount, loopsCount };
@@ -920,38 +1166,63 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
     subscribedArtists,
   ]);
 
-  // Compute Selected In-Player Listener Profile Sheet Data
+  // Compute Selected In-Player Listener Profile Sheet Data (with safe fallback)
   const activeUserSheetData = useMemo(() => {
     if (!inPlayerUserId) return null;
-    const foundUser = users.find((u) => u.id === inPlayerUserId);
-    if (!foundUser) return null;
-    const rank =
-      [...users]
-        .sort((a, b) => b.totalListenSeconds - a.totalListenSeconds)
-        .findIndex((u) => u.id === foundUser.id) + 1;
-    return { user: foundUser, rank: Math.max(1, rank) };
-  }, [inPlayerUserId, users]);
+    const foundUser =
+      (users || []).find((u) => u.id === inPlayerUserId) ||
+      currentUser ||
+      (users && users[0]) || {
+        id: inPlayerUserId,
+        name: 'Auditeur Fidèle (+241)',
+        email: 'auditeur@drop.ga',
+        role: 'USER' as const,
+        joinedAt: '2024',
+        avatar: 'AF',
+        totalLikes: 18,
+        totalListenSeconds: 5400,
+        totalValidatedPlays: 42,
+        totalLoops: 12,
+        trackStats: {},
+      };
+    const sortedUsers = [...(users || [])].sort(
+      (a, b) => (b.totalListenSeconds || 0) - (a.totalListenSeconds || 0)
+    );
+    const rankIdx = sortedUsers.findIndex((u) => u.id === foundUser.id);
+    return { user: foundUser, rank: rankIdx >= 0 ? rankIdx + 1 : 1 };
+  }, [inPlayerUserId, users, currentUser]);
 
-  // Instant Multi-Criteria Search Results (reacts from the very 1st letter typed)
-  // Includes Featuring Artists, Lyricists, Lyrics text, and all Dynamic Genres!
+  // Instant Multi-Criteria Intelligent Search Results (reacts from the very 1st letter typed!)
+  // Accent-insensitive, prefix-prioritized + word-boundary + fuzzy subsequence matching across:
+  // Titres, Beats & Instrumentales, Artistes & Featurings, Beatmakers, Ingés Son, Paroliers, Labels, Genres & DROP-CID
   const instantSearchResults = useMemo(() => {
-    const raw = hubSearchQuery.trim().toLowerCase();
+    const raw = normalizeSearchStr(hubSearchQuery.trim());
     if (!raw) return null;
 
     const scoreMatch = (text?: string): number => {
       if (!text) return 0;
-      const lower = text.toLowerCase();
+      const lower = normalizeSearchStr(text);
+      if (!lower) return 0;
       if (lower === raw) return 100;
-      if (lower.startsWith(raw)) return 82;
-      if (lower.includes(raw)) return 52;
+      if (lower.startsWith(raw)) return 88;
+      // Word boundary prefix match (e.g. typing "b" matches "L'Oiseau Rare" or "Beat Tape")
+      const words = lower.split(/[\s\-_.,/()]+/);
+      if (words.some((w) => w.startsWith(raw))) return 76;
+      if (lower.includes(raw)) return 58;
+      // Subsequence fuzzy match for 2+ letters
+      if (raw.length >= 2) {
+        let qIdx = 0;
+        for (let i = 0; i < lower.length && qIdx < raw.length; i++) {
+          if (lower[i] === raw[qIdx]) qIdx++;
+        }
+        if (qIdx === raw.length) return 32;
+      }
       return 0;
     };
 
-    const matchingGenres = availableGenres.filter(
-      (g) => scoreMatch(g) > 0
-    );
+    const matchingGenres = availableGenres.filter((g) => scoreMatch(g) > 0);
 
-    const matchingTracks = allTracksFlat
+    const allScoredTracks = allTracksFlat
       .map((item) => {
         const { track } = item;
         const featScore =
@@ -964,15 +1235,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             : 0;
 
         const score = Math.max(
-          scoreMatch(track.title) * 1.35,
-          scoreMatch(track.artist) * 1.2,
-          featScore * 1.15,
+          scoreMatch(track.title) * 1.4,
+          scoreMatch(track.artist) * 1.25,
+          featScore * 1.2,
+          scoreMatch(track.dropContentId) * 1.35,
+          scoreMatch(track.beatmakerName) * 1.15,
           scoreMatch(track.lyricistName) * 1.1,
+          scoreMatch(track.soundEngineerName) * 1.05,
           scoreMatch(track.category) * 1.1,
           scoreMatch(track.album),
-          scoreMatch(track.labelName) * 0.9,
-          scoreMatch(track.beatmakerName) * 0.9,
-          scoreMatch(track.soundEngineerName) * 0.9,
+          scoreMatch(track.labelName) * 0.95,
+          scoreMatch(track.musicalKey) * 0.85,
           lyricsTextScore
         );
         return { ...item, score };
@@ -982,10 +1255,22 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
         (a, b) => b.score - a.score || b.track.algoPoints - a.track.algoPoints
       );
 
+    const matchingBeats = allScoredTracks.filter(
+      (m) =>
+        m.track.isInstrumental || m.track.category === 'Beats & Instrumentales'
+    );
+    const matchingTracks = allScoredTracks.filter(
+      (m) =>
+        !(
+          m.track.isInstrumental ||
+          m.track.category === 'Beats & Instrumentales'
+        )
+    );
+
     const matchingEntities = decoupledStudioRankings
       .map((ent) => {
         const score = Math.max(
-          scoreMatch(ent.name) * 1.25,
+          scoreMatch(ent.name) * 1.3,
           scoreMatch(ent.category) * 0.9
         );
         return { ...ent, score };
@@ -995,10 +1280,12 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
 
     return {
       genres: matchingGenres,
+      beats: matchingBeats,
       tracks: matchingTracks,
       entities: matchingEntities,
       totalCount:
         matchingGenres.length +
+        matchingBeats.length +
         matchingTracks.length +
         matchingEntities.length,
     };
@@ -1012,38 +1299,106 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   // Heart pop animation trigger
   const [heartAnimKey, setHeartAnimKey] = useState(0);
 
-  // Playlists state
-  const [playlists, setPlaylists] = useState<UserPlaylist[]>([
-    {
-      id: 'pl-1',
-      name: 'Favoris Créatifs',
-      count: 42,
-      added: true,
-      iconType: 'sparkle',
-    },
-    {
-      id: 'pl-2',
-      name: 'Late Night Drive',
-      count: 28,
-      added: false,
-      iconType: 'moon',
-    },
-    {
-      id: 'pl-3',
-      name: 'Design & Focus Studio',
-      count: 65,
-      added: true,
-      iconType: 'studio',
-    },
-    {
-      id: 'pl-4',
-      name: 'Workout Boost',
-      count: 19,
-      added: false,
-      iconType: 'flame',
-    },
-  ]);
+  // Persistent User Playlists state (synchronized between Player, Central & Mon Profil)
+  const [playlists, setPlaylists] = useState<UserPlaylist[]>(() => {
+    const defaultIds = allTracksFlat.map((m) => m.track.id);
+    const fallbackPlaylists: UserPlaylist[] = [
+      {
+        id: 'pl-1',
+        name: 'Hits Gabon 241',
+        colorTheme: '#e11d38',
+        iconType: 'fire',
+        trackIds: defaultIds.slice(0, 3),
+        createdAt: '2025',
+      },
+      {
+        id: 'pl-2',
+        name: 'Ntcham & Vibe',
+        colorTheme: '#f59e0b',
+        iconType: 'sparkle',
+        trackIds: defaultIds.slice(1, 4),
+        createdAt: '2025',
+      },
+      {
+        id: 'pl-3',
+        name: 'Nuit Libreville',
+        colorTheme: '#8b5cf6',
+        iconType: 'moon',
+        trackIds: defaultIds.slice(0, 2),
+        createdAt: '2025',
+      },
+      {
+        id: 'pl-4',
+        name: 'Sport & Boost',
+        colorTheme: '#10b981',
+        iconType: 'heart',
+        trackIds: defaultIds.slice(2, 5),
+        createdAt: '2025',
+      },
+    ];
+    try {
+      const saved = window.localStorage.getItem('drop_user_playlists_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return fallbackPlaylists;
+  });
   const [newPlaylistInput, setNewPlaylistInput] = useState('');
+
+  useEffect(() => {
+    syncUserPlaylistsToCloud(playlists, currentUser?.id || 'usr-1').catch(
+      () => {}
+    );
+  }, [playlists, currentUser?.id]);
+
+  const handleCreatePlaylist = (
+    name: string,
+    colorTheme = '#e11d38',
+    initialTrackId?: string
+  ) => {
+    const clean = name.trim();
+    if (!clean) return;
+    const newPl: UserPlaylist = {
+      id: `pl-${Date.now()}`,
+      name: clean,
+      colorTheme,
+      iconType: 'sparkle',
+      trackIds: initialTrackId ? [initialTrackId] : [],
+      createdAt: new Date().toLocaleDateString('fr-FR'),
+    };
+    setPlaylists((prev) => [newPl, ...prev]);
+    showToast(`Playlist « ${clean} » créée dans votre profil !`, 'bg-emerald-400');
+  };
+
+  const handleDeletePlaylist = (playlistId: string) => {
+    setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
+    showToast('Playlist supprimée de votre bibliothèque', 'bg-zinc-400');
+  };
+
+  const handleToggleTrackInPlaylist = (playlistId: string, trackId: string) => {
+    setPlaylists((prev) =>
+      prev.map((pl) => {
+        if (pl.id !== playlistId) return pl;
+        const exists = pl.trackIds.includes(trackId);
+        const nextIds = exists
+          ? pl.trackIds.filter((id) => id !== trackId)
+          : [...pl.trackIds, trackId];
+        showToast(
+          exists
+            ? `Retiré de « ${pl.name} »`
+            : `Ajouté à « ${pl.name} »`,
+          exists ? 'bg-zinc-400' : 'bg-emerald-400'
+        );
+        return { ...pl, trackIds: nextIds };
+      })
+    );
+  };
 
   // 2D Carousel Drag Physics
   const [isDraggingCarousel, setIsDraggingCarousel] = useState(false);
@@ -1371,13 +1726,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
 
         {/* 1. EN-TÊTE DE NAVIGATION FIXE */}
         <header className="relative z-20 flex items-center justify-between px-6 pt-3 sm:pt-4 pb-0.5 shrink-0">
-          {/* Bouton Flèche vers le bas (Ouvre le Hub Central de Découverte, Recherche & Mini-Lecteur) */}
+          {/* Bouton Flèche vers le bas (Ouvre l'écran Central) */}
           <button
             type="button"
             onClick={() => setActiveModal('MINI')}
             className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
-            aria-label="Ouvrir le Hub Central et la Recherche"
-            title="Hub Central, Recherche & Mini-Lecteur"
+            aria-label="Ouvrir Central"
+            title="Central"
           >
             <svg
               className="w-5 h-5 sm:w-6 sm:h-6"
@@ -1405,23 +1760,53 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             <DropOfficialLogo className="h-[14px] sm:h-[15px] w-auto" />
           </button>
 
-          {/* Menu Options, Compte Pro/Basic & Studio Admin (•••) */}
-          <button
-            type="button"
-            onClick={() => setActiveModal('OPTIONS')}
-            className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
-            aria-label="Options et Paramètres"
-          >
-            <svg
-              className="w-5 h-5 sm:w-6 sm:h-6"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+          {/* Cloche de Notifications + Menu Options (•••) */}
+          <div className="flex items-center gap-1 -mr-2">
+            {onOpenNotifications && (
+              <button
+                type="button"
+                onClick={onOpenNotifications}
+                className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
+                aria-label="Notifications"
+                title="Notifications"
+              >
+                <svg
+                  className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#e11d38] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow">
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setActiveModal('OPTIONS')}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
+              aria-label="Options et Paramètres"
             >
-              <circle cx="5" cy="12" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="19" cy="12" r="2" />
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="19" cy="12" r="2" />
+              </svg>
+            </button>
+          </div>
         </header>
 
         {/* 2. ZONE CENTRALE : CARROUSEL 3D SUPERPOSÉ OU PANNEAU PAROLES INTERACTIF */}
@@ -1625,102 +2010,156 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           )}
         </section>
 
-        {/* 3. MÉTADONNÉES, CRÉDITS FEATURING, ABONNEMENT ARTISTE, LIKE + RECOMMANDER & BARRE DE PROGRESSION */}
+        {/* 3. MÉTADONNÉES ÉPURÉES, DÉFILEMENT AUTOMATIQUE (MARQUEE), ICÔNE ABONNEMENT MOBILE & PROGRESSION */}
         <section className="relative z-20 px-6 pt-0.5 pb-1.5 sm:pb-2 shrink-0">
-          {/* Titre, Artiste (+ Featurings + S'abonner) & Boutons Like + Recommander */}
+          {/* Titre, Artiste (+ Featurings + Icône S'abonner fixe) & Boutons Recommander + Like fixes */}
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1
+              <div className="flex items-center gap-2 min-w-0">
+                <div
                   onClick={() => openUserTrackSheet(currentTrack.id)}
                   title={
                     isPro
-                      ? 'Ouvrir la fiche analytique du titre (sans quitter le lecteur)'
+                      ? 'Ouvrir la fiche du titre'
                       : 'Fiche détaillée réservée aux comptes DROP Pro'
                   }
-                  className={`text-[21px] sm:text-[25px] leading-tight font-bold text-white tracking-tight truncate transition-colors ${
+                  className={`min-w-0 flex-1 text-[21px] sm:text-[25px] leading-tight font-bold text-white tracking-tight transition-colors ${
                     isPro
                       ? 'cursor-pointer hover:text-amber-200'
                       : 'cursor-default opacity-90'
                   }`}
                 >
-                  {currentTrack.title}
-                </h1>
-                <CertificationBadgeSvg cert={currentTrackCert} compact />
+                  <AutoMarqueeText text={currentTrack.title} />
+                </div>
+                <CertificationBadgeSvg
+                  cert={currentTrackCert}
+                  compact
+                  entityTitle={currentTrack.title}
+                  entityArtist={currentTrack.artist}
+                  playsCount={currentTrack.realPlays}
+                  isPro={isPro}
+                />
               </div>
 
-              {/* Ligne Artiste Principal + Featuring + Bouton S'abonner (Fans) */}
-              <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
+              {/* Ligne Artiste Principal + Featuring (Défilement en boucle si dépassement) + Bouton Icône S'abonner fixe */}
+              <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <div
                   onClick={() =>
                     openUserEntitySheet(currentTrack.artist, 'ARTIST')
                   }
                   title={
                     isPro
-                      ? 'Ouvrir le profil analytique artiste'
+                      ? 'Ouvrir le profil artiste'
                       : 'Profil artiste réservé aux comptes DROP Pro'
                   }
-                  className={`text-[14px] sm:text-[16px] leading-snug font-semibold text-zinc-200 truncate shrink-0 transition-colors ${
+                  className={`min-w-0 flex-1 text-[14px] sm:text-[16px] leading-snug font-semibold text-zinc-200 transition-colors ${
                     isPro
                       ? 'cursor-pointer hover:text-amber-300'
                       : 'cursor-default opacity-80'
                   }`}
                 >
-                  {currentTrack.artist}
-                </button>
+                  <AutoMarqueeText
+                    text={
+                      currentTrack.featuringArtists &&
+                      currentTrack.featuringArtists.length > 0
+                        ? `${currentTrack.artist} feat. ${currentTrack.featuringArtists.join(', ')}`
+                        : currentTrack.artist
+                    }
+                  />
+                </div>
 
-                {currentTrack.featuringArtists &&
-                  currentTrack.featuringArtists.length > 0 && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-xs text-zinc-400 font-mono">
-                        feat.
-                      </span>
-                      {currentTrack.featuringArtists.map((feat) => (
-                        <button
-                          key={feat}
-                          type="button"
-                          onClick={() => openUserEntitySheet(feat, 'ARTIST')}
-                          className="px-1.5 py-0.5 rounded-md bg-white/[0.08] hover:bg-amber-400/20 text-xs font-semibold text-amber-200 border border-white/10 shrink-0 transition"
-                        >
-                          {feat}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                {/* Bouton S'abonner à l'Artiste (Fans) */}
+                {/* Bouton d'Abonnement : Juste une ICÔNE sur mobile (aucun texte sur mobile), fixe */}
                 <button
                   type="button"
                   onClick={() => {
                     onToggleSubscribeArtist?.(currentTrack.artist);
                     showToast(
                       !currentArtistSubscribed
-                        ? `Abonné à ${currentTrack.artist} (+1 Fan au classement)`
-                        : `Désabonné de ${currentTrack.artist}`,
+                        ? `Abonné à ${currentTrack.artist}`
+                        : `Abonnement retiré pour ${currentTrack.artist}`,
                       !currentArtistSubscribed ? 'bg-emerald-400' : 'bg-zinc-400'
                     );
                   }}
-                  className={`ml-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center gap-1 ${
+                  className={`w-7 h-7 sm:w-auto sm:h-auto sm:px-2.5 sm:py-0.5 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center justify-center gap-1 ${
                     currentArtistSubscribed
                       ? 'bg-emerald-500/20 border-emerald-500/45 text-emerald-300'
                       : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
                   }`}
-                  title="S’abonner à l’artiste pour soutenir sa communauté dans le classement"
+                  aria-label={
+                    currentArtistSubscribed
+                      ? `Abonné à ${currentTrack.artist}`
+                      : `S’abonner à ${currentTrack.artist}`
+                  }
+                  title={
+                    currentArtistSubscribed
+                      ? `Abonné à ${currentTrack.artist} (${formatCompactPlays(currentArtistSubscribersCount)})`
+                      : `S’abonner à ${currentTrack.artist}`
+                  }
                 >
-                  <span>
-                    {currentArtistSubscribed ? 'Abonné ✓' : '+ S’abonner'}
-                  </span>
-                  <span className="font-mono text-[10px] opacity-85">
-                    {formatCompactPlays(currentArtistSubscribersCount)}
+                  {currentArtistSubscribed ? (
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                    >
+                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                      <circle cx="8.5" cy="7" r="4" />
+                      <polyline points="17 11 19 13 23 9" />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                    >
+                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                      <circle cx="8.5" cy="7" r="4" />
+                      <line x1="20" y1="8" x2="20" y2="14" />
+                      <line x1="23" y1="11" x2="17" y2="11" />
+                    </svg>
+                  )}
+                  <span className="hidden sm:inline">
+                    {currentArtistSubscribed ? 'Abonné' : 'S’abonner'}
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* Groupe Actions Sociales : Bouton Recommander (Partage Communautaire) + Bouton Like (Coeur) */}
+            {/* Groupe Actions Sociales Fixe : Bouton Télécharger le Beat (si instrumentale) + Bouton Partager/Recommander + Bouton Like */}
             <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
-              {/* Bouton Recommander (placé juste à côté du Like) */}
+              {(currentTrack.isInstrumental ||
+                currentTrack.category === 'Beats & Instrumentales') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerBeatAudioDownload({
+                      title: currentTrack.title,
+                      artist: currentTrack.artist,
+                      bpm: currentTrack.bpm,
+                      duration: currentTrack.duration,
+                      audioUrl: currentTrack.audioUrl,
+                      synthNotes: currentTrack.synthNotes,
+                      dropContentId: currentTrack.dropContentId,
+                    });
+                    showToast(
+                      `Téléchargement du Beat « ${currentTrack.title} » lancé !`,
+                      'bg-cyan-400'
+                    );
+                  }}
+                  className="h-10 px-2.5 sm:px-3 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 flex items-center gap-1.5 active:scale-90 transition shadow-[0_0_14px_rgba(6,182,212,0.28)]"
+                  title="Télécharger cette instrumentale / Beat (WAV Studio)"
+                >
+                  <span className="text-xs">⬇</span>
+                  <span className="text-[11px] font-extrabold tracking-tight">
+                    Beat
+                  </span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setActiveModal('RECOMMEND')}
@@ -1729,8 +2168,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     ? 'bg-amber-400/20 border-amber-400/50 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.28)]'
                     : 'bg-white/[0.07] hover:bg-white/[0.14] border-white/15 text-zinc-200'
                 }`}
-                aria-label="Recommander ce titre à d'autres utilisateurs DROP"
-                title="Recommander ce titre dans le fil commun DROP"
+                aria-label="Partager ou recommander ce titre"
+                title="Partager en vidéo Trend 30s ou recommander dans le Fil DROP"
               >
                 <svg
                   className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0"
@@ -1750,7 +2189,6 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 </span>
               </button>
 
-              {/* Bouton Favori (Coeur Rouge Vectoriel) */}
               <button
                 type="button"
                 onClick={(e) => {
@@ -1790,9 +2228,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             </div>
           </div>
 
-          {/* Ligne Analytique & Classement (#4 ▲+3 | Plume | ▶ 76K • il y a 5 min) */}
+          {/* Ligne Épurée : Classement (#4 ▲+3) & Lectures (▶ 76K) — Sans surcharge visuelle */}
           <div className="flex items-center justify-between mt-1.5 sm:mt-2 text-[12px] sm:text-[13px] tabular-nums gap-2">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2">
               <span className="font-bold text-white tracking-tight inline-flex items-center gap-1 shrink-0">
                 <span>#{safeRankInfo.rank}</span>
                 <RankMedalSvg
@@ -1828,25 +2266,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   </span>
                 </span>
               )}
-
-              <button
-                type="button"
-                onClick={() => openUserEntitySheet(currentLyricist, 'LYRICIST')}
-                className="px-2 py-0.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-zinc-300 text-[10px] font-mono shrink-0 transition"
-                title="Voir le profil du Parolier / Auteur des paroles"
-              >
-                Plume : {currentLyricist}
-              </button>
-
               {isDropMode && (
-                <button
-                  type="button"
-                  onClick={() => onSeek(0)}
-                  className="px-2 py-0.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 text-[10px] font-semibold shrink-0 transition"
-                  title="Quitter la boucle Drop et écouter depuis 0:00"
-                >
-                  Drop • Écouter dès 0:00
-                </button>
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/35 text-amber-300 text-[10px] font-mono font-bold shrink-0">
+                  Aperçu Drop
+                </span>
               )}
             </div>
 
@@ -1862,10 +2285,6 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   currentTrack.realPlays,
                   currentTrack.displayPlaysFormatted
                 )}
-              </span>
-              <span className="text-zinc-400">•</span>
-              <span className="text-zinc-300/80">
-                {currentTrack.lastActivityAgo}
               </span>
             </div>
           </div>
@@ -1962,14 +2381,23 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 </svg>
               </button>
 
+              {/* Le bouton Play ne s'active JAMAIS seul pendant le Drop : il affiche Play (▶) tant que l'utilisateur n'a pas cliqué pour lancer la lecture complète depuis 0:00 */}
               <button
                 type="button"
                 onClick={onTogglePlay}
                 className="play-btn-main"
-                aria-label={isPlaying ? 'Mettre en pause' : 'Lancer la lecture'}
-                title={isPlaying ? 'Mettre en pause' : 'Reprendre la lecture'}
+                aria-label={
+                  isPlaying && !isDropMode
+                    ? 'Mettre en pause'
+                    : 'Lancer la lecture complète depuis 0:00'
+                }
+                title={
+                  isPlaying && !isDropMode
+                    ? 'Mettre en pause'
+                    : 'Cliquer pour lancer la lecture complète depuis 0:00'
+                }
               >
-                {isPlaying ? (
+                {isPlaying && !isDropMode ? (
                   <svg
                     className="w-7 h-7 sm:w-8 sm:h-8 text-white fill-current"
                     viewBox="0 0 24 24"
@@ -2049,8 +2477,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
               </button>
             </div>
 
-            {/* Rangée 2 : 4 Boutons Utilitaires 100% Fonctionnels */}
-            <div className="relative z-10 flex items-center justify-between px-2.5 sm:px-3 mt-3.5 sm:mt-4">
+            {/* Rangée 2 : 5 Boutons Utilitaires Carrés Resserrés (Playlist, Paroles, Trend, Réglages/Égaliseur, Téléchargement) */}
+            <div className="relative z-10 flex items-center justify-between gap-2 px-1 sm:px-2 mt-3.5 sm:mt-4">
               {/* 1. Ajouter à une sélection / Playlist */}
               <button
                 type="button"
@@ -2060,7 +2488,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 title="Ajouter à une sélection"
               >
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -2118,7 +2546,32 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 {!isPro && <ProLockBadgeSvg />}
               </button>
 
-              {/* 3. Égaliseur 5 Bandes & Préréglages Audio */}
+              {/* 3. Studio Vidéo Trend 30s (Format Carré identique aux 4 autres boutons) */}
+              <button
+                type="button"
+                onClick={() => setShowTrendStudioModal(true)}
+                className={`utility-pill ${
+                  showTrendStudioModal ? 'active-pill' : 'trend-pill'
+                }`}
+                aria-label="Créer une vidéo Trend 30s sur le Drop"
+                title="Créer une vidéo Trend 30s (Verrouillée sur les 30s du Drop)"
+              >
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                >
+                  <rect x="2" y="5" width="14" height="14" rx="3" />
+                  <path d="M16 10l6-3.5v11L16 14v-4z" />
+                </svg>
+                <span className="absolute -bottom-1 -right-1 px-1 py-[1px] rounded bg-[#e11d38] text-white text-[8px] font-mono font-extrabold leading-none border border-amber-300/60 shadow">
+                  30s
+                </span>
+              </button>
+
+              {/* 4. Égaliseur 5 Bandes & Préréglages Audio */}
               <button
                 type="button"
                 onClick={() => {
@@ -2162,7 +2615,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 {!isPro && <ProLockBadgeSvg />}
               </button>
 
-              {/* 4. Téléchargement Hors-Ligne */}
+              {/* 5. Téléchargement Hors-Ligne */}
               <button
                 type="button"
                 onClick={() => {
@@ -2224,11 +2677,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           </div>
         </section>
 
-        {/* 5. PIED DE PAGE */}
-        <footer className="relative z-20 pb-2.5 sm:pb-3.5 pt-0.5 text-center shrink-0">
-          <p className="text-[11px] sm:text-[11.5px] text-zinc-400/75 tracking-tight">
+        {/* 5. PIED DE PAGE (Signature Copyright + Label plus petite et discrète) */}
+        <footer className="relative z-20 pb-2 sm:pb-2.5 pt-0.5 text-center shrink-0">
+          <p className="text-[8.5px] sm:text-[9.5px] text-zinc-500/65 tracking-tight">
             {currentTrack.copyrightText ||
-              `Copyright 2028 ${currentTrack.labelName}. All rights reserved`}
+              `© 2028 ${currentTrack.labelName}. Tous droits réservés`}
           </p>
         </footer>
 
@@ -2296,6 +2749,29 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 />
               </div>
 
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModal('NONE');
+                  setShowTrendStudioModal(true);
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#e11d38] via-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_10px_30px_rgba(225,29,56,0.4)] transition"
+              >
+                <svg
+                  className="w-4 h-4 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <rect x="2" y="4" width="15" height="16" rx="3" />
+                  <path d="M17 9l5-3v12l-5-3V9z" />
+                </svg>
+                <span>
+                  Créer une Vidéo Trend (Drop {Math.min(30, currentTrack.dropDuration || 30)}s • Magazine Pop Star)
+                </span>
+              </button>
+
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
@@ -2333,7 +2809,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           </div>
         )}
 
-        {/* 1. Modale : Ajouter à une sélection */}
+        {/* 1. Modale : Ajouter à une Playlist (Synchronisée avec Mon Profil) */}
         {activeModal === 'PLAYLIST' && (
           <div
             onClick={() => setActiveModal('NONE')}
@@ -2344,9 +2820,14 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
               className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl animate-fade-in"
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-white">
-                  Ajouter à une sélection
-                </h2>
+                <div>
+                  <h2 className="text-base font-bold text-white">
+                    Ajouter à mes playlists
+                  </h2>
+                  <p className="text-xs text-zinc-400">
+                    Retrouvez et gérez toutes vos playlists dans Mon Profil
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveModal('NONE')}
@@ -2357,105 +2838,80 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 </button>
               </div>
               <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                {playlists.map((pl, idx) => (
-                  <button
-                    key={pl.id}
-                    type="button"
-                    onClick={() => {
-                      setPlaylists((prev) =>
-                        prev.map((item, i) =>
-                          i === idx
-                            ? {
-                                ...item,
-                                added: !item.added,
-                                count: item.added
-                                  ? item.count - 1
-                                  : item.count + 1,
-                              }
-                            : item
-                        )
-                      );
-                      showToast(
-                        !pl.added
-                          ? `Ajouté à "${pl.name}"`
-                          : `Retiré de "${pl.name}"`
-                      );
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
-                        <PlaylistVectorIcon type={pl.iconType} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {pl.name}
-                        </p>
-                        <p className="text-xs text-zinc-400">
-                          {pl.count} titres
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        pl.added
-                          ? 'bg-amber-400 text-black'
-                          : 'border border-white/30 text-white'
-                      }`}
+                {playlists.map((pl) => {
+                  const isAdded = pl.trackIds.includes(currentTrack.id);
+                  return (
+                    <button
+                      key={pl.id}
+                      type="button"
+                      onClick={() =>
+                        handleToggleTrackInPlaylist(pl.id, currentTrack.id)
+                      }
+                      className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-left"
                     >
-                      {pl.added ? '✓' : '+'}
-                    </span>
-                  </button>
-                ))}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-xl border border-white/15 flex items-center justify-center shrink-0 text-white font-bold text-xs"
+                          style={{
+                            backgroundColor: pl.colorTheme || '#e11d38',
+                          }}
+                        >
+                          {pl.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {pl.name}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {pl.trackIds.length} titre
+                            {pl.trackIds.length > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                          isAdded
+                            ? 'bg-amber-400 text-black'
+                            : 'border border-white/30 text-white'
+                        }`}
+                      >
+                        {isAdded ? '✓' : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="pt-1">
-                {isPro ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newPlaylistInput}
-                      onChange={(e) => setNewPlaylistInput(e.target.value)}
-                      placeholder="Nouvelle sélection..."
-                      className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = newPlaylistInput.trim();
-                        if (!val) return;
-                        setPlaylists((prev) => [
-                          ...prev,
-                          {
-                            id: `pl-${Date.now()}`,
-                            name: val,
-                            count: 1,
-                            added: true,
-                            iconType: 'sparkle',
-                          },
-                        ]);
-                        setNewPlaylistInput('');
-                        showToast(`Sélection "${val}" créée et titre ajouté`);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs transition"
-                    >
-                      Créer
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      notifyProRequired('Création de sélections illimitées')
+              <div className="pt-1 flex gap-2">
+                <input
+                  type="text"
+                  value={newPlaylistInput}
+                  onChange={(e) => setNewPlaylistInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newPlaylistInput.trim()) {
+                      handleCreatePlaylist(
+                        newPlaylistInput.trim(),
+                        '#e11d38',
+                        currentTrack.id
+                      );
+                      setNewPlaylistInput('');
                     }
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-zinc-400 opacity-50 cursor-not-allowed text-xs"
-                  >
-                    <span>Créer une nouvelle sélection personnalisée</span>
-                    <span className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-semibold">
-                      PRO
-                    </span>
-                  </button>
-                )}
+                  }}
+                  placeholder="Créer une nouvelle playlist..."
+                  className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const val = newPlaylistInput.trim();
+                    if (!val) return;
+                    handleCreatePlaylist(val, '#e11d38', currentTrack.id);
+                    setNewPlaylistInput('');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs transition shrink-0"
+                >
+                  + Créer
+                </button>
               </div>
             </div>
           </div>
@@ -2948,97 +3404,91 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
         )}
 
         {/* =================================================================== */}
-        {/* 5. HUB CENTRAL DE DÉCOUVERTE, ONGLETS GLISSANTS & RECHERCHE BASSE   */}
+        {/* 5. ÉCRAN "CENTRAL" AÉRÉ AVEC ACTIONS RAPIDES EN HAUT & MENU BAS FIXE */}
         {/* =================================================================== */}
         {activeModal === 'MINI' && (
-          <div className="absolute inset-0 z-40 bg-zinc-950/96 backdrop-blur-2xl flex flex-col justify-between p-3.5 sm:p-5 animate-fade-in overflow-hidden">
-            {/* En-tête du Hub Central */}
-            <div className="flex items-center justify-between gap-2 shrink-0 pb-2.5 border-b border-white/10">
+          <div className="absolute inset-0 z-40 bg-zinc-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-5 animate-fade-in overflow-hidden">
+            {/* En-tête de l'écran "Central" épuré (Sans le bouton Répertoire) */}
+            <div className="flex items-center justify-between gap-2 shrink-0 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 min-w-0">
                 <DropOfficialLogo className="h-3.5 w-auto shrink-0" />
-                <span className="text-xs font-bold text-white truncate">
-                  Hub Central DROP
+                <span className="text-sm sm:text-base font-extrabold text-white tracking-tight truncate">
+                  Central
                 </span>
-                <button
-                  type="button"
-                  onClick={onToggleUserPlan}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition shrink-0 ${
-                    isPro
-                      ? 'bg-amber-400 text-black'
-                      : 'bg-white/10 text-zinc-300 border border-white/15'
-                  }`}
-                >
-                  {isPro ? 'PRO' : 'BASIC'}
-                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  closeAllAnalyticsSheets();
-                  setActiveModal('NONE');
-                }}
-                className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-xs font-semibold text-white flex items-center gap-1.5 transition shrink-0"
-              >
-                <span>Lecteur 3D</span>
-                <svg
-                  className="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 15l7-7 7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* BARRE D'ONGLETS GLISSANTS (SLIDING TABS — ZÉRO COUPURE DE TEXTE) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-white/[0.04] p-1.5 rounded-2xl border border-white/10 my-2.5 shrink-0">
-              {(
-                [
-                  { id: 'EXPLORER', label: 'Explorer Genres & Projets' },
-                  { id: 'RANGS', label: 'Top Rangs (Anti-Halo)' },
-                  { id: 'AWARDS', label: 'DROP Awards & Certifications' },
-                  {
-                    id: 'RECOS',
-                    label: `Fil Commun Recos (${communityRecommendations.length})`,
-                  },
-                  { id: 'ARTISTES', label: 'Artistes & Métiers Studio' },
-                  { id: 'PROFIL', label: 'Mon Profil Pro' },
-                ] as const
-              ).map((tab) => {
-                const isTabActive =
-                  hubTab === tab.id &&
-                  !instantSearchResults &&
-                  !hasOpenAnalyticsSheet;
-                return (
+              {/* Actions rapides épurées en haut de l'écran Central */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onOpenNotifications && (
                   <button
-                    key={tab.id}
                     type="button"
-                    onClick={() => {
-                      closeAllAnalyticsSheets();
-                      setHubSearchQuery('');
-                      setHubTab(tab.id);
-                    }}
-                    className={`py-2 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition ${
-                      isTabActive
-                        ? 'bg-[#e11d38] text-white shadow-[0_4px_12px_rgba(225,29,56,0.4)]'
-                        : 'text-zinc-300 hover:text-white hover:bg-white/[0.06]'
-                    }`}
+                    onClick={onOpenNotifications}
+                    className="relative w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/12 border border-white/10 flex items-center justify-center text-zinc-200 transition"
+                    title="Notifications"
                   >
-                    {tab.label}
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-[#e11d38] text-white text-[9px] font-mono font-bold flex items-center justify-center">
+                        {unreadNotificationsCount > 9
+                          ? '9+'
+                          : unreadNotificationsCount}
+                      </span>
+                    )}
                   </button>
-                );
-              })}
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal('NONE');
+                    onOpenAdminStudio();
+                  }}
+                  className="px-2.5 py-1.5 rounded-full bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/35 text-amber-300 text-[11px] font-bold transition"
+                  title="Ouvrir l'espace Studio Admin"
+                >
+                  Admin
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeAllAnalyticsSheets();
+                    setActiveModal('NONE');
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-xs font-semibold text-white flex items-center gap-1 transition shrink-0"
+                >
+                  <span>Lecteur</span>
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* Zone Centrale Dynamique */}
-            <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 flex flex-col gap-3">
+            {/* Zone Centrale Aérée */}
+            <div className="flex-1 min-h-0 overflow-y-auto py-3 pr-0.5 flex flex-col gap-4">
               {/* CAS A : Une Fiche Analytique Réutilisable est ouverte directement dans l'interface utilisateur */}
               {activeTrackSheetData ? (
                 <ReusableTrackDetailSheet
@@ -3122,17 +3572,29 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   trackRankMap={trackRankMap}
                   currentTrackId={currentTrack.id}
                   isPlaying={isPlaying}
+                  userPlaylists={playlists}
+                  onCreatePlaylist={handleCreatePlaylist}
+                  onDeletePlaylist={handleDeletePlaylist}
+                  onToggleTrackInPlaylist={handleToggleTrackInPlaylist}
+                  likedTrackIds={likedTrackIds}
+                  onToggleLike={onToggleLike}
+                  subscribedArtists={subscribedArtists}
+                  onToggleSubscribeArtist={onToggleSubscribeArtist}
+                  onOpenEntityProfile={(name, role) =>
+                    openUserEntitySheet(name, role)
+                  }
                   onClose={closeAllAnalyticsSheets}
                   onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                   onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
                 />
               ) : instantSearchResults ? (
-                /* CAS B : Résultats de Recherche Instantanée dès la 1ère lettre tapée */
+                /* CAS B : Résultats de Recherche Intelligente Instantanée dès la 1ère lettre tapée */
                 <div className="space-y-3.5 animate-fade-in">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xs font-bold text-amber-300">
-                      Résultats instantanés pour &ldquo;{hubSearchQuery}&rdquo; (
-                      {instantSearchResults.totalCount})
+                      Recherche temps réel « {hubSearchQuery} » (
+                      {instantSearchResults.totalCount} résultat
+                      {instantSearchResults.totalCount > 1 ? 's' : ''})
                     </span>
                     <button
                       type="button"
@@ -3143,12 +3605,22 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     </button>
                   </div>
 
-                  {/* Genres correspondants (incluant tous les nouveaux genres créés dans l'Admin) */}
+                  {instantSearchResults.totalCount === 0 && (
+                    <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 text-center space-y-1">
+                      <p className="text-xs font-bold text-zinc-300">
+                        Aucune correspondance pour « {hubSearchQuery} »
+                      </p>
+                      <p className="text-[11px] text-zinc-500">
+                        Essayez une lettre, un titre, un artiste, un beatmaker ou un code DROP-CID.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Genres correspondants */}
                   {instantSearchResults.genres.length > 0 && (
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 px-1 block">
-                        Genres &amp; Catégories DROP (
-                        {instantSearchResults.genres.length})
+                        Genres &amp; Catégories ({instantSearchResults.genres.length})
                       </span>
                       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                         {instantSearchResults.genres.map((g) => (
@@ -3157,15 +3629,125 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                             type="button"
                             onClick={() => {
                               setHubSearchQuery('');
-                              setHubGenreFilter(g);
                               setHubTab('EXPLORER');
+                              setCentralFullPageView({
+                                type: 'GENRE',
+                                genre: g,
+                                title: g,
+                                accentColor: '#f59e0b',
+                              });
                             }}
                             className="px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400 text-amber-300 hover:text-black border border-amber-400/40 text-xs font-bold whitespace-nowrap shrink-0 transition"
                           >
-                            Genre : {g} →
+                            {highlightMatchedText(g, hubSearchQuery)} →
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Beats & Instrumentales téléchargeables correspondants */}
+                  {instantSearchResults.beats.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 px-1 block">
+                        🎹 Beats &amp; Instrumentales ({instantSearchResults.beats.length})
+                      </span>
+                      {instantSearchResults.beats.map(
+                        ({ track: t, albumIndex, trackIndex }) => {
+                          const isThisPlaying =
+                            currentTrack.id === t.id && isPlaying;
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() =>
+                                handlePlayOrToggleSpecificTrack(
+                                  albumIndex,
+                                  trackIndex
+                                )
+                              }
+                              className={`flex items-center justify-between gap-2.5 p-2.5 rounded-2xl border cursor-pointer transition ${
+                                currentTrack.id === t.id
+                                  ? 'bg-cyan-500/15 border-cyan-400/60'
+                                  : 'bg-white/[0.04] border-cyan-400/25 hover:bg-white/[0.08]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0">
+                                  <CoverArtwork
+                                    artworkType={t.artworkType}
+                                    coverUrl={t.cover}
+                                    title={t.title}
+                                    artist={t.artist}
+                                  />
+                                  <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
+                                    {isThisPlaying ? '❚❚' : '▶'}
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs sm:text-sm font-bold text-white truncate">
+                                      {highlightMatchedText(
+                                        t.title,
+                                        hubSearchQuery
+                                      )}
+                                    </p>
+                                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[9px] font-mono font-bold">
+                                      {t.bpm || 120} BPM
+                                      {t.musicalKey ? ` · ${t.musicalKey}` : ''}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-zinc-400 truncate">
+                                    Prod.{' '}
+                                    {highlightMatchedText(
+                                      t.beatmakerName || t.artist,
+                                      hubSearchQuery
+                                    )}
+                                    {t.dropContentId && (
+                                      <span className="ml-1.5 text-[9px] font-mono text-emerald-300">
+                                        [{highlightMatchedText(t.dropContentId, hubSearchQuery)}]
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerBeatAudioDownload({
+                                      title: t.title,
+                                      artist: t.artist,
+                                      bpm: t.bpm,
+                                      duration: t.duration,
+                                      audioUrl: t.audioUrl,
+                                      dropContentId: t.dropContentId,
+                                    });
+                                    showToast(
+                                      `Téléchargement du Beat « ${t.title} » lancé !`,
+                                      'bg-cyan-400'
+                                    );
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border bg-cyan-500/20 hover:bg-cyan-500/35 border-cyan-400/50 text-cyan-200 transition"
+                                >
+                                  ⬇ Télécharger le Beat
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openUserTrackSheet(t.id);
+                                  }}
+                                  className="px-2 py-1.5 rounded-xl text-[10px] font-bold border bg-white/10 hover:bg-white/20 border-white/15 text-zinc-200 transition"
+                                >
+                                  Fiche
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                      )}
                     </div>
                   )}
 
@@ -3173,8 +3755,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   {instantSearchResults.tracks.length > 0 && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 px-1 block">
-                        Titres, Featurings &amp; Paroles (
-                        {instantSearchResults.tracks.length})
+                        Titres &amp; Featurings ({instantSearchResults.tracks.length})
                       </span>
                       {instantSearchResults.tracks.map(
                         ({ track: t, albumIndex, trackIndex }) => {
@@ -3215,23 +3796,35 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <p className="text-xs sm:text-sm font-bold text-white truncate">
-                                      {t.title}
+                                      {highlightMatchedText(
+                                        t.title,
+                                        hubSearchQuery
+                                      )}
                                     </p>
-                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] font-mono text-zinc-300 shrink-0">
-                                      {t.category}
-                                    </span>
                                     <CertificationBadgeSvg
                                       cert={cert}
                                       compact
                                     />
                                   </div>
                                   <p className="text-[11px] text-zinc-400 truncate">
-                                    {t.artist}
+                                    {highlightMatchedText(
+                                      t.artist,
+                                      hubSearchQuery
+                                    )}
                                     {t.featuringArtists &&
                                     t.featuringArtists.length > 0
                                       ? ` feat. ${t.featuringArtists.join(', ')}`
                                       : ''}{' '}
-                                    • Plume : {t.lyricistName || t.artist}
+                                    ·{' '}
+                                    {highlightMatchedText(
+                                      t.category,
+                                      hubSearchQuery
+                                    )}
+                                    {t.dropContentId && (
+                                      <span className="ml-1.5 text-[9px] font-mono text-emerald-300/80">
+                                        [{highlightMatchedText(t.dropContentId, hubSearchQuery)}]
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -3263,10 +3856,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   {instantSearchResults.entities.length > 0 && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 px-1 block">
-                        Artistes, Paroliers &amp; Équipes Studio (
-                        {instantSearchResults.entities.length})
+                        Artistes &amp; Talents Studio ({instantSearchResults.entities.length})
                       </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         {instantSearchResults.entities.map((ent) => (
                           <button
                             key={ent.key}
@@ -3274,43 +3866,31 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                             onClick={() =>
                               openUserEntitySheet(ent.name, ent.role)
                             }
-                            className="flex items-center justify-between p-2.5 rounded-2xl border bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-left transition"
+                            className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 text-left transition"
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
-                                <CoverArtwork
-                                  artworkType={ent.artworkType}
-                                  coverUrl={ent.cover}
-                                  title={ent.name}
-                                  artist={ent.name}
-                                />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-white truncate">
-                                    {ent.name}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-mono font-bold shrink-0">
-                                    {ent.role === 'ARTIST'
-                                      ? 'ARTISTE'
-                                      : ent.role === 'LABEL'
-                                        ? 'LABEL'
-                                        : ent.role === 'BEATMAKER'
-                                          ? 'BEATMAKER'
-                                          : ent.role === 'LYRICIST'
-                                            ? 'PAROLIER'
-                                            : 'INGÉ SON'}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-zinc-400 truncate">
-                                  Score : {ent.decoupledScore} pts •{' '}
-                                  {ent.primaryMetricValue}
-                                </p>
-                              </div>
+                            <CoverArtwork
+                              artworkType={ent.artworkType}
+                              coverUrl={ent.cover}
+                              title={ent.name}
+                              artist={ent.name}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+                            <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                              <p className="text-xs sm:text-sm font-extrabold text-white truncate">
+                                {highlightMatchedText(ent.name, hubSearchQuery)}
+                              </p>
+                              <span className="text-[10px] text-amber-300 font-semibold">
+                                {ent.role === 'ARTIST'
+                                  ? 'Artiste'
+                                  : ent.role === 'BEATMAKER'
+                                    ? 'Beatmaker'
+                                    : ent.role === 'LYRICIST'
+                                      ? 'Parolier'
+                                      : ent.role === 'ENGINEER'
+                                        ? 'Ingé Son'
+                                        : 'Label'}
+                              </span>
                             </div>
-                            <span className="text-xs text-amber-300 font-semibold shrink-0">
-                              Profil →
-                            </span>
                           </button>
                         ))}
                       </div>
@@ -3318,115 +3898,102 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   )}
                 </div>
               ) : (
-                /* CAS C : Contenu des Onglets du Hub Central */
+                /* CAS C : Contenu des Onglets de l'écran Central */
                 <>
-                  {/* ONGLET 1 : EXPLORER GENRES DYNAMIQUES & PROJETS 2D */}
+                  {/* =============================================================== */}
+                  {/* ONGLET 1 : EXPLORER — FLUX VISUEL ALTERNÉ (CARRÉS, RECTANGLES,  */}
+                  {/* CERCLES, PLAYLISTS) & VUES PLEINE PAGE (« + / VOIR PLUS »)      */}
+                  {/* =============================================================== */}
                   {hubTab === 'EXPLORER' && (
-                    <div className="space-y-3.5 animate-fade-in">
-                      {/* Barre Glissante des Genres (Tous les genres Admin inclus, zéro troncature) */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                        <button
-                          type="button"
-                          onClick={() => setHubGenreFilter('ALL')}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
-                            hubGenreFilter === 'ALL'
-                              ? 'bg-amber-400 text-black font-bold'
-                              : 'bg-white/[0.06] text-zinc-300 hover:bg-white/10'
-                          }`}
-                        >
-                          Tous les genres ({availableGenres.length})
-                        </button>
-                        {availableGenres.map((genre) => (
-                          <button
-                            key={genre}
-                            type="button"
-                            onClick={() => setHubGenreFilter(genre)}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
-                              hubGenreFilter === genre
-                                ? 'bg-amber-400 text-black font-bold'
-                                : 'bg-white/[0.06] text-zinc-300 hover:bg-white/10'
-                            }`}
-                          >
-                            {genre}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Grille 2D des Projets et de leurs Titres */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {analyticsCatalogue.map((alb, aIdx) => {
-                          if (
-                            hubGenreFilter !== 'ALL' &&
-                            alb.category !== hubGenreFilter
-                          ) {
-                            return null;
-                          }
-                          const firstTrack = alb.tracks[0];
-                          const isCurrentAlbum = aIdx === albumIdx;
-                          const albPlays = alb.tracks.reduce(
-                            (acc, t) => acc + t.realPlays,
-                            0
-                          );
-                          const albCert = getAlbumCertification(albPlays);
-
-                          return (
-                            <div
-                              key={alb.id}
-                              className={`p-3 rounded-2xl bg-white/[0.04] border transition flex flex-col gap-2.5 ${
-                                isCurrentAlbum
-                                  ? 'border-amber-400/50 bg-white/[0.07]'
-                                  : 'border-white/10'
-                              }`}
+                    <div className="space-y-5 animate-fade-in">
+                      {centralFullPageView ? (
+                        /* VUE PLEINE PAGE D'UNE CATÉGORIE SÉLECTIONNÉE (« + / VOIR PLUS ») */
+                        <div className="space-y-4 animate-fade-in">
+                          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => setCentralFullPageView(null)}
+                              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white flex items-center gap-1.5 transition"
                             >
-                              <div className="flex items-center gap-3">
-                                <div
-                                  onClick={() =>
-                                    handlePlayOrToggleSpecificTrack(aIdx, 0)
-                                  }
-                                  className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 cursor-pointer border border-white/10"
-                                >
-                                  <CoverArtwork
-                                    artworkType={firstTrack.artworkType}
-                                    coverUrl={firstTrack.cover}
-                                    title={alb.albumTitle}
-                                    artist={alb.artist}
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="px-2 py-0.5 rounded bg-white/10 text-[10px] font-mono text-amber-300">
-                                      {alb.category} • {alb.year}
-                                    </span>
-                                    <CertificationBadgeSvg
-                                      cert={albCert}
-                                      compact
-                                    />
-                                  </div>
-                                  <p className="text-sm font-bold text-white truncate mt-1">
-                                    {alb.albumTitle}
-                                  </p>
+                              <span>← Retour à Central</span>
+                            </button>
+                            <h3
+                              className="text-sm sm:text-base font-extrabold tracking-tight truncate"
+                              style={{ color: centralFullPageView.accentColor }}
+                            >
+                              {centralFullPageView.title}
+                            </h3>
+                          </div>
+
+                          {/* PLEINE PAGE 1 : MÉTIERS STUDIO (Artistes & Feats, Beatmakers, Paroliers, Ingés Son, Labels) */}
+                          {centralFullPageView.type === 'ROLE' && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {decoupledStudioRankings
+                                .filter(
+                                  (ent) =>
+                                    centralFullPageView.role === 'ALL' ||
+                                    ent.role === centralFullPageView.role
+                                )
+                                .map((ent) => (
                                   <button
+                                    key={ent.key}
                                     type="button"
                                     onClick={() =>
-                                      openUserEntitySheet(alb.artist, 'ARTIST')
+                                      openUserEntitySheet(ent.name, ent.role)
                                     }
-                                    className="text-xs text-zinc-400 hover:text-amber-300 truncate block transition"
+                                    className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 text-left transition-transform active:scale-[0.98]"
                                   >
-                                    {alb.artist}
+                                    <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                      <CoverArtwork
+                                        artworkType={ent.artworkType}
+                                        coverUrl={ent.cover}
+                                        title={ent.name}
+                                        artist={ent.name}
+                                      />
+                                    </div>
+                                    <div
+                                      className="absolute inset-0"
+                                      style={{
+                                        background: `linear-gradient(to top, rgba(0,0,0,0.92) 12%, ${centralFullPageView.accentColor}44 55%, rgba(0,0,0,0.18) 100%)`,
+                                      }}
+                                    />
+                                    <div className="absolute top-2.5 right-2.5">
+                                      {ent.careerCertification &&
+                                        ent.careerCertification.level !==
+                                          'NONE' && (
+                                          <CertificationBadgeSvg
+                                            cert={ent.careerCertification}
+                                            compact
+                                            entityTitle={ent.name}
+                                          />
+                                        )}
+                                    </div>
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                      <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">
+                                        {ent.name}
+                                      </p>
+                                      <span className="text-[11px] text-white/80 font-medium block truncate">
+                                        {ent.primaryMetricValue}
+                                      </span>
+                                    </div>
                                   </button>
-                                </div>
-                              </div>
+                                ))}
+                            </div>
+                          )}
 
-                              <div className="space-y-1.5 pt-1 border-t border-white/10">
-                                {alb.tracks.map((t, tIdx) => {
-                                  const isThisTrackCurrent =
-                                    aIdx === albumIdx && tIdx === trackIdx;
+                          {/* PLEINE PAGE 2 : GENRE MUSICAL */}
+                          {centralFullPageView.type === 'GENRE' && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {allTracksFlat
+                                .filter(
+                                  ({ track }) =>
+                                    !centralFullPageView.genre ||
+                                    centralFullPageView.genre === 'ALL' ||
+                                    track.category === centralFullPageView.genre
+                                )
+                                .map(({ track: t, albumIndex, trackIndex }) => {
                                   const isThisPlaying =
-                                    isThisTrackCurrent && isPlaying;
-                                  const rInfo = trackRankMap[t.id] || {
-                                    rank: 1,
-                                    delta: 0,
-                                  };
+                                    currentTrack.id === t.id && isPlaying;
                                   const tCert = getTrackCertification(
                                     t.realPlays
                                   );
@@ -3435,87 +4002,968 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                       key={t.id}
                                       onClick={() =>
                                         handlePlayOrToggleSpecificTrack(
-                                          aIdx,
-                                          tIdx
+                                          albumIndex,
+                                          trackIndex
                                         )
                                       }
-                                      className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl cursor-pointer transition ${
-                                        isThisTrackCurrent
-                                          ? 'bg-[#e11d38]/20 border border-[#e11d38]/50'
-                                          : 'bg-black/35 hover:bg-white/10 border border-white/5'
-                                      }`}
+                                      className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.98]"
                                     >
-                                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                                        <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">
+                                      <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                        <CoverArtwork
+                                          artworkType={t.artworkType}
+                                          coverUrl={t.cover}
+                                          title={t.title}
+                                          artist={t.artist}
+                                        />
+                                      </div>
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/15" />
+                                      <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                                        <CertificationBadgeSvg
+                                          cert={tCert}
+                                          compact
+                                          entityTitle={t.title}
+                                          entityArtist={t.artist}
+                                          playsCount={t.realPlays}
+                                        />
+                                        <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
                                           {isThisPlaying ? '❚❚' : '▶'}
                                         </span>
-                                        <div className="min-w-0 flex-1">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-semibold text-white truncate">
-                                              {t.title}
-                                            </span>
-                                            <CertificationBadgeSvg
-                                              cert={tCert}
-                                              compact
-                                            />
-                                          </div>
-                                          {t.featuringArtists &&
-                                            t.featuringArtists.length > 0 && (
-                                              <span className="text-[10px] text-amber-200/80 block truncate">
-                                                feat.{' '}
-                                                {t.featuringArtists.join(', ')}
-                                              </span>
-                                            )}
-                                        </div>
                                       </div>
+                                      <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
+                                        <div>
+                                          <p className="text-sm font-extrabold text-white truncate drop-shadow">
+                                            {t.title}
+                                          </p>
+                                          <p className="text-xs text-amber-300 font-semibold truncate">
+                                            {t.artist}
+                                          </p>
+                                        </div>
+                                        {(t.isInstrumental ||
+                                          t.category ===
+                                            'Beats & Instrumentales') && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              triggerBeatAudioDownload({
+                                                title: t.title,
+                                                artist: t.artist,
+                                                bpm: t.bpm,
+                                                duration: t.duration,
+                                                audioUrl: t.audioUrl,
+                                                dropContentId: t.dropContentId,
+                                              });
+                                              showToast(
+                                                `Téléchargement du Beat « ${t.title} » lancé !`,
+                                                'bg-cyan-400'
+                                              );
+                                            }}
+                                            className="w-full py-1.5 px-2 rounded-xl bg-cyan-500/85 hover:bg-cyan-400 text-black font-extrabold text-[10px] flex items-center justify-center gap-1 shadow-lg transition"
+                                          >
+                                            <span>⬇</span>
+                                            <span>Télécharger le Beat</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
 
-                                      <div className="flex items-center gap-1.5 shrink-0">
-                                        <span className="text-[10px] font-mono text-amber-300">
-                                          #{rInfo.rank}
+                          {/* PLEINE PAGE 3 : TOUS LES DROPS EN RECTANGLES PANORAMIQUES */}
+                          {centralFullPageView.type === 'DROPS' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                              {allTracksFlat.map(
+                                ({ track: t, albumIndex, trackIndex }) => {
+                                  const isThisPlaying =
+                                    currentTrack.id === t.id && isPlaying;
+                                  const tCert = getTrackCertification(
+                                    t.realPlays
+                                  );
+                                  return (
+                                    <div
+                                      key={t.id}
+                                      onClick={() =>
+                                        handlePlayOrToggleSpecificTrack(
+                                          albumIndex,
+                                          trackIndex
+                                        )
+                                      }
+                                      className="group relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.99]"
+                                    >
+                                      <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                        <CoverArtwork
+                                          artworkType={t.artworkType}
+                                          coverUrl={t.cover}
+                                          title={t.title}
+                                          artist={t.artist}
+                                        />
+                                      </div>
+                                      <div
+                                        className="absolute inset-0"
+                                        style={{
+                                          background: `linear-gradient(to top, rgba(0,0,0,0.92) 15%, ${
+                                            t.ambientPrimary || '#e11d38'
+                                          }55 60%, rgba(0,0,0,0.2) 100%)`,
+                                        }}
+                                      />
+                                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                                        <CertificationBadgeSvg
+                                          cert={tCert}
+                                          compact
+                                          entityTitle={t.title}
+                                          entityArtist={t.artist}
+                                          playsCount={t.realPlays}
+                                        />
+                                        <span className="w-9 h-9 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
+                                          {isThisPlaying ? '❚❚' : '▶'}
                                         </span>
+                                      </div>
+                                      <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <p className="text-base font-extrabold text-white truncate drop-shadow">
+                                            {t.title}
+                                          </p>
+                                          <p className="text-xs text-amber-300 font-bold truncate">
+                                            {t.artist}
+                                          </p>
+                                        </div>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             openUserTrackSheet(t.id);
                                           }}
-                                          className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 hover:bg-amber-400 hover:text-black border border-white/15 text-zinc-200 transition"
+                                          className="px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-[10px] font-bold text-white shrink-0"
                                         >
-                                          Infos
+                                          Fiche
                                         </button>
                                       </div>
                                     </div>
                                   );
-                                })}
-                              </div>
+                                }
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
+                          )}
+
+                          {/* PLEINE PAGE 4 : TOUS LES ARTISTES EN CERCLES */}
+                          {centralFullPageView.type === 'ARTISTS_CIRCLES' && (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 py-2">
+                              {decoupledStudioRankings
+                                .filter((ent) => ent.role === 'ARTIST')
+                                .map((ent) => (
+                                  <button
+                                    key={ent.key}
+                                    type="button"
+                                    onClick={() =>
+                                      openUserEntitySheet(ent.name, 'ARTIST')
+                                    }
+                                    className="flex flex-col items-center gap-2 group"
+                                  >
+                                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] group-hover:scale-105 transition-transform">
+                                      <CoverArtwork
+                                        artworkType={ent.artworkType}
+                                        coverUrl={ent.cover}
+                                        title={ent.name}
+                                        artist={ent.name}
+                                      />
+                                    </div>
+                                    <span className="text-xs sm:text-sm font-extrabold text-white truncate max-w-full">
+                                      {ent.name}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+
+                          {/* PLEINE PAGE 5 : PROJETS & ALBUMS */}
+                          {centralFullPageView.type === 'ALBUMS' && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {analyticsCatalogue.map((alb, aIdx) => {
+                                const firstTrack = alb.tracks[0];
+                                const albPlays = alb.tracks.reduce(
+                                  (acc, t) => acc + t.realPlays,
+                                  0
+                                );
+                                const albCert = getAlbumCertification(albPlays);
+                                return (
+                                  <div
+                                    key={alb.id}
+                                    onClick={() =>
+                                      handlePlayOrToggleSpecificTrack(aIdx, 0)
+                                    }
+                                    className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.98]"
+                                  >
+                                    <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                      <CoverArtwork
+                                        artworkType={firstTrack.artworkType}
+                                        coverUrl={firstTrack.cover}
+                                        title={alb.albumTitle}
+                                        artist={alb.artist}
+                                      />
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+                                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                                      <CertificationBadgeSvg
+                                        cert={albCert}
+                                        compact
+                                        entityTitle={alb.albumTitle}
+                                        entityArtist={alb.artist}
+                                        playsCount={albPlays}
+                                      />
+                                      <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
+                                        ▶
+                                      </span>
+                                    </div>
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                      <p className="text-sm font-extrabold text-white truncate drop-shadow">
+                                        {alb.albumTitle}
+                                      </p>
+                                      <p className="text-xs text-amber-300 font-semibold truncate">
+                                        {alb.artist}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* =========================================================== */
+                        /* FLUX PRINCIPAL AÉRÉ « CENTRAL » (GÉOMÉTRIES ALTERNÉES)      */
+                        /* =========================================================== */
+                        <>
+                          {/* BANNIÈRE SLIDESHOW PUBLICITAIRE HAUT (IMAGE PURE, GÉRÉE DANS ADMIN) */}
+                          <CentralAdSlideshowBanner
+                            position="TOP"
+                            slides={adBanners}
+                            settings={adBannerSettings}
+                            onSelectTrackId={(tId) => {
+                              const found = allTracksFlat.find(
+                                (m) => m.track.id === tId
+                              );
+                              if (found) {
+                                handlePlayOrToggleSpecificTrack(
+                                  found.albumIndex,
+                                  found.trackIndex
+                                );
+                              }
+                            }}
+                            onSelectAlbumId={(albId) => {
+                              const albIdx = analyticsCatalogue.findIndex(
+                                (a) => a.id === albId
+                              );
+                              if (albIdx >= 0) {
+                                onSelectAlbumIndex(albIdx, 0, false);
+                                setActiveModal('NONE');
+                              }
+                            }}
+                          />
+
+                          {/* 1. RANGÉE CARRÉE DÉFILANTE : CATÉGORIES MÉTIERS & GENRES */}
+                          <section className="space-y-2.5">
+                            <div className="flex items-center justify-between px-0.5">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                                Catégories &amp; Métiers
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCentralFullPageView({
+                                    type: 'ROLE',
+                                    role: 'ALL',
+                                    title: 'Toutes les Catégories & Métiers',
+                                    accentColor: '#f59e0b',
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-amber-400 hover:text-black text-[11px] font-bold text-amber-300 transition"
+                              >
+                                + Voir plus
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3 overflow-x-auto pb-1.5 no-scrollbar">
+                              {(
+                                [
+                                  {
+                                    id: 'ARTIST' as StudioEntityRole,
+                                    title: 'Artistes & Feats',
+                                    color: '#f59e0b',
+                                    cover:
+                                      allTracksFlat[0]?.track.cover || '',
+                                    artworkType:
+                                      allTracksFlat[0]?.track.artworkType,
+                                  },
+                                  {
+                                    id: 'BEATMAKER' as StudioEntityRole,
+                                    title: 'Beatmakers',
+                                    color: '#10b981',
+                                    cover:
+                                      allTracksFlat[1]?.track.cover ||
+                                      allTracksFlat[0]?.track.cover ||
+                                      '',
+                                    artworkType:
+                                      allTracksFlat[1]?.track.artworkType,
+                                  },
+                                  {
+                                    id: 'LYRICIST' as StudioEntityRole,
+                                    title: 'Paroliers',
+                                    color: '#8b5cf6',
+                                    cover:
+                                      allTracksFlat[2]?.track.cover ||
+                                      allTracksFlat[0]?.track.cover ||
+                                      '',
+                                    artworkType:
+                                      allTracksFlat[2]?.track.artworkType,
+                                  },
+                                  {
+                                    id: 'ENGINEER' as StudioEntityRole,
+                                    title: 'Ingés du Son',
+                                    color: '#06b6d4',
+                                    cover:
+                                      allTracksFlat[3]?.track.cover ||
+                                      allTracksFlat[0]?.track.cover ||
+                                      '',
+                                    artworkType:
+                                      allTracksFlat[3]?.track.artworkType,
+                                  },
+                                  {
+                                    id: 'LABEL' as StudioEntityRole,
+                                    title: 'Labels',
+                                    color: '#e11d38',
+                                    cover:
+                                      allTracksFlat[4]?.track.cover ||
+                                      allTracksFlat[0]?.track.cover ||
+                                      '',
+                                    artworkType:
+                                      allTracksFlat[4]?.track.artworkType,
+                                  },
+                                ] as const
+                              ).map((catCard) => (
+                                <button
+                                  key={catCard.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setCentralFullPageView({
+                                      type: 'ROLE',
+                                      role: catCard.id,
+                                      title: catCard.title,
+                                      accentColor: catCard.color,
+                                    })
+                                  }
+                                  className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/40 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                >
+                                  <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
+                                    <CoverArtwork
+                                      artworkType={catCard.artworkType}
+                                      coverUrl={catCard.cover}
+                                      title={catCard.title}
+                                      artist={catCard.title}
+                                    />
+                                  </div>
+                                  <div
+                                    className="absolute inset-0"
+                                    style={{
+                                      background: `linear-gradient(145deg, ${catCard.color}66 0%, rgba(0,0,0,0.88) 90%)`,
+                                    }}
+                                  />
+                                  <span
+                                    className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
+                                    style={{ backgroundColor: catCard.color }}
+                                  >
+                                    +
+                                  </span>
+                                  <div className="absolute bottom-3 left-3 right-3">
+                                    <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
+                                      {catCard.title}
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+
+                              {/* Cartes carrées des Genres musicaux à la suite dans le défilement */}
+                              {availableGenres.map((genre, gIdx) => {
+                                const genreTrack =
+                                  allTracksFlat.find(
+                                    (m) => m.track.category === genre
+                                  )?.track || allTracksFlat[0]?.track;
+                                const palette = [
+                                  '#e11d38',
+                                  '#f59e0b',
+                                  '#10b981',
+                                  '#8b5cf6',
+                                  '#06b6d4',
+                                ];
+                                const gColor = palette[gIdx % palette.length];
+                                return (
+                                  <button
+                                    key={genre}
+                                    type="button"
+                                    onClick={() =>
+                                      setCentralFullPageView({
+                                        type: 'GENRE',
+                                        genre,
+                                        title: genre,
+                                        accentColor: gColor,
+                                      })
+                                    }
+                                    className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/40 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                  >
+                                    {genreTrack && (
+                                      <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
+                                        <CoverArtwork
+                                          artworkType={genreTrack.artworkType}
+                                          coverUrl={genreTrack.cover}
+                                          title={genre}
+                                          artist={genreTrack.artist}
+                                        />
+                                      </div>
+                                    )}
+                                    <div
+                                      className="absolute inset-0"
+                                      style={{
+                                        background: `linear-gradient(145deg, ${gColor}66 0%, rgba(0,0,0,0.9) 90%)`,
+                                      }}
+                                    />
+                                    <span
+                                      className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
+                                      style={{ backgroundColor: gColor }}
+                                    >
+                                      +
+                                    </span>
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                      <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
+                                        {genre}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+
+                          {/* 2. RANGÉE RECTANGULAIRE PANORAMIQUE (16:9) : DROPS EN VEDETTE */}
+                          <section className="space-y-2.5">
+                            <div className="flex items-center justify-between px-0.5">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                                Drops en Vedette
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCentralFullPageView({
+                                    type: 'DROPS',
+                                    title: 'Tous les Drops en Vedette',
+                                    accentColor: '#e11d38',
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-[#e11d38] hover:text-white text-[11px] font-bold text-rose-300 transition"
+                              >
+                                + Voir plus
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3.5 overflow-x-auto pb-1.5 no-scrollbar">
+                              {allTracksFlat.map(
+                                ({ track: t, albumIndex, trackIndex }, idx) => {
+                                  const isThisPlaying =
+                                    currentTrack.id === t.id && isPlaying;
+                                  const tCert = getTrackCertification(
+                                    t.realPlays
+                                  );
+                                  const accentColors = [
+                                    '#e11d38',
+                                    '#f59e0b',
+                                    '#8b5cf6',
+                                    '#10b981',
+                                    '#06b6d4',
+                                  ];
+                                  const cardColor =
+                                    t.ambientPrimary ||
+                                    accentColors[idx % accentColors.length];
+
+                                  return (
+                                    <div
+                                      key={t.id}
+                                      onClick={() =>
+                                        handlePlayOrToggleSpecificTrack(
+                                          albumIndex,
+                                          trackIndex
+                                        )
+                                      }
+                                      className="group relative w-64 sm:w-72 aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 shrink-0 cursor-pointer transition-transform active:scale-[0.98] shadow-xl"
+                                    >
+                                      <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                        <CoverArtwork
+                                          artworkType={t.artworkType}
+                                          coverUrl={t.cover}
+                                          title={t.title}
+                                          artist={t.artist}
+                                        />
+                                      </div>
+                                      <div
+                                        className="absolute inset-0"
+                                        style={{
+                                          background: `linear-gradient(to top, rgba(0,0,0,0.92) 12%, ${cardColor}55 58%, rgba(0,0,0,0.18) 100%)`,
+                                        }}
+                                      />
+
+                                      <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between">
+                                        <CertificationBadgeSvg
+                                          cert={tCert}
+                                          compact
+                                          entityTitle={t.title}
+                                          entityArtist={t.artist}
+                                          playsCount={t.realPlays}
+                                        />
+                                        <span className="w-8 h-8 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
+                                          {isThisPlaying ? '❚❚' : '▶'}
+                                        </span>
+                                      </div>
+
+                                      {/* Titre court directement sur la carte rectangulaire */}
+                                      <div className="absolute bottom-3 left-3.5 right-3.5">
+                                        <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">
+                                          {t.title}
+                                        </p>
+                                        <p className="text-xs font-bold text-amber-300 truncate">
+                                          {t.artist}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              )}
+                            </div>
+                          </section>
+
+                          {/* 2-BIS. RANGÉE SPÉCIALE : BEATS & INSTRUMENTALES TÉLÉCHARGEABLES */}
+                          {allTracksFlat.some(
+                            ({ track }) =>
+                              track.isInstrumental ||
+                              track.category === 'Beats & Instrumentales'
+                          ) && (
+                            <section className="space-y-2.5">
+                              <div className="flex items-center justify-between px-0.5">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-sm font-extrabold text-cyan-300 tracking-tight">
+                                    🎹 Beats &amp; Instrumentales
+                                  </h3>
+                                  <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[9px] font-mono font-bold">
+                                    Téléchargement Direct
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setCentralFullPageView({
+                                      type: 'GENRE',
+                                      genre: 'Beats & Instrumentales',
+                                      title: 'Beats & Instrumentales',
+                                      accentColor: '#06b6d4',
+                                    })
+                                  }
+                                  className="px-2.5 py-1 rounded-full bg-cyan-500/15 hover:bg-cyan-400 hover:text-black text-[11px] font-bold text-cyan-300 transition"
+                                >
+                                  + Voir tous les Beats
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-3.5 overflow-x-auto pb-1.5 no-scrollbar">
+                                {allTracksFlat
+                                  .filter(
+                                    ({ track }) =>
+                                      track.isInstrumental ||
+                                      track.category ===
+                                        'Beats & Instrumentales'
+                                  )
+                                  .map(({ track: t, albumIndex, trackIndex }) => {
+                                    const isThisPlaying =
+                                      currentTrack.id === t.id && isPlaying;
+                                    return (
+                                      <div
+                                        key={t.id}
+                                        onClick={() =>
+                                          handlePlayOrToggleSpecificTrack(
+                                            albumIndex,
+                                            trackIndex
+                                          )
+                                        }
+                                        className="group relative w-64 sm:w-72 rounded-2xl overflow-hidden border border-cyan-400/35 hover:border-cyan-300 bg-zinc-900/90 p-3 shrink-0 cursor-pointer transition-transform active:scale-[0.98] shadow-xl flex flex-col justify-between gap-2.5"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-white/15 shrink-0">
+                                            <CoverArtwork
+                                              artworkType={t.artworkType}
+                                              coverUrl={t.cover}
+                                              title={t.title}
+                                              artist={t.artist}
+                                            />
+                                            <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white font-bold text-xs">
+                                              {isThisPlaying ? '❚❚' : '▶'}
+                                            </span>
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <p className="text-xs sm:text-sm font-extrabold text-white truncate">
+                                              {t.title}
+                                            </p>
+                                            <p className="text-[11px] text-cyan-300 font-bold truncate">
+                                              Prod. {t.beatmakerName || t.artist}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                              <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 text-[9px] font-mono font-bold">
+                                                {t.bpm || 120} BPM
+                                              </span>
+                                              {t.musicalKey && (
+                                                <span className="px-1.5 py-0.5 rounded bg-white/10 text-zinc-200 text-[9px] font-mono font-bold">
+                                                  {t.musicalKey}
+                                                </span>
+                                              )}
+                                              <span className="text-[9px] font-mono text-emerald-300/90 truncate">
+                                                {t.dropContentId}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              triggerBeatAudioDownload({
+                                                title: t.title,
+                                                artist: t.artist,
+                                                bpm: t.bpm,
+                                                duration: t.duration,
+                                                audioUrl: t.audioUrl,
+                                                dropContentId: t.dropContentId,
+                                              });
+                                              showToast(
+                                                `Téléchargement du Beat « ${t.title} » lancé !`,
+                                                'bg-cyan-400'
+                                              );
+                                            }}
+                                            className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-extrabold text-[11px] flex items-center justify-center gap-1.5 shadow-md transition"
+                                          >
+                                            <span>⬇</span>
+                                            <span>Télécharger le Beat</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserTrackSheet(t.id);
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                                          >
+                                            Fiche
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </section>
+                          )}
+
+                          {/* 3. RANGÉE CIRCULAIRE : ARTISTES & TALENTS */}
+                          <section className="space-y-2.5">
+                            <div className="flex items-center justify-between px-0.5">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                                Artistes &amp; Talents
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCentralFullPageView({
+                                    type: 'ARTISTS_CIRCLES',
+                                    title: 'Tous les Artistes & Talents',
+                                    accentColor: '#f59e0b',
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-amber-400 hover:text-black text-[11px] font-bold text-amber-300 transition"
+                              >
+                                + Voir plus
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-4 overflow-x-auto pb-1.5 no-scrollbar">
+                              {decoupledStudioRankings
+                                .filter((ent) => ent.role === 'ARTIST')
+                                .map((ent, idx) => {
+                                  const ringColors = [
+                                    'border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.3)]',
+                                    'border-[#e11d38] shadow-[0_0_16px_rgba(225,29,56,0.3)]',
+                                    'border-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.3)]',
+                                    'border-violet-400 shadow-[0_0_16px_rgba(139,92,246,0.3)]',
+                                    'border-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.3)]',
+                                  ];
+                                  return (
+                                    <button
+                                      key={ent.key}
+                                      type="button"
+                                      onClick={() =>
+                                        openUserEntitySheet(ent.name, 'ARTIST')
+                                      }
+                                      className="flex flex-col items-center gap-1.5 shrink-0 w-24 group"
+                                    >
+                                      <div
+                                        className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 transition-transform group-hover:scale-105 ${
+                                          ringColors[idx % ringColors.length]
+                                        }`}
+                                      >
+                                        <CoverArtwork
+                                          artworkType={ent.artworkType}
+                                          coverUrl={ent.cover}
+                                          title={ent.name}
+                                          artist={ent.name}
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                      </div>
+                                      <span className="text-xs font-extrabold text-white truncate max-w-full">
+                                        {ent.name}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </section>
+
+                          {/* 4. RANGÉE CARRÉE COLORÉE : MES PLAYLISTS & FAVORIS */}
+                          <section className="space-y-2.5">
+                            <div className="flex items-center justify-between px-0.5">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                                Mes Playlists &amp; Favoris
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => setHubTab('PROFIL')}
+                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-emerald-400 hover:text-black text-[11px] font-bold text-emerald-300 transition"
+                              >
+                                + Gérer dans Mon Profil
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3 overflow-x-auto pb-1.5 no-scrollbar">
+                              {/* Carte Carrée Spéciale : Mes Likes ♥ */}
+                              <button
+                                type="button"
+                                onClick={() => setHubTab('PROFIL')}
+                                className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-rose-400/40 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                style={{
+                                  background:
+                                    'linear-gradient(135deg, #e11d38 0%, #4c0519 100%)',
+                                }}
+                              >
+                                <span className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-bold">
+                                  ♥
+                                </span>
+                                <div className="absolute bottom-3 left-3 right-3">
+                                  <span className="text-sm sm:text-base font-extrabold text-white block leading-tight">
+                                    Mes Likes
+                                  </span>
+                                  <span className="text-[11px] text-rose-100/90 font-mono">
+                                    {
+                                      Object.values(likedTrackIds).filter(
+                                        Boolean
+                                      ).length
+                                    }{' '}
+                                    titres
+                                  </span>
+                                </div>
+                              </button>
+
+                              {/* Cartes Carrées des Playlists de l'utilisateur */}
+                              {playlists.map((pl) => {
+                                const firstMatch = allTracksFlat.find((m) =>
+                                  pl.trackIds.includes(m.track.id)
+                                );
+                                return (
+                                  <button
+                                    key={pl.id}
+                                    type="button"
+                                    onClick={() => {
+                                      if (firstMatch) {
+                                        handlePlayOrToggleSpecificTrack(
+                                          firstMatch.albumIndex,
+                                          firstMatch.trackIndex
+                                        );
+                                      } else {
+                                        setHubTab('PROFIL');
+                                      }
+                                    }}
+                                    className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                    style={{
+                                      background: `linear-gradient(135deg, ${
+                                        pl.colorTheme || '#f59e0b'
+                                      } 0%, #090b10 95%)`,
+                                    }}
+                                  >
+                                    {firstMatch && (
+                                      <div className="absolute inset-0 opacity-65 group-hover:scale-110 transition-transform duration-300">
+                                        <CoverArtwork
+                                          artworkType={
+                                            firstMatch.track.artworkType
+                                          }
+                                          coverUrl={firstMatch.track.cover}
+                                          title={pl.name}
+                                          artist={firstMatch.track.artist}
+                                        />
+                                      </div>
+                                    )}
+                                    <div
+                                      className="absolute inset-0"
+                                      style={{
+                                        background: `linear-gradient(to top, rgba(0,0,0,0.9) 12%, ${
+                                          pl.colorTheme || '#f59e0b'
+                                        }55 55%, rgba(0,0,0,0.2) 100%)`,
+                                      }}
+                                    />
+                                    <span className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center text-xs font-bold shadow">
+                                      ▶
+                                    </span>
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                      <span className="text-sm font-extrabold text-white truncate block drop-shadow">
+                                        {pl.name}
+                                      </span>
+                                      <span className="text-[10px] text-white/80 font-mono">
+                                        {pl.trackIds.length} titre
+                                        {pl.trackIds.length > 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+
+                          {/* 5. RANGÉE PROJETS & ALBUMS EN CARTES COLORÉES */}
+                          <section className="space-y-2.5">
+                            <div className="flex items-center justify-between px-0.5">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                                Projets &amp; Albums
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCentralFullPageView({
+                                    type: 'ALBUMS',
+                                    title: 'Tous les Projets & Albums',
+                                    accentColor: '#06b6d4',
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-cyan-400 hover:text-black text-[11px] font-bold text-cyan-300 transition"
+                              >
+                                + Voir plus
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {analyticsCatalogue.map((alb, aIdx) => {
+                                const firstTrack = alb.tracks[0];
+                                const albPlays = alb.tracks.reduce(
+                                  (acc, t) => acc + t.realPlays,
+                                  0
+                                );
+                                const albCert = getAlbumCertification(albPlays);
+                                return (
+                                  <div
+                                    key={alb.id}
+                                    onClick={() =>
+                                      handlePlayOrToggleSpecificTrack(aIdx, 0)
+                                    }
+                                    className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.98] shadow-lg"
+                                  >
+                                    <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                      <CoverArtwork
+                                        artworkType={firstTrack.artworkType}
+                                        coverUrl={firstTrack.cover}
+                                        title={alb.albumTitle}
+                                        artist={alb.artist}
+                                      />
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+                                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                                      <CertificationBadgeSvg
+                                        cert={albCert}
+                                        compact
+                                        entityTitle={alb.albumTitle}
+                                        entityArtist={alb.artist}
+                                        playsCount={albPlays}
+                                      />
+                                      <span className="w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center text-xs font-bold shadow">
+                                        ▶
+                                      </span>
+                                    </div>
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                      <p className="text-sm font-extrabold text-white truncate drop-shadow">
+                                        {alb.albumTitle}
+                                      </p>
+                                      <p className="text-xs text-amber-300 font-semibold truncate">
+                                        {alb.artist}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </section>
+
+                          {/* BANNIÈRE SLIDESHOW PUBLICITAIRE BAS (TOUT EN BAS APRÈS LES CONTENUS) */}
+                          <CentralAdSlideshowBanner
+                            position="BOTTOM"
+                            slides={adBanners}
+                            settings={adBannerSettings}
+                            onSelectTrackId={(tId) => {
+                              const found = allTracksFlat.find(
+                                (m) => m.track.id === tId
+                              );
+                              if (found) {
+                                handlePlayOrToggleSpecificTrack(
+                                  found.albumIndex,
+                                  found.trackIndex
+                                );
+                              }
+                            }}
+                            onSelectAlbumId={(albId) => {
+                              const albIdx = analyticsCatalogue.findIndex(
+                                (a) => a.id === albId
+                              );
+                              if (albIdx >= 0) {
+                                onSelectAlbumIndex(albIdx, 0, false);
+                                setActiveModal('NONE');
+                              }
+                            }}
+                          />
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {/* ONGLET 2 : CLASSEMENTS DÉCOUPLÉS ANTI-EFFET DE HALO (PILIER II) */}
+                  {/* ONGLET 2 : CLASSEMENTS ÉPURÉS (SANS JARGON TECHNIQUE) */}
                   {hubTab === 'RANGS' && (
-                    <div className="space-y-3 animate-fade-in">
-                      {/* Sélecteur de Période Officielle (Hebdo 7j / Mensuel 30j / Annuel glissant 365j) */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 bg-white/[0.03] border border-white/10 rounded-xl p-2">
-                        <span className="text-[10.5px] font-mono text-zinc-300 px-1">
-                          Périodicité Officielle des Classements (ECG) :
+                    <div className="space-y-3.5 animate-fade-in">
+                      {/* Sélecteur de Période (7j / 30j / Annuel) */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 bg-white/[0.03] border border-white/10 rounded-2xl p-2.5">
+                        <span className="text-xs font-bold text-white px-1">
+                          Classements Officiels
                         </span>
                         <div className="flex items-center gap-1">
                           {(
                             [
-                              { id: 'WEEKLY_7D', label: 'Hebdomadaire (7j)' },
-                              { id: 'MONTHLY_30D', label: 'Mensuel (30j)' },
-                              { id: 'ANNUAL_365D', label: 'Annuel glissant' },
+                              { id: 'WEEKLY_7D', label: '7 Jours' },
+                              { id: 'MONTHLY_30D', label: '30 Jours' },
+                              { id: 'ANNUAL_365D', label: 'Annuel' },
                             ] as { id: ChartTimeframe; label: string }[]
                           ).map((tf) => (
                             <button
                               key={tf.id}
                               type="button"
                               onClick={() => setChartTimeframe(tf.id)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition ${
+                              className={`px-3 py-1 rounded-xl text-[11px] font-bold transition ${
                                 chartTimeframe === tf.id
                                   ? 'bg-[#e11d38] text-white'
                                   : 'bg-white/5 text-zinc-400 hover:text-white'
@@ -3527,29 +4975,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                         </div>
                       </div>
 
-                      {/* Onglets Glissants par Philosophie de Métier */}
+                      {/* Onglets par catégorie de classement (libellés simples pour les utilisateurs) */}
                       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                         {(
                           [
-                            { id: 'ALL', label: '1. Top Chansons (60/25/15)' },
-                            { id: 'ARTIST', label: '2. Top Artistes (70/30 Feat)' },
-                            {
-                              id: 'BEATMAKER',
-                              label: '3. Top Beatmakers (Cap 25%)',
-                            },
-                            {
-                              id: 'ENGINEER',
-                              label: '4. Top Ingés Son (20/50/30 • Cap 20%)',
-                            },
-                            {
-                              id: 'LYRICIST',
-                              label: '5. Top Paroliers (Plume x1,25)',
-                            },
-                            {
-                              id: 'LABEL',
-                              label: '6. Top Labels (Médiane • Min 3 Art.)',
-                            },
-                            { id: 'CATEGORY', label: 'Top Genres Gabonais' },
+                            { id: 'ALL', label: 'Top Chansons' },
+                            { id: 'ARTIST', label: 'Top Artistes' },
+                            { id: 'BEATMAKER', label: 'Top Beatmakers' },
+                            { id: 'ENGINEER', label: 'Top Ingénieurs Son' },
+                            { id: 'LYRICIST', label: 'Top Auteurs' },
+                            { id: 'LABEL', label: 'Top Labels' },
+                            { id: 'CATEGORY', label: 'Par Genre' },
                           ] as const
                         ).map((dim) => (
                           <button
@@ -3565,26 +5001,6 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                             {dim.label}
                           </button>
                         ))}
-                      </div>
-
-                      {/* Bandeau explicatif de la formule officielle du classement sélectionné */}
-                      <div className="p-2.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-[11px] text-amber-200 flex items-center justify-between gap-2">
-                        <span>
-                          {hubRankDimension === 'ALL' &&
-                            'Top Chansons : Score Titre = 60% Volume ECG + 25% Vélocité + 15% Engagement social. Loi d’amortissement : -5%/semaine après 10 semaines dans le Top 10.'}
-                          {hubRankDimension === 'ARTIST' &&
-                            'Top Artistes : 40% Volume ECG (70% Principal / 30% Featuring ou 50/50) + 30% Profondeur Catalogue + 30% Fidélisation & Conversion Abonnés.'}
-                          {hubRankDimension === 'BEATMAKER' &&
-                            'Top Beatmakers : [(35% Volume plafonné 25%/titre) + (35% Delta d’Impact vs 3 sorties) + (30% Accroche 45s & Loop)] × Polyvalence 90j (1 art.=x0.70, 2=x1.00, 3-4=x1.20, 5+=x1.40).'}
-                          {hubRankDimension === 'ENGINEER' &&
-                            'Top Ingénieurs du Son : Ventilation Prise (20%) / Mixage (50%) / Mastering (30%) • 35% Complétion >85% + 25% Standard -14 LUFS + 25% Volume (Plafond strict 20%/titre) + 15% Diversité.'}
-                          {hubRankDimension === 'LYRICIST' &&
-                            'Top Paroliers : Paroles synchronisées requises • 35% Ouvertures & Partages de punchlines + 30% Longévité J+90 + 20% Volume (Plafond 25%) + 15% Bonus Plume Externe (x1,25).'}
-                          {hubRankDimension === 'LABEL' &&
-                            'Top Labels : Éligibilité min. 3 artistes actifs • 40% Médiane & Moyenne tronquée (-50% locomotive) + 25% Équilibre Roster (<80%/artiste) + 20% Nouvelles signatures + 15% Métadonnées.'}
-                          {hubRankDimension === 'CATEGORY' &&
-                            'Genres Musicaux Gabonais : Ntcham, Rap Gabonais, Afrobeats, Rumba Gabonaise, Gospel, Tradimoderne et tous les genres créés dans l’Admin.'}
-                        </span>
                       </div>
 
                       {hubRankDimension === 'ALL' ? (
@@ -4560,7 +5976,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     </div>
                   )}
 
-                  {/* ONGLET 6 : MON PROFIL & SIMULATEUR MOBILE MONEY ECG */}
+                  {/* ONGLET 6 : MON PROFIL, BIBLIOTHÈQUE PERSONNELLE (PLAYLISTS, LIKES, FAVORIS, ÉCOUTES) & PASS MOBILE MONEY */}
                   {hubTab === 'PROFIL' && currentUser && (
                     <ReusableUserProfileSheet
                       user={currentUser}
@@ -4585,6 +6001,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                       trackRankMap={trackRankMap}
                       currentTrackId={currentTrack.id}
                       isPlaying={isPlaying}
+                      userPlaylists={playlists}
+                      onCreatePlaylist={handleCreatePlaylist}
+                      onDeletePlaylist={handleDeletePlaylist}
+                      onToggleTrackInPlaylist={handleToggleTrackInPlaylist}
+                      likedTrackIds={likedTrackIds}
+                      onToggleLike={onToggleLike}
+                      subscribedArtists={subscribedArtists}
+                      onToggleSubscribeArtist={onToggleSubscribeArtist}
+                      onOpenEntityProfile={(name, role) =>
+                        openUserEntitySheet(name, role)
+                      }
                       onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                       onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
                     />
@@ -4593,8 +6020,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
               )}
             </div>
 
-            {/* PILE FIXE EN BAS : MINI-LECTEUR JUSTE AU-DESSUS + RECHERCHE BAS */}
-            <div className="pt-2.5 space-y-2 shrink-0 border-t border-white/10 bg-zinc-950/95">
+            {/* PILE FIXE EN BAS : BARRE DE RECHERCHE + MINI-LECTEUR EMPILÉS JUSTE AU-DESSUS DU MENU BAS MOBILE FIXE */}
+            <div className="pt-2.5 space-y-2.5 shrink-0 border-t border-white/10 bg-zinc-950/98">
+              {/* 1. Mini-Lecteur Synchronisé */}
               <SynchronizedMiniPlayer
                 currentTrack={currentTrack}
                 currentTime={currentTime}
@@ -4609,6 +6037,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 }}
               />
 
+              {/* 2. Barre de Recherche Instantanée */}
               <div className="relative flex items-center">
                 <svg
                   className="w-4 h-4 text-amber-400 absolute left-3.5 pointer-events-none"
@@ -4630,8 +6059,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     }
                     setHubSearchQuery(e.target.value);
                   }}
-                  placeholder="Rechercher un titre, artiste, featuring, parolier, genre, label, beatmaker..."
-                  className="w-full pl-10 pr-20 py-3 rounded-2xl bg-white/[0.07] hover:bg-white/[0.1] focus:bg-zinc-900 border border-white/15 focus:border-amber-400 text-xs sm:text-sm text-white placeholder-zinc-400 focus:outline-none shadow-lg transition"
+                  placeholder="Rechercher un titre, artiste, genre, label, beatmaker..."
+                  className="w-full pl-10 pr-20 py-2.5 rounded-2xl bg-white/[0.07] hover:bg-white/[0.1] focus:bg-zinc-900 border border-white/15 focus:border-amber-400 text-xs sm:text-sm text-white placeholder-zinc-400 focus:outline-none shadow-lg transition"
                 />
                 {hubSearchQuery.trim().length > 0 && (
                   <div className="absolute right-2.5 flex items-center gap-1.5">
@@ -4652,11 +6081,135 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* 3. MENU BAS MOBILE FIXE SUR CENTRAL (Awards masqué tant qu'il n'est pas activé par les Admins) */}
+              <nav
+                aria-label="Navigation principale Central"
+                className={`grid ${
+                  enableAwardsCeremony ? 'grid-cols-5' : 'grid-cols-4'
+                } gap-1 pt-1.5 pb-0.5 border-t border-white/10`}
+              >
+                {(
+                  [
+                    {
+                      id: 'EXPLORER',
+                      label: 'Explorer',
+                      icon: (
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      id: 'RANGS',
+                      label: 'Classements',
+                      icon: (
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <line x1="18" y1="20" x2="18" y2="10" />
+                          <line x1="12" y1="20" x2="12" y2="4" />
+                          <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                      ),
+                    },
+                    ...(enableAwardsCeremony
+                      ? [
+                          {
+                            id: 'AWARDS' as const,
+                            label: 'Awards',
+                            icon: (
+                              <svg
+                                className="w-4 h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <circle cx="12" cy="8" r="6" />
+                                <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+                              </svg>
+                            ),
+                          },
+                        ]
+                      : []),
+                    {
+                      id: 'RECOS',
+                      label: 'Fil Recos',
+                      icon: (
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      id: 'PROFIL',
+                      label: 'Mon Profil',
+                      icon: (
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      ),
+                    },
+                  ] as const
+                ).map((item) => {
+                  const isActive =
+                    hubTab === item.id &&
+                    !instantSearchResults &&
+                    !hasOpenAnalyticsSheet;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        closeAllAnalyticsSheets();
+                        setCentralFullPageView(null);
+                        setHubSearchQuery('');
+                        setHubTab(item.id);
+                      }}
+                      className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-xl transition ${
+                        isActive
+                          ? 'bg-[#e11d38] text-white font-bold shadow-[0_4px_12px_rgba(225,29,56,0.4)]'
+                          : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      {item.icon}
+                      <span className="text-[10px] leading-none truncate max-w-full">
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
           </div>
         )}
 
-        {/* 6. OVERLAY ANALYTIQUE PRO DIRECT DEPUIS LE LECTEUR 3D (ZÉRO ADMIN) */}
+        {/* 6. OVERLAY ANALYTIQUE DIRECT DEPUIS LE LECTEUR 3D */}
         {activeModal === 'NONE' && hasOpenAnalyticsSheet && (
           <div className="absolute inset-0 z-40 bg-zinc-950/96 backdrop-blur-2xl flex flex-col justify-between p-3.5 sm:p-5 animate-fade-in overflow-hidden">
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -4742,6 +6295,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   trackRankMap={trackRankMap}
                   currentTrackId={currentTrack.id}
                   isPlaying={isPlaying}
+                  userPlaylists={playlists}
+                  onCreatePlaylist={handleCreatePlaylist}
+                  onDeletePlaylist={handleDeletePlaylist}
+                  onToggleTrackInPlaylist={handleToggleTrackInPlaylist}
+                  likedTrackIds={likedTrackIds}
+                  onToggleLike={onToggleLike}
+                  subscribedArtists={subscribedArtists}
+                  onToggleSubscribeArtist={onToggleSubscribeArtist}
+                  onOpenEntityProfile={(name, role) =>
+                    openUserEntitySheet(name, role)
+                  }
                   onClose={closeAllAnalyticsSheets}
                   onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                   onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
@@ -4764,6 +6328,55 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           </div>
         )}
       </main>
+
+      {/* STUDIO TREND VIDÉO 30S (AFFICHE DE MAGAZINE POP STAR) — ACCESSIBLE DEPUIS LE LECTEUR PRINCIPAL */}
+      <DropTrendMagazineStudio
+        track={{
+          id: currentTrack.id,
+          title: currentTrack.title,
+          artist: currentTrack.artist,
+          featuring: currentTrack.featuringArtists,
+          featuringSplitMode: currentTrack.featuringSplitMode,
+          album: currentTrack.album,
+          category: currentTrack.category,
+          labelName: currentTrack.labelName,
+          copyrightText: currentTrack.copyrightText,
+          beatmakerName: currentTrack.beatmakerName || 'Beatmaker',
+          soundEngineerName:
+            currentTrack.soundEngineerName || 'Ingénieur du son',
+          lyricistName: currentTrack.lyricistName,
+          isInstrumental: currentTrack.isInstrumental,
+          audioCodec: currentTrack.audioCodec || 'OPUS',
+          audioUrl: currentTrack.audioUrl,
+          cover: currentTrack.cover,
+          artworkType: currentTrack.artworkType,
+          ambientPrimary: currentTrack.ambientPrimary || '#e11d38',
+          ambientSecondary: currentTrack.ambientSecondary || '#f59e0b',
+          duration: currentTrack.duration,
+          dropStart: currentTrack.dropStart,
+          dropDuration: currentTrack.dropDuration,
+          bpm: currentTrack.bpm || 124,
+          synthNotes: currentTrack.synthNotes || [110, 146.83, 164.81, 196, 220],
+          realPlays: currentTrack.realPlays,
+          lastActivityAgo: currentTrack.lastActivityAgo,
+          totalListenSeconds: currentTrack.totalListenSeconds || 0,
+          listenSessions: currentTrack.listenSessions || 0,
+          avgRetentionPct: currentTrack.avgRetentionPct || 85,
+          algoPoints: currentTrack.algoPoints || 0,
+          likesCount: currentTrack.likesCount || 0,
+          loopPlaysCount: currentTrack.loopPlaysCount || 0,
+          longevityDays: currentTrack.longevityDays || 1,
+          consecutiveLoops: currentTrack.consecutiveLoops || 0,
+          baselineRank: currentTrack.baselineRank || 1,
+        }}
+        isOpen={showTrendStudioModal}
+        onClose={() => setShowTrendStudioModal(false)}
+        onPauseMainPlayer={() => {
+          if (isPlaying) {
+            onForceStopPlay ? onForceStopPlay() : onTogglePlay();
+          }
+        }}
+      />
     </div>
   );
 };

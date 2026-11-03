@@ -183,11 +183,12 @@
   border-radius: 28px;
 }
 
-/* Boutons secondaires carrés arrondis en verre givré (rangée du bas) */
+/* Boutons secondaires carrés arrondis en verre givré (rangée du bas resserrée pour 5 boutons : Playlist, Paroles, Trend, Réglages, Téléchargement) */
 .utility-pill {
-  width: clamp(46px, 6.2dvh, 52px);
-  height: clamp(44px, 5.8dvh, 50px);
-  border-radius: 16px;
+  width: clamp(41px, 5.6dvh, 46px);
+  height: clamp(41px, 5.6dvh, 46px);
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 0.12) 0%,
@@ -205,6 +206,7 @@
   color: rgba(255, 255, 255, 0.94);
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
+  flex-shrink: 0;
 }
 
 .utility-pill:hover {
@@ -232,6 +234,19 @@
   box-shadow:
     0 0 22px rgba(245, 158, 11, 0.3),
     inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.utility-pill.trend-pill {
+  background: linear-gradient(
+    145deg,
+    rgba(225, 29, 56, 0.28) 0%,
+    rgba(245, 158, 11, 0.22) 100%
+  );
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+  box-shadow:
+    0 0 18px rgba(225, 29, 56, 0.32),
+    inset 0 1px 1px rgba(255, 255, 255, 0.32);
 }
 
 /* Bouton Play Principal Rouge Cramoisi */
