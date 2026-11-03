@@ -297,6 +297,19 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const logoCycleIndexRef = useRef<number>(0);
   const logoCycleStartRef = useRef<number>(performance.now());
   const officialLogoImgRef = useRef<HTMLImageElement | null>(null);
+  const trackCoverImgRef = useRef<HTMLImageElement | null>(null);
+
+  // Préchargement de la pochette officielle du morceau pour le mode affiche
+  useEffect(() => {
+    if (track.cover) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = track.cover;
+      img.onload = () => {
+        trackCoverImgRef.current = img;
+      };
+    }
+  }, [track.cover]);
 
   // Références vidéo, canvas et audio
   const liveViewfinderVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -854,6 +867,34 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             ctx.drawImage(sourceVideo, dx, dy, dw, dh);
           }
           ctx.restore();
+        } else {
+          // Mode visuel magazine Pop Star de secours (aucun écran noir, enregistrement toujours garanti)
+          const coverImg = trackCoverImgRef.current;
+          if (coverImg && coverImg.complete && coverImg.naturalWidth > 0) {
+            ctx.save();
+            ctx.filter = 'blur(44px) brightness(0.65)';
+            ctx.drawImage(coverImg, -60, -60, CANVAS_W + 120, CANVAS_H + 120);
+            ctx.restore();
+
+            const cardW = 760;
+            const cardH = 760;
+            const cardX = (CANVAS_W - cardW) / 2;
+            const cardY = (CANVAS_H - cardH) / 2 - 100;
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowBlur = 50;
+            ctx.shadowOffsetY = 25;
+            ctx.drawImage(coverImg, cardX, cardY, cardW, cardH);
+            ctx.restore();
+          } else {
+            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+            grad.addColorStop(0, '#1c080d');
+            grad.addColorStop(0.5, '#0e0e14');
+            grad.addColorStop(1, '#050508');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+          }
         }
       };
 
@@ -1274,7 +1315,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const progressPct = Math.min(100, (recordedSeconds / hardLimitSec) * 100);
 
   return (
-    <div className="fixed inset-0 z-[150] w-screen h-screen bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 z-[150] w-full h-[100dvh] max-h-[100dvh] bg-black overflow-hidden select-none flex flex-col justify-between">
       {/* Canvas haute définition 1080×1920 invisibles servant à l'enregistrement temps réel */}
       <canvas
         ref={exportWatermarkedCanvasRef}
@@ -1317,22 +1358,33 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
           {/* Si le navigateur demande une action manuelle pour autoriser la caméra web ou native */}
           {cameraError && !cameraReady && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
-              <button
-                type="button"
-                onClick={() => startLiveCamera(cameraFacing)}
-                className="px-5 py-3 rounded-full bg-white text-black font-semibold text-sm flex items-center gap-2 shadow-xl active:scale-95 transition"
-              >
-                <Camera className="w-4 h-4" />
-                <span>Activer la caméra en direct</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => nativeFileInputRef.current?.click()}
-                className="px-4 py-2 rounded-full bg-zinc-800/90 border border-white/15 text-white/90 text-xs font-medium active:scale-95 transition"
-              >
-                Ouvrir l&apos;appareil photo natif
-              </button>
+            <div className="absolute inset-x-4 top-20 bottom-36 z-20 flex flex-col items-center justify-center gap-3.5 bg-zinc-950/90 backdrop-blur-xl rounded-3xl border border-white/10 px-6 text-center max-w-sm mx-auto shadow-2xl">
+              <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <Camera className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Caméra en direct non détectée</p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Activez la caméra ou enregistrez directement votre vidéo Trend 30s avec le visuel Pop Star officiel.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full pt-1">
+                <button
+                  type="button"
+                  onClick={() => startLiveCamera(cameraFacing)}
+                  className="w-full px-4 py-2.5 rounded-full bg-white text-black font-semibold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95 transition"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Activer la caméra en direct</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nativeFileInputRef.current?.click()}
+                  className="w-full px-4 py-2 rounded-full bg-zinc-800/90 border border-white/15 text-white/90 text-xs font-medium active:scale-95 transition"
+                >
+                  Ouvrir l&apos;appareil photo natif
+                </button>
+              </div>
             </div>
           )}
 
@@ -1385,9 +1437,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             <div className="w-7 h-7 sm:w-10 sm:h-10" />
           </div>
 
-          {/* Zone basse de la caméra plein écran : uniquement le bouton rouge d'enregistrement et la bascule caméra */}
-          <div className="absolute bottom-8 inset-x-0 flex items-center justify-center z-30">
-            <div className="w-full max-w-md px-8 flex items-center justify-between">
+          {/* Zone basse de la caméra plein écran : bouton rouge d'enregistrement et bascule caméra */}
+          <div className="absolute inset-x-0 bottom-0 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] flex items-center justify-center z-40 pointer-events-none">
+            <div className="w-full max-w-md px-8 flex items-center justify-between pointer-events-auto">
               <div className="w-12 h-12" />
 
               {/* BOUTON D'ENREGISTREMENT ROUGE UNIQUE (Clic 1 = Enregistrer, Clic 2 = Couper l'enregistrement) */}
@@ -1400,7 +1452,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                     startTrendRecording();
                   }
                 }}
-                className="relative w-20 h-20 rounded-full border-[4px] border-white/85 bg-black/30 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_30px_rgba(0,0,0,0.7)]"
+                className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-full border-[5px] border-white/90 bg-black/40 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_35px_rgba(255,59,48,0.75)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-400 cursor-pointer"
                 aria-label={
                   isRecording
                     ? "Couper l'enregistrement"
@@ -1408,12 +1460,16 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 }
               >
                 <span
-                  className={`bg-[#ff3b30] transition-all duration-200 ${
+                  className={`bg-[#ff3b30] flex items-center justify-center transition-all duration-200 ${
                     isRecording
-                      ? 'w-8 h-8 rounded-md shadow-[0_0_20px_rgba(255,59,48,0.9)]'
-                      : 'w-[64px] h-[64px] rounded-full'
+                      ? 'w-8 h-8 rounded-lg shadow-[0_0_24px_rgba(255,59,48,1)] ring-4 ring-white/60'
+                      : 'w-[64px] h-[64px] rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_0_22px_rgba(255,59,48,0.9)]'
                   }`}
-                />
+                >
+                  {!isRecording && (
+                    <span className="w-3.5 h-3.5 rounded-full bg-white/40 shadow-sm" />
+                  )}
+                </span>
               </button>
 
               {/* Bascule Caméra Facecam (Avant) / Caméra Arrière */}
@@ -1421,7 +1477,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 type="button"
                 onClick={handleToggleCameraFacing}
                 disabled={isRecording}
-                className="w-12 h-12 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition disabled:opacity-30"
+                className="w-12 h-12 rounded-full bg-zinc-900/85 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition disabled:opacity-30 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 aria-label="Basculer la caméra avant ou arrière"
               >
                 <RefreshCw className="w-5 h-5" />

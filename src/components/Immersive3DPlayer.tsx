@@ -92,6 +92,16 @@ import {
   getAlbumCertification,
 } from '../utils/rankingEngine';
 import { DropTrendMagazineStudio } from './DropTrendMagazineStudio';
+import { PlayerHeader } from './player/PlayerHeader';
+import { PlayerCoverFlow } from './player/PlayerCoverFlow';
+import { PlayerLyricsPanel } from './player/PlayerLyricsPanel';
+import { PlayerMetadataBar } from './player/PlayerMetadataBar';
+import { PlayerPlaybackDock } from './player/PlayerPlaybackDock';
+import { EqualizerModal } from './player/modals/EqualizerModal';
+import { PlaylistModal } from './player/modals/PlaylistModal';
+import { QueueModal } from './player/modals/QueueModal';
+import { OptionsMenuModal } from './player/modals/OptionsMenuModal';
+import { RecommendModal } from './player/modals/RecommendModal';
 
 export interface LyricLine {
   time: number;
@@ -1751,750 +1761,103 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           <span>{toastMsg || 'Action effectuée'}</span>
         </div>
 
-        {/* 1. EN-TÊTE DE NAVIGATION FIXE */}
-        <header className="relative z-20 flex items-center justify-between px-6 pt-3 sm:pt-4 pb-0.5 shrink-0">
-          {/* Bouton Flèche vers le bas (Ouvre l'écran Central) */}
-          <button
-            type="button"
-            onClick={() => setActiveModal('MINI')}
-            className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
-            aria-label="Ouvrir Central"
-            title="Central"
-          >
-            <ChevronDown className="w-6 h-6 stroke-[2.2]" />
-          </button>
+        {/* 1. EN-TÊTE STRICTEMENT SYMÉTRIQUE AVEC LOGO DROP CENTRÉ AU PIXEL PRÈS */}
+        <PlayerHeader
+          onOpenCentral={() => setActiveModal('MINI')}
+          onOpenQueue={() => setActiveModal('QUEUE')}
+          onOpenOptions={() => setActiveModal('OPTIONS')}
+          onOpenNotifications={onOpenNotifications}
+          unreadNotificationsCount={unreadNotificationsCount}
+        />
 
-          {/* Logo Officiel DROP Fixe au centre de l'en-tête */}
-          <button
-            type="button"
-            onClick={() => setActiveModal('QUEUE')}
-            className="flex items-center justify-center px-3 py-1 rounded-full hover:bg-white/[0.06] transition"
-            aria-label="DROP — Ouvrir la file de lecture"
-            title="File de lecture DROP"
-          >
-            <DropOfficialLogo className="h-[14px] sm:h-[15px] w-auto" />
-          </button>
-
-          {/* Cloche de Notifications + Menu Options (•••) */}
-          <div className="flex items-center gap-1 -mr-2">
-            {onOpenNotifications && (
-              <button
-                type="button"
-                onClick={onOpenNotifications}
-                className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <Bell className="w-5 h-5 stroke-[2]" />
-                {unreadNotificationsCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#e11d38] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow">
-                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                  </span>
-                )}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setActiveModal('OPTIONS')}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
-              aria-label="Options et Paramètres"
-            >
-              <Ellipsis className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
-
-        {/* 2. ZONE CENTRALE : CARROUSEL 3D SUPERPOSÉ OU PANNEAU PAROLES INTERACTIF */}
-        <section className="relative z-20 flex-1 min-h-0 flex flex-col justify-center">
-          <div
-            onPointerDown={handleCarouselPointerDown}
-            onPointerMove={handleCarouselPointerMove}
-            onPointerUp={handleCarouselPointerUp}
-            onPointerCancel={handleCarouselPointerUp}
-            onWheel={handleCarouselWheel}
-            className="carousel-stage"
-          >
-            {catalogue.map((alb, idx) => {
-              const isActiveCard = idx === albumIdx;
-              const displayedTrack = isActiveCard
-                ? currentTrack
-                : alb.tracks[0];
-
-              const rawOffset = idx - albumIdx + dragOffsetRatio;
-              const absOffset = Math.abs(rawOffset);
-
-              const translateX = rawOffset * 108;
-              const translateY =
-                isActiveCard && dragAxis === 'Y'
-                  ? dragDeltaY * 0.42
-                  : absOffset * 6;
-              const translateZ = -absOffset * 95;
-              const rotateY = rawOffset * -22;
-              const rotateZ = rawOffset * 2.5;
-              const scale = Math.max(0.68, 1 - absOffset * 0.14);
-
-              const blurPx =
-                absOffset < 0.05
-                  ? 0
-                  : Math.min(14, 6.2 + Math.max(0, absOffset - 0.85) * 4.8);
-              const brightness =
-                absOffset < 0.05
-                  ? 1
-                  : Math.max(0.22, 0.42 - Math.max(0, absOffset - 1) * 0.16);
-              const saturate = absOffset < 0.05 ? 1 : 0.78;
-              const opacity =
-                absOffset > 2.1
-                  ? 0
-                  : absOffset < 0.05
-                    ? 1
-                    : Math.max(0.24, 0.72 - Math.max(0, absOffset - 1) * 0.45);
-              const zIndex = Math.round(30 - absOffset * 10);
-
-              return (
-                <div
-                  key={alb.id}
-                  onClick={() => {
-                    if (dragMovedRef.current) return;
-                    if (!isActiveCard) {
-                      onSelectAlbumIndex(idx, 0, false);
-                    }
-                  }}
-                  style={{
-                    zIndex,
-                    opacity,
-                    transform: `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) scale(${scale})`,
-                    filter: `blur(${blurPx.toFixed(2)}px) brightness(${brightness.toFixed(2)}) saturate(${saturate})`,
-                    pointerEvents: absOffset > 1.5 ? 'none' : 'auto',
-                  }}
-                  className={`cover-card ${isDraggingCarousel ? 'dragging' : ''}`}
-                >
-                  <div className="cover-card-inner">
-                    <CoverArtwork
-                      artworkType={displayedTrack.artworkType}
-                      coverUrl={displayedTrack.cover}
-                      title={displayedTrack.title}
-                      artist={displayedTrack.artist}
-                    />
-                    <div className="cover-glare" />
-
-                    {!isActiveCard && (
-                      <div className="absolute inset-0 bg-black/38 pointer-events-none transition-opacity duration-300" />
-                    )}
-
-                    {isActiveCard && currentAlbum.tracks.length > 1 && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 py-2 px-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15">
-                        {currentAlbum.tracks.map((t, tIdx) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectTrackIndex(tIdx);
-                            }}
-                            aria-label={`Piste ${tIdx + 1}: ${t.title}`}
-                            className={`w-1.5 rounded-full transition-all ${
-                              tIdx === trackIdx
-                                ? 'h-4 bg-amber-400 shadow-[0_0_8px_#fbbf24]'
-                                : 'h-1.5 bg-white/45 hover:bg-white/80'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* 2. ZONE CENTRALE : CARROUSEL 3D COVERFLOW ULTRA-FLUIDE 60 FPS & PAROLES */}
+        <PlayerCoverFlow
+          catalogue={catalogue}
+          albumIdx={albumIdx}
+          trackIdx={trackIdx}
+          currentTrack={currentTrack}
+          onNavigateAlbum={onNavigateAlbum}
+          onSelectAlbumIndex={onSelectAlbumIndex}
+          onNavigateTrack={onNavigateTrack}
+          onSelectTrackIndex={onSelectTrackIndex}
+          onToast={showToast}
+        >
+          <PlayerLyricsPanel
+            isOpen={lyricsOpen}
+            isPro={isPro}
+            currentTrack={currentTrack}
+            currentTime={currentTime}
+            activeLyricIdx={activeLyricIdx}
+            currentLyricist={currentLyricist}
+            onClose={() => setLyricsOpen(false)}
+            onSeek={onSeek}
+            onOpenLyricistProfile={(lyricist) => openUserEntitySheet(lyricist, 'LYRICIST')}
+            onShareExcerpt={(cleanExcerpt) => {
+              onRecommendTrack?.(currentTrack.id, cleanExcerpt, true);
+              showToast(
+                `Extrait partagé dans le Fil DROP (+Score Parolier : ${currentLyricist})`,
+                'bg-violet-400'
               );
-            })}
-          </div>
+            }}
+            formatTime={formatTime}
+          />
+        </PlayerCoverFlow>
 
-          {/* Panneau Paroles Synchronisées Interactif avec Crédit Parolier & Partage d'Extrait en Direct */}
-          {lyricsOpen && isPro && (
-            <div className="absolute inset-x-4 sm:inset-x-5 inset-y-1 z-30 rounded-[28px] bg-zinc-950/94 border border-white/15 backdrop-blur-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl transition-all animate-fade-in">
-              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold tracking-wide text-amber-300">
-                      Paroles Synchronisées
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-violet-500/20 border border-violet-400/35 text-violet-300 text-[10px] font-mono">
-                      Score Plume Actif
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLyricsOpen(false);
-                      openUserEntitySheet(currentLyricist, 'LYRICIST');
-                    }}
-                    className="text-[11px] text-zinc-300 hover:text-amber-300 flex items-center gap-1 mt-0.5 truncate transition"
-                  >
-                    <span className="text-zinc-400">Parolier / Auteur :</span>
-                    <span className="font-semibold text-white underline decoration-white/30">
-                      {currentLyricist}
-                    </span>
-                    <ChevronRight className="w-3 h-3 text-zinc-400" />
-                  </button>
-                </div>
+        {/* 3. MÉTADONNÉES, DÉFILEMENT MARQUEE, BADGES, SCRUBBER & SEGMENT DROP */}
+        <PlayerMetadataBar
+          currentTrack={currentTrack}
+          currentTrackCert={currentTrackCert}
+          isPro={isPro}
+          currentArtistSubscribed={currentArtistSubscribed}
+          currentArtistSubscribersCount={currentArtistSubscribersCount}
+          onToggleSubscribeArtist={onToggleSubscribeArtist}
+          isCurrentRecommended={isCurrentRecommended}
+          currentRecsCount={currentRecsCount}
+          onOpenRecommendModal={() => setActiveModal('RECOMMEND')}
+          isCurrentLiked={isCurrentLiked}
+          onToggleLike={(e) => onToggleLike(currentTrack.id, e)}
+          onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
+          onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
+          safeRankInfo={safeRankInfo}
+          isDropMode={isDropMode}
+          currentTime={currentTime}
+          onSeek={onSeek}
+          formatTime={formatTime}
+          formatCompactPlays={formatCompactPlays}
+          onToast={showToast}
+        />
 
-                <button
-                  type="button"
-                  onClick={() => setLyricsOpen(false)}
-                  aria-label="Fermer les paroles"
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white flex items-center justify-center shrink-0 transition"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {/* 4. DOCK DE CONTRÔLE GLASSMORPHIQUE & 5 BOUTONS DONT LE BOUTON ROUGE PHARE TREND 30S */}
+        <PlayerPlaybackDock
+          isPlaying={isPlaying}
+          isDropMode={isDropMode}
+          isShuffle={isShuffle}
+          repeatMode={repeatMode}
+          onTogglePlay={onTogglePlay}
+          onNavigateTrack={onNavigateTrack}
+          onToggleShuffle={onToggleShuffle}
+          onCycleRepeat={onCycleRepeat}
+          onToast={showToast}
+          isPro={isPro}
+          lyricsOpen={lyricsOpen}
+          onToggleLyrics={() => {
+            const nextOpen = !lyricsOpen;
+            setLyricsOpen(nextOpen);
+            if (nextOpen) {
+              onRecordLyricsOpen?.(currentTrack.id);
+            }
+          }}
+          onOpenPlaylistModal={() => setActiveModal('PLAYLIST')}
+          onOpenTrendStudio={() => setShowTrendStudioModal(true)}
+          isTrendStudioOpen={showTrendStudioModal}
+          onOpenEqModal={() => setActiveModal('EQ')}
+          isEqCustomOrActive={isEqCustomOrActive}
+          isDownloadedOffline={Boolean(currentTrack.downloadedOffline)}
+          onToggleDownload={() => onToggleDownload(currentTrack.id)}
+          onNotifyProRequired={notifyProRequired}
+        />
 
-              <div className="lyrics-scroll flex-1 overflow-y-auto py-3 space-y-2.5 pr-1">
-                {trackLyrics.map((line, i) => {
-                  const cleanLine = line.text.replace(/^🔥\s*/, '');
-                  const isActiveLine = i === activeLyricIdx;
-                  return (
-                    <div
-                      key={i}
-                      className={`group flex items-center justify-between gap-2 p-2 rounded-xl transition ${
-                        isActiveLine
-                          ? 'bg-white/[0.08] border border-amber-400/35'
-                          : 'hover:bg-white/[0.04]'
-                      }`}
-                    >
-                      <p
-                        onClick={() => onSeek(line.time)}
-                        className={`lyrics-line flex-1 text-sm sm:text-base font-bold leading-snug cursor-pointer ${
-                          isActiveLine ? 'active-lyric text-white' : 'text-zinc-300'
-                        }`}
-                      >
-                        {cleanLine}
-                      </p>
-
-                      {/* Bouton Partager l'extrait de paroles vers le Fil Commun DROP (Valorise le Parolier en direct) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRecommendTrack?.(
-                            currentTrack.id,
-                            `« ${cleanLine.replace('[DROP] ', '')} »`,
-                            true
-                          );
-                          showToast(
-                            `Extrait partagé dans le Fil DROP (+Score Parolier : ${currentLyricist})`,
-                            'bg-violet-400'
-                          );
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/35 border border-violet-400/40 text-violet-200 text-[10px] font-mono font-bold shrink-0 transition flex items-center gap-1 active:scale-95"
-                        title="Partager cet extrait dans le fil commun DROP et valoriser le parolier"
-                      >
-                        <span>Extrait</span>
-                        <Share2 className="w-2.5 h-2.5 text-violet-300" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
-                <span>
-                  Touchez une phrase pour synchroniser ou « Extrait » pour partager
-                </span>
-                <span className="font-mono text-zinc-300">
-                  {formatTime(currentTime)}
-                </span>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* 3. MÉTADONNÉES ÉPURÉES, DÉFILEMENT AUTOMATIQUE (MARQUEE), ICÔNE ABONNEMENT MOBILE & PROGRESSION */}
-        <section className="relative z-20 px-6 pt-0.5 pb-1.5 sm:pb-2 shrink-0">
-          {/* Titre, Artiste (+ Featurings + Icône S'abonner fixe) & Boutons Recommander + Like fixes */}
-          <div className="flex items-start justify-between gap-2.5">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  onClick={() => openUserTrackSheet(currentTrack.id)}
-                  title={
-                    isPro
-                      ? 'Ouvrir la fiche du titre'
-                      : 'Fiche détaillée réservée aux comptes DROP Pro'
-                  }
-                  className={`min-w-0 flex-1 text-[21px] sm:text-[25px] leading-tight font-bold text-white tracking-tight transition-colors ${
-                    isPro
-                      ? 'cursor-pointer hover:text-amber-200'
-                      : 'cursor-default opacity-90'
-                  }`}
-                >
-                  <AutoMarqueeText text={currentTrack.title} />
-                </div>
-                <CertificationBadgeSvg
-                  cert={currentTrackCert}
-                  compact
-                  entityTitle={currentTrack.title}
-                  entityArtist={currentTrack.artist}
-                  playsCount={currentTrack.realPlays}
-                  isPro={isPro}
-                />
-              </div>
-
-              {/* Ligne Artiste Principal + Featuring (Défilement en boucle si dépassement) + Bouton Icône S'abonner fixe */}
-              <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                <div
-                  onClick={() =>
-                    openUserEntitySheet(currentTrack.artist, 'ARTIST')
-                  }
-                  title={
-                    isPro
-                      ? 'Ouvrir le profil artiste'
-                      : 'Profil artiste réservé aux comptes DROP Pro'
-                  }
-                  className={`min-w-0 flex-1 text-[14px] sm:text-[16px] leading-snug font-semibold text-zinc-200 transition-colors ${
-                    isPro
-                      ? 'cursor-pointer hover:text-amber-300'
-                      : 'cursor-default opacity-80'
-                  }`}
-                >
-                  <AutoMarqueeText
-                    text={
-                      currentTrack.featuringArtists &&
-                      currentTrack.featuringArtists.length > 0
-                        ? `${currentTrack.artist} feat. ${currentTrack.featuringArtists.join(', ')}`
-                        : currentTrack.artist
-                    }
-                  />
-                </div>
-
-                {/* Bouton d'Abonnement : Juste une ICÔNE sur mobile (aucun texte sur mobile), fixe */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleSubscribeArtist?.(currentTrack.artist);
-                    showToast(
-                      !currentArtistSubscribed
-                        ? `Abonné à ${currentTrack.artist}`
-                        : `Abonnement retiré pour ${currentTrack.artist}`,
-                      !currentArtistSubscribed ? 'bg-emerald-400' : 'bg-zinc-400'
-                    );
-                  }}
-                  className={`w-7 h-7 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center justify-center ${
-                    currentArtistSubscribed
-                      ? 'bg-emerald-500/20 border-emerald-500/45 text-emerald-300'
-                      : 'bg-white/10 hover:bg-white/20 border-white/20 text-white active:scale-95'
-                  }`}
-                  aria-label={
-                    currentArtistSubscribed
-                      ? `Abonné à ${currentTrack.artist}`
-                      : `S’abonner à ${currentTrack.artist}`
-                  }
-                  title={
-                    currentArtistSubscribed
-                      ? `Abonné à ${currentTrack.artist} (${formatCompactPlays(currentArtistSubscribersCount)})`
-                      : `S’abonner à ${currentTrack.artist}`
-                  }
-                >
-                  {currentArtistSubscribed ? (
-                    <UserCheck className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
-                  ) : (
-                    <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Groupe Actions Sociales Fixe : Bouton Télécharger le Beat (si instrumentale) + Bouton Partager/Recommander + Bouton Like */}
-            <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
-              {(currentTrack.isInstrumental ||
-                currentTrack.category === 'Beats & Instrumentales') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerBeatAudioDownload({
-                      title: currentTrack.title,
-                      artist: currentTrack.artist,
-                      bpm: currentTrack.bpm,
-                      duration: currentTrack.duration,
-                      audioUrl: currentTrack.audioUrl,
-                      synthNotes: currentTrack.synthNotes,
-                      dropContentId: currentTrack.dropContentId,
-                    });
-                    showToast(
-                      `Téléchargement du Beat « ${currentTrack.title} » lancé !`,
-                      'bg-cyan-400'
-                    );
-                  }}
-                  className="h-10 px-2.5 sm:px-3 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 flex items-center gap-1.5 active:scale-90 transition shadow-[0_0_14px_rgba(6,182,212,0.28)]"
-                  title="Télécharger cette instrumentale / Beat (WAV Studio)"
-                >
-                  <ArrowDownToLine className="w-3.5 h-3.5 stroke-[2.2]" />
-                  <span className="text-[11px] font-extrabold tracking-tight">
-                    Beat
-                  </span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setActiveModal('RECOMMEND')}
-                className={`h-10 px-2.5 sm:px-3 rounded-full border flex items-center gap-1.5 active:scale-90 transition ${
-                  isCurrentRecommended
-                    ? 'bg-amber-400/20 border-amber-400/50 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.28)]'
-                    : 'bg-white/[0.07] hover:bg-white/[0.14] border-white/15 text-zinc-200'
-                }`}
-                aria-label="Partager ou recommander ce titre"
-                title="Partager en vidéo Trend 30s ou recommander dans le Fil DROP"
-              >
-                <Share2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.1]" />
-                <span className="text-xs font-mono font-bold">
-                  {formatCompactPlays(currentRecsCount)}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  setHeartAnimKey((prev) => prev + 1);
-                  onToggleLike(currentTrack.id, e);
-                  showToast(
-                    !isCurrentLiked
-                      ? 'Ajouté aux titres aimés'
-                      : 'Retiré des titres aimés',
-                    !isCurrentLiked ? 'bg-rose-500' : 'bg-zinc-400'
-                  );
-                }}
-                className="w-10 h-10 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 flex items-center justify-center active:scale-90 transition relative shrink-0"
-                aria-label="Ajouter aux favoris"
-              >
-                <Heart
-                  key={heartAnimKey}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-all ${
-                    heartAnimKey > 0 ? 'heart-animate' : ''
-                  } ${
-                    isCurrentLiked
-                      ? 'text-[#ef233c] fill-[#ef233c] drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]'
-                      : 'text-zinc-300 stroke-[2]'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Ligne Épurée : Classement (#4 ▲+3) & Lectures (▶ 76K) — Sans surcharge visuelle */}
-          <div className="flex items-center justify-between mt-1.5 sm:mt-2 text-[12px] sm:text-[13px] tabular-nums gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white tracking-tight inline-flex items-center gap-1 shrink-0">
-                <span>#{safeRankInfo.rank}</span>
-                <RankMedalSvg
-                  rank={safeRankInfo.rank}
-                  className="w-3.5 h-3.5"
-                />
-              </span>
-              {safeRankInfo.delta !== 0 && (
-                <span
-                  className={`font-semibold flex items-center gap-1 shrink-0 ${
-                    safeRankInfo.delta > 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'
-                  }`}
-                >
-                  <svg
-                    className={`w-2.5 h-2.5 fill-current ${
-                      safeRankInfo.delta < 0 ? 'rotate-180' : ''
-                    }`}
-                    viewBox="0 0 12 12"
-                  >
-                    <path d="M6 2L11 10H1L6 2Z" />
-                  </svg>
-                  <span>
-                    {safeRankInfo.delta > 0
-                      ? `+${safeRankInfo.delta}`
-                      : `${safeRankInfo.delta}`}
-                  </span>
-                </span>
-              )}
-              {isDropMode && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/35 text-amber-300 text-[10px] font-mono font-bold shrink-0">
-                  Aperçu Drop
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5 text-zinc-300/90 shrink-0">
-              <Play className="w-3.5 h-3.5 text-white fill-current" />
-              <span className="font-bold text-white">
-                {formatCompactPlays(
-                  currentTrack.realPlays,
-                  currentTrack.displayPlaysFormatted
-                )}
-              </span>
-            </div>
-          </div>
-
-          {/* Barre de Progression Interactive avec Segment Drop Ambre Lumineux */}
-          <div className="mt-2 sm:mt-2.5">
-            <div
-              ref={scrubberRef}
-              onPointerDown={handleScrubberPointerDown}
-              onPointerMove={handleScrubberPointerMove}
-              onPointerUp={handleScrubberPointerUp}
-              onPointerCancel={handleScrubberPointerUp}
-              className={`scrubber-container ${isScrubbing ? 'dragging' : ''}`}
-              role="slider"
-              aria-label="Progression du titre et zone de Drop"
-            >
-              <div className="scrubber-track">
-                <div
-                  style={{
-                    left: `${dropStartPct}%`,
-                    width: `${dropWidthPct}%`,
-                  }}
-                  className={`absolute -top-[1.5px] -bottom-[1.5px] rounded-full transition-all pointer-events-none ${
-                    isDropMode
-                      ? 'bg-amber-400/60 ring-1 ring-amber-300/90 shadow-[0_0_16px_rgba(251,191,36,0.85)]'
-                      : 'bg-amber-400/35 border-x border-amber-300/70'
-                  }`}
-                />
-
-                <div
-                  className="scrubber-fill"
-                  style={{ width: `${progressPct}%` }}
-                >
-                  <div className="scrubber-thumb" />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-[12px] font-medium text-zinc-300/80 mt-0.5 tabular-nums">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(currentTrack.duration)}</span>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. DOCK DE CONTRÔLE GLASSMORPHIQUE ACCENTUÉ */}
-        <section className="relative z-20 px-5 sm:px-6 pb-1.5 shrink-0">
-          <div className="glass-dock px-4 py-3.5 sm:px-5 sm:py-4.5">
-            {/* Rangée 1 : Contrôles de flux principaux */}
-            <div className="relative z-10 flex items-center justify-between px-1">
-              <button
-                type="button"
-                onClick={() => {
-                  onToggleShuffle();
-                  showToast(
-                    !isShuffle
-                      ? 'Lecture aléatoire activée'
-                      : 'Lecture aléatoire désactivée'
-                  );
-                }}
-                className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center hover:text-white active:scale-90 transition ${
-                  isShuffle ? 'text-amber-400' : 'text-white/90'
-                }`}
-                aria-label="Lecture aléatoire"
-              >
-                <Shuffle className="w-5 h-5 stroke-[2]" />
-                {isShuffle && (
-                  <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigateTrack(-1)}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
-                aria-label="Titre précédent"
-              >
-                <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
-              </button>
-
-              {/* Le bouton Play ne s'active JAMAIS seul pendant le Drop : il affiche Play (▶) tant que l'utilisateur n'a pas cliqué pour lancer la lecture complète depuis 0:00 */}
-              <button
-                type="button"
-                onClick={onTogglePlay}
-                className="play-btn-main"
-                aria-label={
-                  isPlaying && !isDropMode
-                    ? 'Mettre en pause'
-                    : 'Lancer la lecture complète depuis 0:00'
-                }
-                title={
-                  isPlaying && !isDropMode
-                    ? 'Mettre en pause'
-                    : 'Cliquer pour lancer la lecture complète depuis 0:00'
-                }
-              >
-                {isPlaying && !isDropMode ? (
-                  <Pause className="w-7 h-7 sm:w-8 sm:h-8 fill-current" />
-                ) : (
-                  <Play className="w-7 h-7 sm:w-8 sm:h-8 fill-current ml-0.5" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigateTrack(1)}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
-                aria-label="Titre suivant"
-              >
-                <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const nextMode = (repeatMode + 1) % 3;
-                  onCycleRepeat();
-                  if (nextMode === 0) showToast('Répétition désactivée');
-                  else if (nextMode === 1)
-                    showToast('Répéter toute la sélection');
-                  else showToast('Répéter ce titre en boucle');
-                }}
-                className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center hover:text-white active:scale-90 transition ${
-                  repeatMode > 0 ? 'text-amber-400' : 'text-white/90'
-                }`}
-                aria-label="Mode répétition"
-              >
-                {repeatMode === 2 ? (
-                  <Repeat1 className="w-5 h-5 stroke-[2]" />
-                ) : (
-                  <Repeat className="w-5 h-5 stroke-[2]" />
-                )}
-                {repeatMode > 0 && (
-                  <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-                )}
-              </button>
-            </div>
-
-            {/* Rangée 2 : 5 Boutons Utilitaires Carrés Resserrés (Playlist, Paroles, Trend, Réglages/Égaliseur, Téléchargement) */}
-            <div className="relative z-10 flex items-center justify-between gap-2 px-1 sm:px-2 mt-3.5 sm:mt-4">
-              {/* 1. Ajouter à une sélection / Playlist */}
-              <button
-                type="button"
-                onClick={() => setActiveModal('PLAYLIST')}
-                className="utility-pill"
-                aria-label="Ajouter à une sélection"
-                title="Ajouter à une sélection"
-              >
-                <ListPlus className="w-5 h-5 stroke-[2]" />
-              </button>
-
-              {/* 2. Paroles Synchronisées & Score Parolier en Direct */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isPro) {
-                    notifyProRequired('Paroles synchronisées');
-                    return;
-                  }
-                  const nextOpen = !lyricsOpen;
-                  setLyricsOpen(nextOpen);
-                  if (nextOpen) {
-                    onRecordLyricsOpen?.(currentTrack.id);
-                  }
-                }}
-                className={`utility-pill ${
-                  !isPro
-                    ? 'opacity-40 grayscale cursor-not-allowed'
-                    : lyricsOpen
-                      ? 'active-pill'
-                      : ''
-                }`}
-                aria-label="Paroles synchronisées"
-                title={
-                  isPro
-                    ? 'Paroles synchronisées & Partage d’extrait'
-                    : 'Paroles synchronisées (Réservé DROP Pro)'
-                }
-              >
-                <MicVocal className="w-5 h-5 stroke-[2]" />
-                {!isPro && <ProLockBadgeSvg />}
-              </button>
-
-              {/* 3. Studio Vidéo Trend 30s (Format Carré identique aux 4 autres boutons) */}
-              <button
-                type="button"
-                onClick={() => setShowTrendStudioModal(true)}
-                className={`utility-pill ${
-                  showTrendStudioModal ? 'active-pill' : 'trend-pill'
-                }`}
-                aria-label="Créer une vidéo Trend 30s sur le Drop"
-                title="Créer une vidéo Trend 30s (Verrouillée sur les 30s du Drop)"
-              >
-                <Video className="w-5 h-5 stroke-[2.1]" />
-                <span className="absolute -bottom-1 -right-1 px-1 py-[1px] rounded bg-[#e11d38] text-white text-[8px] font-mono font-extrabold leading-none border border-amber-300/60 shadow">
-                  30s
-                </span>
-              </button>
-
-              {/* 4. Égaliseur 5 Bandes & Préréglages Audio */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isPro) {
-                    notifyProRequired('Égaliseur 5 bandes & Préréglages');
-                    return;
-                  }
-                  setActiveModal('EQ');
-                }}
-                className={`utility-pill ${
-                  !isPro
-                    ? 'opacity-40 grayscale cursor-not-allowed'
-                    : isEqCustomOrActive
-                      ? 'active-pill'
-                      : ''
-                }`}
-                aria-label="Égaliseur 5 bandes et Préréglages"
-                title={
-                  isPro
-                    ? 'Égaliseur 5 bandes & Préréglages'
-                    : 'Égaliseur 5 bandes (Réservé DROP Pro)'
-                }
-              >
-                <SlidersHorizontal className="w-5 h-5 stroke-[2]" />
-                {!isPro && <ProLockBadgeSvg />}
-              </button>
-
-              {/* 5. Téléchargement Hors-Ligne */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isPro) {
-                    notifyProRequired('Téléchargement hors-ligne');
-                    return;
-                  }
-                  onToggleDownload(currentTrack.id);
-                  showToast(
-                    !currentTrack.downloadedOffline
-                      ? 'Enregistré pour écoute hors-ligne'
-                      : 'Retiré des téléchargements hors-ligne',
-                    !currentTrack.downloadedOffline
-                      ? 'bg-emerald-400'
-                      : 'bg-zinc-400'
-                  );
-                }}
-                className={`utility-pill relative ${
-                  !isPro
-                    ? 'opacity-40 grayscale cursor-not-allowed'
-                    : currentTrack.downloadedOffline
-                      ? 'active-pill'
-                      : ''
-                }`}
-                aria-label="Télécharger pour écoute hors-ligne"
-                title={
-                  isPro
-                    ? 'Écoute hors-ligne'
-                    : 'Écoute hors-ligne (Réservé DROP Pro)'
-                }
-              >
-                <ArrowDownToLine className="w-5 h-5 stroke-[2]" />
-                {!isPro ? (
-                  <ProLockBadgeSvg />
-                ) : (
-                  currentTrack.downloadedOffline && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-                  )
-                )}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. PIED DE PAGE (Signature Copyright + Label plus petite et discrète) */}
+        {/* 5. PIED DE PAGE DISCRET */}
         <footer className="relative z-20 pb-2 sm:pb-2.5 pt-0.5 text-center shrink-0">
           <p className="text-[8.5px] sm:text-[9.5px] text-zinc-500/65 tracking-tight">
             {currentTrack.copyrightText ||
@@ -2502,722 +1865,81 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
           </p>
         </footer>
 
-        {/* =================================================================== */}
-        {/* MODALE RECOMMANDER AU FIL COMMUN DROP (Placé à côté du Like)        */}
-        {/* =================================================================== */}
-        {activeModal === 'RECOMMEND' && (
-          <div
-            onClick={() => setActiveModal('NONE')}
-            className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex flex-col justify-end p-4"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl animate-fade-in"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    Recommander à la communauté DROP
-                  </h2>
-                  <p className="text-xs text-zinc-400">
-                    Propulsez « {currentTrack.title} » dans le Fil Commun et
-                    boostez son score d&apos;explosion
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('NONE')}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
-                  aria-label="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {/* MODALES DÉCOUPLÉES ET ERGONOMIQUES */}
+        <RecommendModal
+          isOpen={activeModal === 'RECOMMEND'}
+          currentTrack={currentTrack}
+          currentTrackCert={currentTrackCert}
+          currentRecsCount={currentRecsCount}
+          communityRecommendationsCount={communityRecommendations ? communityRecommendations.length : 0}
+          onClose={() => setActiveModal('NONE')}
+          onOpenTrendStudio={() => {
+            setActiveModal('NONE');
+            setShowTrendStudioModal(true);
+          }}
+          onPublishRecommendation={(note) => {
+            onRecommendTrack?.(currentTrack.id, note, false);
+            setActiveModal('MINI');
+            setHubTab('RECOS');
+            showToast('Recommandation publiée dans le Fil Commun DROP !', 'bg-amber-400');
+          }}
+          onViewFeed={() => {
+            setActiveModal('MINI');
+            setHubTab('RECOS');
+          }}
+        />
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-                <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0">
-                  <CoverArtwork
-                    artworkType={currentTrack.artworkType}
-                    coverUrl={currentTrack.cover}
-                    title={currentTrack.title}
-                    artist={currentTrack.artist}
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white truncate">
-                    {currentTrack.title}
-                  </p>
-                  <p className="text-xs text-zinc-400 truncate">
-                    {currentTrack.artist} • {currentRecsCount} recommandations
-                  </p>
-                </div>
-                <CertificationBadgeSvg cert={currentTrackCert} compact />
-              </div>
+        <PlaylistModal
+          isOpen={activeModal === 'PLAYLIST'}
+          currentTrackId={currentTrack.id}
+          playlists={playlists}
+          onClose={() => setActiveModal('NONE')}
+          onToggleTrackInPlaylist={handleToggleTrackInPlaylist}
+          onCreatePlaylist={handleCreatePlaylist}
+        />
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                  Message ou pourquoi écouter ce titre (optionnel)
-                </label>
-                <input
-                  type="text"
-                  value={recommendNote}
-                  onChange={(e) => setRecommendNote(e.target.value)}
-                  placeholder="Ex: Le drop à 1:16 et le mix sont incroyables..."
-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
-                />
-              </div>
+        <EqualizerModal
+          isOpen={activeModal === 'EQ'}
+          isPro={isPro}
+          eqGains={eqGains}
+          masterVolume={masterVolume}
+          onClose={() => setActiveModal('NONE')}
+          onResetEq={onResetEq}
+          onApplyEqPreset={onApplyEqPreset}
+          onChangeEqBand={onChangeEqBand}
+          onChangeMasterVolume={onChangeMasterVolume}
+          onToast={showToast}
+        />
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('NONE');
-                  setShowTrendStudioModal(true);
-                }}
-                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#e11d38] via-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_10px_30px_rgba(225,29,56,0.4)] transition"
-              >
-                <Video className="w-4 h-4 shrink-0 stroke-[2.2]" />
-                <span>
-                  Créer une Vidéo Trend (Drop {Math.min(30, currentTrack.dropDuration || 30)}s • Magazine Pop Star)
-                </span>
-              </button>
+        <QueueModal
+          isOpen={activeModal === 'QUEUE'}
+          catalogue={catalogue}
+          albumIdx={albumIdx}
+          trackIdx={trackIdx}
+          isPlaying={isPlaying}
+          onClose={() => setActiveModal('NONE')}
+          onSelectTrack={handlePlayOrToggleSpecificTrack}
+          formatCompactPlays={formatCompactPlays}
+          formatTime={formatTime}
+        />
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRecommendTrack?.(
-                      currentTrack.id,
-                      recommendNote.trim() ||
-                        'Recommande fortement ce titre à la communauté DROP !',
-                      false
-                    );
-                    setRecommendNote('');
-                    setActiveModal('MINI');
-                    setHubTab('RECOS');
-                    showToast(
-                      'Recommandation publiée dans le Fil Commun DROP !',
-                      'bg-amber-400'
-                    );
-                  }}
-                  className="py-3 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs transition shadow-[0_0_16px_rgba(251,191,36,0.35)]"
-                >
-                  Publier dans le Fil DROP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveModal('MINI');
-                    setHubTab('RECOS');
-                  }}
-                  className="py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs transition"
-                >
-                  Voir le Fil Commun ({communityRecommendations.length})
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 1. Modale : Ajouter à une Playlist (Synchronisée avec Mon Profil) */}
-        {activeModal === 'PLAYLIST' && (
-          <div
-            onClick={() => setActiveModal('NONE')}
-            className="absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex flex-col justify-end p-4"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl animate-fade-in"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    Ajouter à mes playlists
-                  </h2>
-                  <p className="text-xs text-zinc-400">
-                    Retrouvez et gérez toutes vos playlists dans Mon Profil
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('NONE')}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
-                  aria-label="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                {playlists.map((pl) => {
-                  const isAdded = pl.trackIds.includes(currentTrack.id);
-                  return (
-                    <button
-                      key={pl.id}
-                      type="button"
-                      onClick={() =>
-                        handleToggleTrackInPlaylist(pl.id, currentTrack.id)
-                      }
-                      className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-9 h-9 rounded-xl border border-white/15 flex items-center justify-center shrink-0 text-white font-bold text-xs"
-                          style={{
-                            backgroundColor: pl.colorTheme || '#e11d38',
-                          }}
-                        >
-                          {pl.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">
-                            {pl.name}
-                          </p>
-                          <p className="text-xs text-zinc-400">
-                            {pl.trackIds.length} titre
-                            {pl.trackIds.length > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                          isAdded
-                            ? 'bg-amber-400 text-black'
-                            : 'border border-white/30 text-white'
-                        }`}
-                      >
-                        {isAdded ? (
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        ) : (
-                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="pt-1 flex gap-2">
-                <input
-                  type="text"
-                  value={newPlaylistInput}
-                  onChange={(e) => setNewPlaylistInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newPlaylistInput.trim()) {
-                      handleCreatePlaylist(
-                        newPlaylistInput.trim(),
-                        '#e11d38',
-                        currentTrack.id
-                      );
-                      setNewPlaylistInput('');
-                    }
-                  }}
-                  placeholder="Créer une nouvelle playlist..."
-                  className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const val = newPlaylistInput.trim();
-                    if (!val) return;
-                    handleCreatePlaylist(val, '#e11d38', currentTrack.id);
-                    setNewPlaylistInput('');
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs transition shrink-0"
-                >
-                  Créer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 2. Modale : Égaliseur 5 Bandes Haute Précision */}
-        {activeModal === 'EQ' && isPro && (
-          <div
-            onClick={() => setActiveModal('NONE')}
-            className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex flex-col justify-end p-3.5 sm:p-4"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-4 sm:p-5 space-y-3.5 shadow-2xl max-h-[90dvh] overflow-y-auto animate-fade-in"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    Égaliseur 5 Bandes &amp; Gain
-                  </h2>
-                  <p className="text-[11px] text-zinc-400">
-                    Traitement fréquentiel temps réel au demi-décibel (0.5 dB)
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onResetEq();
-                      showToast('Égaliseur remis à plat (0 dB)');
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[11px] font-semibold text-amber-300 transition"
-                  >
-                    Plat (0 dB)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveModal('NONE')}
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
-                    aria-label="Fermer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2.5">
-                <div className="min-w-0 flex-1">
-                  <span className="text-[11px] font-bold text-emerald-300 block">
-                    Normalisation Automatique -14,0 LUFS Active
-                  </span>
-                  <span className="text-[10px] text-zinc-300 block truncate">
-                    Volume uniforme garanti sur toutes les chansons
-                  </span>
-                </div>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 font-mono text-[10px] font-bold shrink-0">
-                  -14.0 LUFS Constant
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-zinc-400 block">
-                  Préréglages Audio
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {EQ_PRESETS.map((preset) => {
-                    const isSelected = activePresetId === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => {
-                          onApplyEqPreset(preset.gains);
-                          showToast(`Préréglage : ${preset.name}`);
-                        }}
-                        className={`px-1.5 py-2 rounded-xl border text-center transition ${
-                          isSelected
-                            ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold shadow-[0_0_15px_rgba(251,191,36,0.2)]'
-                            : 'bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 font-medium'
-                        }`}
-                      >
-                        <span className="text-[10.5px] sm:text-xs block leading-tight truncate">
-                          {preset.name}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-black/55 border border-white/10 space-y-3">
-                <div className="relative h-20 w-full">
-                  <svg
-                    viewBox="0 0 280 88"
-                    className="w-full h-full overflow-visible"
-                  >
-                    <line
-                      x1="12"
-                      y1="44"
-                      x2="268"
-                      y2="44"
-                      stroke="rgba(255,255,255,0.14)"
-                      strokeDasharray="3 3"
-                      strokeWidth="1"
-                    />
-                    <polyline
-                      fill="none"
-                      stroke="#fbbf24"
-                      strokeWidth="2.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      points={eqCurvePoints}
-                    />
-                    {eqGains.map((gain, i) => {
-                      const cx = 24 + i * 58;
-                      const cy = 44 - (gain / 12) * 32;
-                      const isBandActive = selectedBandIdx === i;
-                      return (
-                        <g
-                          key={EQ_BANDS_META[i].freq}
-                          onClick={() => setSelectedBandIdx(i)}
-                          className="cursor-pointer"
-                        >
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={isBandActive ? 8 : 5.5}
-                            fill={isBandActive ? '#fbbf24' : '#18181b'}
-                            stroke="#ffffff"
-                            strokeWidth={isBandActive ? 2.5 : 1.8}
-                          />
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                <div className="grid grid-cols-5 gap-1.5">
-                  {EQ_BANDS_META.map((band, idx) => {
-                    const gain = eqGains[idx] ?? 0;
-                    const isSelected = selectedBandIdx === idx;
-                    return (
-                      <button
-                        key={band.freq}
-                        type="button"
-                        onClick={() => setSelectedBandIdx(idx)}
-                        className={`min-h-[54px] py-2 px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition ${
-                          isSelected
-                            ? 'bg-amber-400 text-black border-amber-300 font-bold shadow-[0_0_16px_rgba(251,191,36,0.4)]'
-                            : 'bg-white/[0.06] text-white border-white/10 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold">
-                          {band.freq}
-                        </span>
-                        <span
-                          className={`text-[10px] font-mono ${
-                            isSelected
-                              ? 'text-black/85 font-extrabold'
-                              : 'text-amber-300'
-                          }`}
-                        >
-                          {gain > 0 ? `+${gain}` : gain}dB
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {(() => {
-                  const activeBand = EQ_BANDS_META[selectedBandIdx];
-                  const activeGain = eqGains[selectedBandIdx] ?? 0;
-                  return (
-                    <div className="pt-2 border-t border-white/10 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">
-                          Bande active :{' '}
-                          <span className="text-amber-400">
-                            {activeBand.freq} ({activeBand.label})
-                          </span>
-                        </span>
-                        <span className="font-mono text-sm font-extrabold text-amber-400">
-                          {activeGain > 0 ? `+${activeGain}` : activeGain} dB
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => stepSelectedBandGain(-0.5)}
-                          className="min-w-[64px] min-h-[46px] px-3 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-white font-mono text-xs font-bold flex items-center justify-center transition"
-                        >
-                          -0.5 dB
-                        </button>
-
-                        <input
-                          type="range"
-                          min={-12}
-                          max={12}
-                          step={0.5}
-                          value={activeGain}
-                          onInput={(e) =>
-                            onChangeEqBand(
-                              selectedBandIdx,
-                              parseFloat(e.currentTarget.value)
-                            )
-                          }
-                          onChange={(e) =>
-                            onChangeEqBand(
-                              selectedBandIdx,
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          className="flex-1 fat-slider cursor-pointer"
-                          aria-label={`Gain ${activeBand.freq}`}
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() => stepSelectedBandGain(0.5)}
-                          className="min-w-[64px] min-h-[46px] px-3 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 active:scale-95 border border-amber-400/40 text-amber-300 font-mono text-xs font-bold flex items-center justify-center transition"
-                        >
-                          +0.5 dB
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-200 font-semibold">
-                    Volume Master Temps Réel
-                  </span>
-                  <span className="font-mono text-amber-400 font-bold">
-                    {Math.round(masterVolume)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={masterVolume}
-                  onInput={handleVolumeInput}
-                  onChange={handleVolumeInput}
-                  className="w-full fat-slider cursor-pointer"
-                  aria-label="Volume Master"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 3. Modale : File d'attente / Catalogue DROP */}
-        {activeModal === 'QUEUE' && (
-          <div
-            onClick={() => setActiveModal('NONE')}
-            className="absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex flex-col justify-end p-4"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl animate-fade-in"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <DropOfficialLogo className="h-3.5 w-auto" />
-                  <span className="text-xs text-zinc-400 font-medium">
-                    • File de lecture
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('NONE')}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
-                  aria-label="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {catalogue.map((alb, aIdx) =>
-                  alb.tracks.map((t, tIdx) => {
-                    const isCurrent = aIdx === albumIdx && tIdx === trackIdx;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => {
-                          handlePlayOrToggleSpecificTrack(aIdx, tIdx);
-                          setActiveModal('NONE');
-                        }}
-                        className={`w-full flex items-center gap-3 p-2.5 rounded-2xl border transition text-left ${
-                          isCurrent
-                            ? 'bg-white/15 border-amber-400/50'
-                            : 'bg-white/5 border-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0">
-                          <CoverArtwork
-                            artworkType={t.artworkType}
-                            coverUrl={t.cover}
-                            title={t.title}
-                            artist={t.artist}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">
-                            {t.title}
-                          </p>
-                          <p className="text-xs text-zinc-400 truncate">
-                            {t.artist}
-                            {t.featuringArtists && t.featuringArtists.length > 0
-                              ? ` feat. ${t.featuringArtists.join(', ')}`
-                              : ''}{' '}
-                            •{' '}
-                            {formatCompactPlays(
-                              t.realPlays,
-                              t.displayPlaysFormatted
-                            )}{' '}
-                            écoutes
-                          </p>
-                        </div>
-                        <span className="text-xs font-medium text-amber-400">
-                          {isCurrent
-                            ? isPlaying
-                              ? 'En écoute'
-                              : 'En pause'
-                            : formatTime(t.duration)}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. Modale : Options Audio Temps Réel, Forfait Basic/Pro & Accès Studio Admin */}
-        {activeModal === 'OPTIONS' && (
-          <div
-            onClick={() => setActiveModal('NONE')}
-            className="absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex flex-col justify-end p-4"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl max-h-[88dvh] overflow-y-auto animate-fade-in"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-white">
-                  Contrôles Audio &amp; Compte
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('NONE')}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
-                  aria-label="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-white block">
-                    Niveau de Compte DROP
-                  </span>
-                  <span className="text-[11px] text-zinc-400">
-                    {isPro
-                      ? 'DROP Pro actif (Toutes les données analytiques débloquées)'
-                      : 'Compte Basic (Fonctions Pro grisées)'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleUserPlan();
-                    showToast(
-                      !isPro
-                        ? 'Compte passé en DROP Pro'
-                        : 'Compte passé en DROP Basic',
-                      !isPro ? 'bg-amber-400' : 'bg-zinc-400'
-                    );
-                  }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 ${
-                    isPro
-                      ? 'bg-amber-400 text-black shadow-[0_0_16px_rgba(251,191,36,0.35)]'
-                      : 'bg-white/10 text-white border border-white/20 hover:bg-white/15'
-                  }`}
-                >
-                  {isPro ? 'PRO Actif' : 'Passer en PRO'}
-                </button>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-200 font-semibold">
-                    Volume Master Temps Réel
-                  </span>
-                  <span className="font-mono text-amber-400 font-bold">
-                    {Math.round(masterVolume)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={masterVolume}
-                  onInput={handleVolumeInput}
-                  onChange={handleVolumeInput}
-                  className="w-full fat-slider cursor-pointer"
-                  aria-label="Volume Master"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isPro) {
-                      notifyProRequired('Fiche détaillée du titre');
-                      return;
-                    }
-                    setActiveModal('NONE');
-                    openUserTrackSheet(currentTrack.id);
-                  }}
-                  className={`relative p-3 rounded-2xl border text-xs font-semibold text-center transition ${
-                    isPro
-                      ? 'bg-white/5 hover:bg-white/10 border-white/15 text-white'
-                      : 'bg-white/5 border-white/10 text-zinc-400 opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <span>Fiche Titre</span>
-                  {!isPro && <ProLockBadgeSvg />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isPro) {
-                      notifyProRequired('Profil Artiste');
-                      return;
-                    }
-                    setActiveModal('NONE');
-                    openUserEntitySheet(currentTrack.artist, 'ARTIST');
-                  }}
-                  className={`relative p-3 rounded-2xl border text-xs font-semibold text-center transition ${
-                    isPro
-                      ? 'bg-white/5 hover:bg-white/10 border-white/15 text-white'
-                      : 'bg-white/5 border-white/10 text-zinc-400 opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <span>Profil Artiste</span>
-                  {!isPro && <ProLockBadgeSvg />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isPro) {
-                      notifyProRequired('Profil Parolier');
-                      return;
-                    }
-                    setActiveModal('NONE');
-                    openUserEntitySheet(currentLyricist, 'LYRICIST');
-                  }}
-                  className={`relative p-3 rounded-2xl border text-xs font-semibold text-center transition ${
-                    isPro
-                      ? 'bg-white/5 hover:bg-white/10 border-white/15 text-white'
-                      : 'bg-white/5 border-white/10 text-zinc-400 opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <span>Parolier</span>
-                  {!isPro && <ProLockBadgeSvg />}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('NONE');
-                  onOpenAdminStudio();
-                }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 font-semibold text-sm transition"
-              >
-                <span>Studio Admin (Catalogue, Featuring, Paroliers &amp; DRM)</span>
-                <span className="text-xs">Ouvrir →</span>
-              </button>
-            </div>
-          </div>
-        )}
-
+        <OptionsMenuModal
+          isOpen={activeModal === 'OPTIONS'}
+          isPro={isPro}
+          masterVolume={masterVolume}
+          currentTrackId={currentTrack.id}
+          currentArtist={currentTrack.artist}
+          currentLyricist={currentLyricist}
+          onClose={() => setActiveModal('NONE')}
+          onToggleUserPlan={onToggleUserPlan}
+          onChangeMasterVolume={onChangeMasterVolume}
+          onOpenTrackSheet={openUserTrackSheet}
+          onOpenArtistProfile={(art) => openUserEntitySheet(art, 'ARTIST')}
+          onOpenLyricistProfile={(lyr) => openUserEntitySheet(lyr, 'LYRICIST')}
+          onOpenAdminStudio={onOpenAdminStudio}
+          onNotifyProRequired={notifyProRequired}
+          onToast={showToast}
+        />
         {/* =================================================================== */}
         {/* 5. ÉCRAN "CENTRAL" AÉRÉ AVEC ACTIONS RAPIDES EN HAUT & MENU BAS FIXE */}
         {/* =================================================================== */}
