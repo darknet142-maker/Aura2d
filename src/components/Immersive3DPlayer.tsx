@@ -1948,7 +1948,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             {/* En-tête de l'écran "Central" épuré (Sans le bouton Répertoire) */}
             <div className="flex items-center justify-between gap-2 shrink-0 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 min-w-0">
-                <DropOfficialLogo className="h-3.5 w-auto shrink-0" />
+                <DropOfficialLogo className="h-[18px] w-auto shrink-0 max-w-[90px]" />
                 <span className="text-sm sm:text-base font-extrabold text-white tracking-tight truncate">
                   Central
                 </span>

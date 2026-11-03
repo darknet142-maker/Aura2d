@@ -11,3 +11,4 @@ export const ProLockBadgeSvg: React.FC = () => {
     </span>
   );
 };
+

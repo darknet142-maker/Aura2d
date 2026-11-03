@@ -132,3 +132,4 @@ export const PlayerPlaybackDock: React.FC<PlayerPlaybackDockProps> = ({
     </section>
   );
 };
+

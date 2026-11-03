@@ -242,3 +242,4 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
     </section>
   );
 };
+

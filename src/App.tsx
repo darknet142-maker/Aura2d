@@ -4880,7 +4880,7 @@ export function App() {
               className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
               title="Retour au lecteur DROP"
             >
-              <DropOfficialLogo className="h-4 w-auto" />
+              <DropOfficialLogo className="h-[18px] sm:h-[20px] w-auto max-w-[110px]" />
             </button>
 
             {isPlaying && (
@@ -4974,7 +4974,7 @@ export function App() {
           <div className="w-full max-w-sm bg-[#0E1118] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <DropOfficialLogo className="h-4 w-auto mb-1.5" />
+                <DropOfficialLogo className="h-[22px] w-auto max-w-[125px] mb-1.5" />
                 <h1 className="text-lg font-bold tracking-tight truncate">
                   {authMode === 'LOGIN' ? 'Connexion' : 'Inscription'}
                 </h1>

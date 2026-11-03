@@ -124,3 +124,4 @@ export const PlayerLyricsPanel: React.FC<PlayerLyricsPanelProps> = ({
     </div>
   );
 };
+

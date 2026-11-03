@@ -39,7 +39,7 @@ export const QueueModal: React.FC<QueueModalProps> = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <DropOfficialLogo className="h-3.5 w-auto" />
+            <DropOfficialLogo className="h-[18px] w-auto max-w-[90px]" />
             <span className="text-xs text-zinc-400 font-medium">• File de lecture</span>
           </div>
           <button

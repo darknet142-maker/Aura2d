@@ -72,10 +72,10 @@ const CANVAS_H = 1920;
 
 const OFFICIAL_DROP_LOGO_SRC = '/drop-logo.webp';
 
-// Dimensions réduites du logo officiel DROP sur le canvas 1080×1920 (plus discret + opacité à 31%)
-const DROP_LOGO_W = 188;
+// Dimensions du logo officiel écrit DROP sur le canvas 1080×1920 (ratio 5:1 préservé)
+const DROP_LOGO_W = 220;
 const DROP_LOGO_H = 44;
-const DROP_LOGO_OPACITY = 0.31;
+const DROP_LOGO_OPACITY = 0.35;
 
 // Dimensions et position du QR Code dynamique permettant de scanner vers la chanson sur Drop
 const QR_SIZE = 164;
