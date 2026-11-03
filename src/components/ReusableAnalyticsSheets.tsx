@@ -1,6 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  X,
+  Check,
+  Plus,
+  Share2,
+  Heart,
+  UserPlus,
+  UserCheck,
+  ArrowDownToLine,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+} from 'lucide-react';
+import {
   CoverArtwork,
   ArtworkType,
   RankMedalSvg,
@@ -211,6 +229,8 @@ export const AutoMarqueeText: React.FC<{
           className="inline-flex items-center whitespace-nowrap will-change-transform"
           style={{
             animation: `dropMarqueeLoop ${speedSec}s linear infinite`,
+            maskImage: 'linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)',
           }}
         >
           <span className="pr-8">{text}</span>
@@ -224,8 +244,8 @@ export const AutoMarqueeText: React.FC<{
 
       <style>{`
         @keyframes dropMarqueeLoop {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
+          0%, 25% { transform: translateX(0%); }
+          75%, 100% { transform: translateX(-50%); }
         }
       `}</style>
     </div>
@@ -656,7 +676,7 @@ export const CertificationBadgeSvg: React.FC<{
                   className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-zinc-300 hover:text-white transition"
                   aria-label="Fermer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -694,8 +714,9 @@ export const CertificationBadgeSvg: React.FC<{
                     <span className="text-[10px] text-zinc-400 block">
                       Statut de vérification
                     </span>
-                    <span className="text-xs font-bold text-emerald-400 mt-0.5 block">
-                      Vérifié &amp; Authentifié ✓
+                    <span className="text-xs font-bold text-emerald-400 mt-0.5 flex items-center gap-1">
+                      <span>Vérifié &amp; Authentifié</span>
+                      <Check className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
@@ -934,9 +955,7 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
             className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 active:scale-90 transition"
             aria-label="Titre précédent"
           >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-            </svg>
+            <SkipBack className="w-4 h-4 fill-current" />
           </button>
 
           <button
@@ -955,13 +974,9 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
             }
           >
             {isFullPlayActive ? (
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-              </svg>
+              <Pause className="w-4 h-4 fill-current" />
             ) : (
-              <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
-                <path d="M8 5.14v14l11-7-11-7z" />
-              </svg>
+              <Play className="w-4 h-4 fill-current ml-0.5" />
             )}
           </button>
 
@@ -971,9 +986,7 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
             className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 active:scale-90 transition"
             aria-label="Titre suivant"
           >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-            </svg>
+            <SkipForward className="w-4 h-4 fill-current" />
           </button>
         </div>
       </div>
@@ -1133,9 +1146,10 @@ export const ReusableTrackDetailSheet: React.FC<
               onConfirmCreditHandshake(track.id, roleKey);
             }
           }}
-          className="px-1.5 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-300 text-[9.5px] font-mono font-bold transition"
+          className="px-2 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-300 text-[9.5px] font-mono font-bold transition inline-flex items-center gap-1"
         >
-          Valider ✓
+          <span>Valider</span>
+          <Check className="w-2.5 h-2.5" />
         </button>
       );
     }
@@ -2782,8 +2796,9 @@ export const ReusableUserProfileSheet: React.FC<
                           }}
                           className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg hover:scale-105 transition"
                           title={`Lire ${pl.name}`}
+                          aria-label={`Lire la playlist ${pl.name}`}
                         >
-                          ▶
+                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                         </button>
                       )}
                     </div>
@@ -2793,8 +2808,12 @@ export const ReusableUserProfileSheet: React.FC<
                       <h4 className="text-sm sm:text-base font-extrabold text-white leading-tight line-clamp-2 drop-shadow">
                         {pl.name}
                       </h4>
-                      <span className="text-[10px] text-white/75 mt-0.5 block">
-                        {isExpanded ? 'Masquer les titres ▲' : 'Ouvrir la playlist ▼'}
+                      <span className="text-[10px] text-white/75 mt-0.5 flex items-center gap-1">
+                        {isExpanded ? (
+                          <>Masquer les titres <ChevronUp className="w-3 h-3" /></>
+                        ) : (
+                          <>Ouvrir la playlist <ChevronDown className="w-3 h-3" /></>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -2899,13 +2918,23 @@ export const ReusableUserProfileSheet: React.FC<
                                 </div>
                               </div>
                               <span
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 ${
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 flex items-center gap-1 ${
                                   inPlaylist
                                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                     : 'bg-white/10 text-white'
                                 }`}
                               >
-                                {inPlaylist ? 'Ajouté ✓' : '+ Ajouter'}
+                                {inPlaylist ? (
+                                  <>
+                                    <Check className="w-3 h-3" />
+                                    <span>Ajouté</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3 h-3" />
+                                    <span>Ajouter</span>
+                                  </>
+                                )}
                               </span>
                             </button>
                           );
@@ -2940,7 +2969,11 @@ export const ReusableUserProfileSheet: React.FC<
                                     artist={t.artist}
                                   />
                                   <span className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs">
-                                    {isThisPlaying ? '❚❚' : '▶'}
+                                    {isThisPlaying ? (
+                                      <Pause className="w-3.5 h-3.5 fill-current" />
+                                    ) : (
+                                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                    )}
                                   </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -3065,7 +3098,11 @@ export const ReusableUserProfileSheet: React.FC<
                               artist={t.artist}
                             />
                             <span className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs">
-                              {isThisPlaying ? '❚❚' : '▶'}
+                              {isThisPlaying ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              )}
                             </span>
                           </div>
                           <div className="min-w-0 flex-1">

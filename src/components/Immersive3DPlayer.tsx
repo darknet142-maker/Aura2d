@@ -1,5 +1,47 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ChevronLeft,
+  Bell,
+  Ellipsis,
+  Share2,
+  Heart,
+  UserPlus,
+  UserCheck,
+  ListPlus,
+  MicVocal,
+  Video,
+  SlidersHorizontal,
+  ArrowDownToLine,
+  Check,
+  X,
+  Search,
+  Compass,
+  ChartNoAxesColumn,
+  MessageCircle,
+  UserRound,
+  Trophy,
+  Lock,
+  Plus,
+  Minus,
+  Maximize2,
+  Minimize2,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  Sparkles,
+  Flame,
+  Radio,
+  Download,
+} from 'lucide-react';
+import {
   CoverArtwork,
   ArtworkType,
   DropOfficialLogo,
@@ -582,16 +624,7 @@ function ProLockBadgeSvg() {
       className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-900/95 border border-white/25 flex items-center justify-center text-amber-400 shadow"
       title="Réservé aux comptes DROP Pro"
     >
-      <svg
-        className="w-2.5 h-2.5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-      >
-        <rect x="4" y="11" width="16" height="10" rx="2" />
-        <path d="M8 11V7a4 4 0 018 0v4" />
-      </svg>
+      <Lock className="w-2.5 h-2.5 stroke-[2.5]" />
     </span>
   );
 }
@@ -1692,19 +1725,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
         className="hidden sm:flex fixed top-4 right-4 z-50 items-center gap-2 px-3.5 py-2 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-xs font-medium text-zinc-200 border border-white/15 backdrop-blur-md shadow-xl transition-all"
         title="Basculer l'affichage plein écran"
       >
-        <svg
-          className="w-4 h-4 text-amber-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-          />
-        </svg>
+        {fullBleed ? (
+          <Minimize2 className="w-4 h-4 text-amber-400" />
+        ) : (
+          <Maximize2 className="w-4 h-4 text-amber-400" />
+        )}
         <span>{fullBleed ? 'Format Mobile 9:16' : 'Étendre Plein Écran'}</span>
       </button>
 
@@ -1734,19 +1759,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             aria-label="Ouvrir Central"
             title="Central"
           >
-            <svg
-              className="w-5 h-5 sm:w-6 sm:h-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            <ChevronDown className="w-6 h-6 stroke-[2.2]" />
           </button>
 
           {/* Logo Officiel DROP Fixe au centre de l'en-tête */}
@@ -1770,19 +1783,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 aria-label="Notifications"
                 title="Notifications"
               >
-                <svg
-                  className="w-4.5 h-4.5 sm:w-5 sm:h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
+                <Bell className="w-5 h-5 stroke-[2]" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#e11d38] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow">
                     {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
@@ -1796,15 +1797,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
               className="w-10 h-10 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition"
               aria-label="Options et Paramètres"
             >
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="5" cy="12" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="19" cy="12" r="2" />
-              </svg>
+              <Ellipsis className="w-5 h-5" />
             </button>
           </div>
         </header>
@@ -1937,16 +1930,17 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     <span className="font-semibold text-white underline decoration-white/30">
                       {currentLyricist}
                     </span>
-                    <span>→</span>
+                    <ChevronRight className="w-3 h-3 text-zinc-400" />
                   </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setLyricsOpen(false)}
-                  className="text-xs text-zinc-300 hover:text-white px-2.5 py-1 rounded-lg bg-white/10 shrink-0"
+                  aria-label="Fermer les paroles"
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white flex items-center justify-center shrink-0 transition"
                 >
-                  Fermer
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -1987,10 +1981,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                             'bg-violet-400'
                           );
                         }}
-                        className="px-2 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/35 border border-violet-400/40 text-violet-200 text-[10px] font-mono font-bold shrink-0 transition"
+                        className="px-2.5 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/35 border border-violet-400/40 text-violet-200 text-[10px] font-mono font-bold shrink-0 transition flex items-center gap-1 active:scale-95"
                         title="Partager cet extrait dans le fil commun DROP et valoriser le parolier"
                       >
-                        Extrait ↗
+                        <span>Extrait</span>
+                        <Share2 className="w-2.5 h-2.5 text-violet-300" />
                       </button>
                     </div>
                   );
@@ -1999,8 +1994,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
 
               <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
                 <span>
-                  Touchez une phrase pour synchroniser ou « Extrait ↗ » pour
-                  partager
+                  Touchez une phrase pour synchroniser ou « Extrait » pour partager
                 </span>
                 <span className="font-mono text-zinc-300">
                   {formatTime(currentTime)}
@@ -2080,10 +2074,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                       !currentArtistSubscribed ? 'bg-emerald-400' : 'bg-zinc-400'
                     );
                   }}
-                  className={`w-7 h-7 sm:w-auto sm:h-auto sm:px-2.5 sm:py-0.5 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center justify-center gap-1 ${
+                  className={`w-7 h-7 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center justify-center ${
                     currentArtistSubscribed
                       ? 'bg-emerald-500/20 border-emerald-500/45 text-emerald-300'
-                      : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
+                      : 'bg-white/10 hover:bg-white/20 border-white/20 text-white active:scale-95'
                   }`}
                   aria-label={
                     currentArtistSubscribed
@@ -2097,34 +2091,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   }
                 >
                   {currentArtistSubscribed ? (
-                    <svg
-                      className="w-3.5 h-3.5 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.4"
-                    >
-                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                      <circle cx="8.5" cy="7" r="4" />
-                      <polyline points="17 11 19 13 23 9" />
-                    </svg>
+                    <UserCheck className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
                   ) : (
-                    <svg
-                      className="w-3.5 h-3.5 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.4"
-                    >
-                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                      <circle cx="8.5" cy="7" r="4" />
-                      <line x1="20" y1="8" x2="20" y2="14" />
-                      <line x1="23" y1="11" x2="17" y2="11" />
-                    </svg>
+                    <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
                   )}
-                  <span className="hidden sm:inline">
-                    {currentArtistSubscribed ? 'Abonné' : 'S’abonner'}
-                  </span>
                 </button>
               </div>
             </div>
@@ -2153,7 +2123,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   className="h-10 px-2.5 sm:px-3 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 flex items-center gap-1.5 active:scale-90 transition shadow-[0_0_14px_rgba(6,182,212,0.28)]"
                   title="Télécharger cette instrumentale / Beat (WAV Studio)"
                 >
-                  <span className="text-xs">⬇</span>
+                  <ArrowDownToLine className="w-3.5 h-3.5 stroke-[2.2]" />
                   <span className="text-[11px] font-extrabold tracking-tight">
                     Beat
                   </span>
@@ -2171,19 +2141,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 aria-label="Partager ou recommander ce titre"
                 title="Partager en vidéo Trend 30s ou recommander dans le Fil DROP"
               >
-                <svg
-                  className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.1"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"
-                  />
-                </svg>
+                <Share2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.1]" />
                 <span className="text-xs font-mono font-bold">
                   {formatCompactPlays(currentRecsCount)}
                 </span>
@@ -2204,26 +2162,16 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 className="w-10 h-10 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 flex items-center justify-center active:scale-90 transition relative shrink-0"
                 aria-label="Ajouter aux favoris"
               >
-                <svg
+                <Heart
                   key={heartAnimKey}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-all ${
                     heartAnimKey > 0 ? 'heart-animate' : ''
                   } ${
                     isCurrentLiked
-                      ? 'text-[#ef233c] drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]'
-                      : 'text-zinc-300'
+                      ? 'text-[#ef233c] fill-[#ef233c] drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]'
+                      : 'text-zinc-300 stroke-[2]'
                   }`}
-                  fill={isCurrentLiked ? 'currentColor' : 'none'}
-                  stroke="currentColor"
-                  strokeWidth="1.9"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  />
-                </svg>
+                />
               </button>
             </div>
           </div>
@@ -2244,21 +2192,14 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     safeRankInfo.delta > 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'
                   }`}
                 >
-                  {safeRankInfo.delta > 0 ? (
-                    <svg
-                      className="w-2.5 h-2.5 fill-current"
-                      viewBox="0 0 12 12"
-                    >
-                      <path d="M6 2L11 10H1L6 2Z" />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-2.5 h-2.5 fill-current"
-                      viewBox="0 0 12 12"
-                    >
-                      <path d="M6 10L1 2H11L6 10Z" />
-                    </svg>
-                  )}
+                  <svg
+                    className={`w-2.5 h-2.5 fill-current ${
+                      safeRankInfo.delta < 0 ? 'rotate-180' : ''
+                    }`}
+                    viewBox="0 0 12 12"
+                  >
+                    <path d="M6 2L11 10H1L6 2Z" />
+                  </svg>
                   <span>
                     {safeRankInfo.delta > 0
                       ? `+${safeRankInfo.delta}`
@@ -2274,12 +2215,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 text-zinc-300/90 shrink-0">
-              <svg
-                className="w-3.5 h-3.5 text-white fill-current"
-                viewBox="0 0 24 24"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
+              <Play className="w-3.5 h-3.5 text-white fill-current" />
               <span className="font-bold text-white">
                 {formatCompactPlays(
                   currentTrack.realPlays,
@@ -2349,19 +2285,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 }`}
                 aria-label="Lecture aléatoire"
               >
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"
-                  />
-                </svg>
+                <Shuffle className="w-5 h-5 stroke-[2]" />
                 {isShuffle && (
                   <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
                 )}
@@ -2373,12 +2297,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
                 aria-label="Titre précédent"
               >
-                <svg
-                  className="w-6 h-6 sm:w-7 sm:h-7 fill-current"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-                </svg>
+                <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
               </button>
 
               {/* Le bouton Play ne s'active JAMAIS seul pendant le Drop : il affiche Play (▶) tant que l'utilisateur n'a pas cliqué pour lancer la lecture complète depuis 0:00 */}
@@ -2398,19 +2317,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 }
               >
                 {isPlaying && !isDropMode ? (
-                  <svg
-                    className="w-7 h-7 sm:w-8 sm:h-8 text-white fill-current"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  </svg>
+                  <Pause className="w-7 h-7 sm:w-8 sm:h-8 fill-current" />
                 ) : (
-                  <svg
-                    className="w-7 h-7 sm:w-8 sm:h-8 text-white fill-current ml-1"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 5.14v14l11-7-11-7z" />
-                  </svg>
+                  <Play className="w-7 h-7 sm:w-8 sm:h-8 fill-current ml-0.5" />
                 )}
               </button>
 
@@ -2420,12 +2329,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white hover:text-amber-200 active:scale-90 transition"
                 aria-label="Titre suivant"
               >
-                <svg
-                  className="w-6 h-6 sm:w-7 sm:h-7 fill-current"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                </svg>
+                <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
               </button>
 
               <button
@@ -2443,33 +2347,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 }`}
                 aria-label="Mode répétition"
               >
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 1l4 4-4 4"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 13v2a4 4 0 01-4 4H3"
-                  />
-                </svg>
-                {repeatMode === 2 && (
-                  <span className="flex absolute -top-0.5 right-1 text-[9px] font-extrabold bg-amber-400 text-black rounded-full w-3.5 h-3.5 items-center justify-center">
-                    1
-                  </span>
+                {repeatMode === 2 ? (
+                  <Repeat1 className="w-5 h-5 stroke-[2]" />
+                ) : (
+                  <Repeat className="w-5 h-5 stroke-[2]" />
                 )}
                 {repeatMode > 0 && (
                   <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
@@ -2487,19 +2368,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 aria-label="Ajouter à une sélection"
                 title="Ajouter à une sélection"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h12M4 10h12M4 14h8M17 14v6M14 17h6"
-                  />
-                </svg>
+                <ListPlus className="w-5 h-5 stroke-[2]" />
               </button>
 
               {/* 2. Paroles Synchronisées & Score Parolier en Direct */}
@@ -2530,19 +2399,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     : 'Paroles synchronisées (Réservé DROP Pro)'
                 }
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10zM8 9h8M8 13h5"
-                  />
-                </svg>
+                <MicVocal className="w-5 h-5 stroke-[2]" />
                 {!isPro && <ProLockBadgeSvg />}
               </button>
 
@@ -2556,16 +2413,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 aria-label="Créer une vidéo Trend 30s sur le Drop"
                 title="Créer une vidéo Trend 30s (Verrouillée sur les 30s du Drop)"
               >
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.1"
-                >
-                  <rect x="2" y="5" width="14" height="14" rx="3" />
-                  <path d="M16 10l6-3.5v11L16 14v-4z" />
-                </svg>
+                <Video className="w-5 h-5 stroke-[2.1]" />
                 <span className="absolute -bottom-1 -right-1 px-1 py-[1px] rounded bg-[#e11d38] text-white text-[8px] font-mono font-extrabold leading-none border border-amber-300/60 shadow">
                   30s
                 </span>
@@ -2595,23 +2443,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     : 'Égaliseur 5 bandes (Réservé DROP Pro)'
                 }
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <line x1="4" y1="21" x2="4" y2="14" strokeLinecap="round" />
-                  <line x1="4" y1="10" x2="4" y2="3" strokeLinecap="round" />
-                  <line x1="12" y1="21" x2="12" y2="12" strokeLinecap="round" />
-                  <line x1="12" y1="8" x2="12" y2="3" strokeLinecap="round" />
-                  <line x1="20" y1="21" x2="20" y2="16" strokeLinecap="round" />
-                  <line x1="20" y1="12" x2="20" y2="3" strokeLinecap="round" />
-                  <circle cx="4" cy="12" r="2" />
-                  <circle cx="12" cy="10" r="2" />
-                  <circle cx="20" cy="14" r="2" />
-                </svg>
+                <SlidersHorizontal className="w-5 h-5 stroke-[2]" />
                 {!isPro && <ProLockBadgeSvg />}
               </button>
 
@@ -2647,24 +2479,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     : 'Écoute hors-ligne (Réservé DROP Pro)'
                 }
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4v11m0 0l-4-4m4 4l4-4"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
-                  />
-                </svg>
+                <ArrowDownToLine className="w-5 h-5 stroke-[2]" />
                 {!isPro ? (
                   <ProLockBadgeSvg />
                 ) : (
@@ -2710,9 +2525,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal('NONE')}
-                  className="w-8 h-8 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
+                  aria-label="Fermer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -2757,16 +2573,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 }}
                 className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#e11d38] via-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_10px_30px_rgba(225,29,56,0.4)] transition"
               >
-                <svg
-                  className="w-4 h-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                >
-                  <rect x="2" y="4" width="15" height="16" rx="3" />
-                  <path d="M17 9l5-3v12l-5-3V9z" />
-                </svg>
+                <Video className="w-4 h-4 shrink-0 stroke-[2.2]" />
                 <span>
                   Créer une Vidéo Trend (Drop {Math.min(30, currentTrack.dropDuration || 30)}s • Magazine Pop Star)
                 </span>
@@ -2831,10 +2638,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal('NONE')}
-                  className="w-8 h-8 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
                   aria-label="Fermer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
@@ -2875,7 +2682,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                             : 'border border-white/30 text-white'
                         }`}
                       >
-                        {isAdded ? '✓' : '+'}
+                        {isAdded ? (
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        ) : (
+                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        )}
                       </span>
                     </button>
                   );
@@ -2910,7 +2721,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   }}
                   className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs transition shrink-0"
                 >
-                  + Créer
+                  Créer
                 </button>
               </div>
             </div>
@@ -2950,21 +2761,21 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveModal('NONE')}
-                    className="w-8 h-8 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
                     aria-label="Fermer"
                   >
-                    ✕
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
-                <div className="min-w-0">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2.5">
+                <div className="min-w-0 flex-1">
                   <span className="text-[11px] font-bold text-emerald-300 block">
                     Normalisation Automatique -14,0 LUFS Active
                   </span>
-                  <span className="text-[10px] font-mono text-zinc-300 block truncate">
-                    Volume uniforme garanti sur toutes les chansons (Compensateur RMS + Limiteur Broadcast)
+                  <span className="text-[10px] text-zinc-300 block truncate">
+                    Volume uniforme garanti sur toutes les chansons
                   </span>
                 </div>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 font-mono text-[10px] font-bold shrink-0">
@@ -2987,13 +2798,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                           onApplyEqPreset(preset.gains);
                           showToast(`Préréglage : ${preset.name}`);
                         }}
-                        className={`px-2.5 py-2 rounded-xl border text-left transition ${
+                        className={`px-1.5 py-2 rounded-xl border text-center transition ${
                           isSelected
                             ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold shadow-[0_0_15px_rgba(251,191,36,0.2)]'
                             : 'bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 font-medium'
                         }`}
                       >
-                        <span className="text-xs block truncate">
+                        <span className="text-[10.5px] sm:text-xs block leading-tight truncate">
                           {preset.name}
                         </span>
                       </button>
@@ -3187,9 +2998,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal('NONE')}
-                  className="w-8 h-8 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
+                  aria-label="Fermer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -3268,9 +3080,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal('NONE')}
-                  className="w-8 h-8 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition active:scale-95"
+                  aria-label="Fermer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -3650,7 +3463,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   {instantSearchResults.beats.length > 0 && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 px-1 block">
-                        🎹 Beats &amp; Instrumentales ({instantSearchResults.beats.length})
+                        Beats &amp; Instrumentales ({instantSearchResults.beats.length})
                       </span>
                       {instantSearchResults.beats.map(
                         ({ track: t, albumIndex, trackIndex }) => {
@@ -3680,7 +3493,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     artist={t.artist}
                                   />
                                   <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
-                                    {isThisPlaying ? '❚❚' : '▶'}
+                                    {isThisPlaying ? (
+                                      <Pause className="w-4 h-4 fill-current" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    )}
                                   </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -3790,7 +3607,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     artist={t.artist}
                                   />
                                   <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
-                                    {isThisPlaying ? '❚❚' : '▶'}
+                                    {isThisPlaying ? (
+                                      <Pause className="w-4 h-4 fill-current" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    )}
                                   </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -4026,7 +3847,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           playsCount={t.realPlays}
                                         />
                                         <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
-                                          {isThisPlaying ? '❚❚' : '▶'}
+                                          {isThisPlaying ? (
+                                            <Pause className="w-4 h-4 fill-current" />
+                                          ) : (
+                                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                                          )}
                                         </span>
                                       </div>
                                       <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
@@ -4117,7 +3942,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           playsCount={t.realPlays}
                                         />
                                         <span className="w-9 h-9 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                                          {isThisPlaying ? '❚❚' : '▶'}
+                                          {isThisPlaying ? (
+                                            <Pause className="w-4 h-4 fill-current" />
+                                          ) : (
+                                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                                          )}
                                         </span>
                                       </div>
                                       <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
@@ -4213,7 +4042,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                         playsCount={albPlays}
                                       />
                                       <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
-                                        ▶
+                                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                                       </span>
                                     </div>
                                     <div className="absolute bottom-3 left-3 right-3">
@@ -4278,9 +4107,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     accentColor: '#f59e0b',
                                   })
                                 }
-                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-amber-400 hover:text-black text-[11px] font-bold text-amber-300 transition"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] text-xs font-semibold text-zinc-300 hover:text-white transition"
                               >
-                                + Voir plus
+                                <span>Tout voir</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
@@ -4373,7 +4203,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
                                     style={{ backgroundColor: catCard.color }}
                                   >
-                                    +
+                                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                                   </span>
                                   <div className="absolute bottom-3 left-3 right-3">
                                     <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
@@ -4431,7 +4261,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                       className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
                                       style={{ backgroundColor: gColor }}
                                     >
-                                      +
+                                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                                     </span>
                                     <div className="absolute bottom-3 left-3 right-3">
                                       <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
@@ -4459,9 +4289,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     accentColor: '#e11d38',
                                   })
                                 }
-                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-[#e11d38] hover:text-white text-[11px] font-bold text-rose-300 transition"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] text-xs font-semibold text-zinc-300 hover:text-white transition"
                               >
-                                + Voir plus
+                                <span>Tout voir</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
@@ -4519,7 +4350,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           playsCount={t.realPlays}
                                         />
                                         <span className="w-8 h-8 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                                          {isThisPlaying ? '❚❚' : '▶'}
+                                          {isThisPlaying ? (
+                                            <Pause className="w-4 h-4 fill-current" />
+                                          ) : (
+                                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                                          )}
                                         </span>
                                       </div>
 
@@ -4549,7 +4384,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                               <div className="flex items-center justify-between px-0.5">
                                 <div className="flex items-center gap-2">
                                   <h3 className="text-sm font-extrabold text-cyan-300 tracking-tight">
-                                    🎹 Beats &amp; Instrumentales
+                                    Beats &amp; Instrumentales
                                   </h3>
                                   <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[9px] font-mono font-bold">
                                     Téléchargement Direct
@@ -4602,7 +4437,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                               artist={t.artist}
                                             />
                                             <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white font-bold text-xs">
-                                              {isThisPlaying ? '❚❚' : '▶'}
+                                              {isThisPlaying ? (
+                                                <Pause className="w-4 h-4 fill-current" />
+                                              ) : (
+                                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                                              )}
                                             </span>
                                           </div>
                                           <div className="min-w-0 flex-1">
@@ -4684,9 +4523,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     accentColor: '#f59e0b',
                                   })
                                 }
-                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-amber-400 hover:text-black text-[11px] font-bold text-amber-300 transition"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] text-xs font-semibold text-zinc-300 hover:text-white transition"
                               >
-                                + Voir plus
+                                <span>Tout voir</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
@@ -4823,7 +4663,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                       }}
                                     />
                                     <span className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center text-xs font-bold shadow">
-                                      ▶
+                                      <Play className="w-3 h-3 fill-current ml-0.5" />
                                     </span>
                                     <div className="absolute bottom-3 left-3 right-3">
                                       <span className="text-sm font-extrabold text-white truncate block drop-shadow">
@@ -4855,9 +4695,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     accentColor: '#06b6d4',
                                   })
                                 }
-                                className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-cyan-400 hover:text-black text-[11px] font-bold text-cyan-300 transition"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] text-xs font-semibold text-zinc-300 hover:text-white transition"
                               >
-                                + Voir plus
+                                <span>Tout voir</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
@@ -4895,7 +4736,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                         playsCount={albPlays}
                                       />
                                       <span className="w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center text-xs font-bold shadow">
-                                        ▶
+                                        <Play className="w-3 h-3 fill-current ml-0.5" />
                                       </span>
                                     </div>
                                     <div className="absolute bottom-3 left-3 right-3">
@@ -5064,11 +4905,15 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           artist={t.artist}
                                         />
                                         <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white text-xs">
-                                          {isThisPlaying ? '❚❚' : '▶'}
+                                          {isThisPlaying ? (
+                                            <Pause className="w-3.5 h-3.5 fill-current" />
+                                          ) : (
+                                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                          )}
                                         </span>
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                        <div className="flex items-center gap-1.5 min-w-0">
                                           <p className="text-xs font-bold text-white truncate">
                                             {t.title}
                                           </p>
@@ -5077,8 +4922,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                             compact
                                           />
                                           {explosion.decayPenaltyPct > 0 && (
-                                            <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/35 text-rose-300 text-[9px] font-mono">
-                                              Usure Top 10 : -{explosion.decayPenaltyPct}%
+                                            <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/35 text-rose-300 text-[9px] font-mono shrink-0">
+                                              Usure : -{explosion.decayPenaltyPct}%
                                             </span>
                                           )}
                                         </div>
@@ -5088,14 +4933,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           t.featuringArtists.length > 0
                                             ? ` feat. ${t.featuringArtists.join(', ')}`
                                             : ''}{' '}
-                                          • {formatCompactPlays(t.realPlays)} ECG •
-                                          Vol:{explosion.volumeComponent} / Vél:{explosion.growthComponent} / Soc:{explosion.socialComponent}
+                                          • {formatCompactPlays(t.realPlays)} ECG
                                         </p>
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 font-mono text-[11px] font-bold">
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">
                                         {explosion.explosionScore} pts
                                       </span>
                                       <button
@@ -5104,9 +4948,11 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           e.stopPropagation();
                                           openUserTrackSheet(t.id);
                                         }}
-                                        className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border bg-amber-400/15 hover:bg-amber-400/25 border-amber-400/40 text-amber-300 transition"
+                                        className="w-7 h-7 rounded-lg text-zinc-400 hover:text-amber-300 hover:bg-white/10 flex items-center justify-center transition"
+                                        title="Ouvrir la fiche analytique"
+                                        aria-label={`Ouvrir la fiche analytique de ${t.title}`}
                                       >
-                                        Fiche →
+                                        <ChevronRight className="w-4 h-4" />
                                       </button>
                                     </div>
                                   </div>
@@ -5493,8 +5339,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                   Écoute Anonymisée de Packs de 3 Titres Normalisés à -14,0 LUFS
                                 </h3>
                               </div>
-                              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-mono text-[10.5px]">
-                                Conflit d&apos;intérêts : 0 détecté ✓
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-mono text-[10.5px]">
+                                <span>Conflit d&apos;intérêts : 0 détecté</span>
+                                <Check className="w-3.5 h-3.5" />
                               </span>
                             </div>
                             <p className="text-xs text-zinc-300">
@@ -5595,9 +5442,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                               }}
                                               className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-400/15 border border-white/10 text-xs transition"
                                             >
-                                              <span className="font-mono text-white font-semibold">
-                                                {isPlayingThis ? '❚❚' : '▶'}{' '}
-                                                {tp.slotLabel} ({tp.genre})
+                                              <span className="font-mono text-white font-semibold inline-flex items-center gap-1.5">
+                                                {isPlayingThis ? (
+                                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                                ) : (
+                                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                                )}
+                                                <span>{tp.slotLabel} ({tp.genre})</span>
                                               </span>
                                               <span className="text-[10px] font-mono text-cyan-300">
                                                 -14 LUFS
@@ -5866,8 +5717,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     </p>
                                   </div>
                                 </div>
-                                <span className="px-2.5 py-1 rounded-lg bg-[#e11d38] text-white text-[11px] font-bold shrink-0">
-                                  Écouter ▶
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#e11d38] text-white text-[11px] font-bold shrink-0">
+                                  <span>Écouter</span>
+                                  <Play className="w-3 h-3 fill-current ml-0.5" />
                                 </span>
                               </div>
                             </div>
@@ -6039,16 +5891,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
 
               {/* 2. Barre de Recherche Instantanée */}
               <div className="relative flex items-center">
-                <svg
-                  className="w-4 h-4 text-amber-400 absolute left-3.5 pointer-events-none"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <Search className="w-4 h-4 text-amber-400 absolute left-3.5 pointer-events-none stroke-[2.4]" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -6073,10 +5916,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                         setHubSearchQuery('');
                         searchInputRef.current?.focus();
                       }}
-                      className="w-6 h-6 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"
+                      className="w-6 h-6 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition"
                       aria-label="Effacer la recherche"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
@@ -6094,86 +5937,31 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     {
                       id: 'EXPLORER',
                       label: 'Explorer',
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <circle cx="12" cy="12" r="10" />
-                          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-                        </svg>
-                      ),
+                      icon: <Compass className="w-4 h-4 stroke-[2]" />,
                     },
                     {
                       id: 'RANGS',
                       label: 'Classements',
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <line x1="18" y1="20" x2="18" y2="10" />
-                          <line x1="12" y1="20" x2="12" y2="4" />
-                          <line x1="6" y1="20" x2="6" y2="14" />
-                        </svg>
-                      ),
+                      icon: <ChartNoAxesColumn className="w-4 h-4 stroke-[2]" />,
                     },
                     ...(enableAwardsCeremony
                       ? [
                           {
                             id: 'AWARDS' as const,
                             label: 'Awards',
-                            icon: (
-                              <svg
-                                className="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <circle cx="12" cy="8" r="6" />
-                                <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
-                              </svg>
-                            ),
+                            icon: <Trophy className="w-4 h-4 stroke-[2]" />,
                           },
                         ]
                       : []),
                     {
                       id: 'RECOS',
                       label: 'Fil Recos',
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-                        </svg>
-                      ),
+                      icon: <MessageCircle className="w-4 h-4 stroke-[2]" />,
                     },
                     {
                       id: 'PROFIL',
                       label: 'Mon Profil',
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                          <circle cx="12" cy="7" r="4" />
-                        </svg>
-                      ),
+                      icon: <UserRound className="w-4 h-4 stroke-[2]" />,
                     },
                   ] as const
                 ).map((item) => {

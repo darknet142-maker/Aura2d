@@ -1,4 +1,4 @@
-export type StreamActionType = 'play' | 'like' | 'unlike' | 'loop' | 'complete' | 'skip';
+﻿export type StreamActionType = 'play' | 'like' | 'unlike' | 'loop' | 'complete' | 'skip';
 
 export type GabonSubscriptionPass =
   | 'PASS_MENSUEL_HEBDO' // 1.0 ECG — Cap 5 écoutes/titre/24h — 3 votes/jour Awards

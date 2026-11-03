@@ -4,12 +4,27 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // CONFIGURATION SUPABASE & FALLBACK HYBRIDE LOCAL PERSISTANT
 // ============================================================================
 
-const ENV_SUPABASE_URL =
+// Identifiants Supabase par défaut pour déploiements Vercel & Environnements Cloud
+const DEFAULT_SUPABASE_URL = 'https://djjgozsaylesngxshxey.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqamdvenNheWxlc25neHNoeGV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NzMyODcsImV4cCI6MjEwOTE0OTI4N30.EBY4zazR4kkqnMBs7gV_dEFLSwiyYSVrpYfhP1ygni4';
+
+const rawEnvUrl =
   (import.meta as unknown as { env?: Record<string, string> }).env
     ?.VITE_SUPABASE_URL || '';
-const ENV_SUPABASE_ANON_KEY =
+const rawEnvKey =
   (import.meta as unknown as { env?: Record<string, string> }).env
     ?.VITE_SUPABASE_ANON_KEY || '';
+
+const ENV_SUPABASE_URL =
+  rawEnvUrl && !rawEnvUrl.includes('VOTRE_PROJET')
+    ? rawEnvUrl
+    : DEFAULT_SUPABASE_URL;
+
+const ENV_SUPABASE_ANON_KEY =
+  rawEnvKey && !rawEnvKey.includes('VOTRE_CLE_ANON')
+    ? rawEnvKey
+    : DEFAULT_SUPABASE_ANON_KEY;
 
 const LOCAL_STORAGE_TRACKS_KEY = 'drop_supabase_tracks_v2';
 const LOCAL_STORAGE_CATALOGUE_SNAPSHOT_KEY = 'drop_full_catalogue_snapshot_v2';
@@ -1332,16 +1347,54 @@ CREATE TABLE IF NOT EXISTS public.ad_banner_settings (
 );
 
 -- ----------------------------------------------------------------------------
--- 6. BUCKETS SUPABASE STORAGE : 'audio_files' (Opus) & 'cover_files' (Pochettes/Bannières)
+-- 6. TABLE DU FIL COMMUN DES RECOMMANDATIONS & EXTRAITS : public.community_recommendations
 -- ----------------------------------------------------------------------------
-INSERT INTO storage.buckets (id, name, public)
-VALUES 
-    ('audio_files', 'audio_files', true),
-    ('cover_files', 'cover_files', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+CREATE TABLE IF NOT EXISTS public.community_recommendations (
+    id TEXT PRIMARY KEY,
+    track_id TEXT NOT NULL,
+    track_title TEXT NOT NULL,
+    track_artist TEXT NOT NULL,
+    track_category TEXT NOT NULL DEFAULT 'Ntcham',
+    cover TEXT,
+    user_id TEXT NOT NULL DEFAULT 'usr-1',
+    user_name TEXT NOT NULL DEFAULT 'Membre DROP',
+    user_avatar TEXT DEFAULT '',
+    comment_or_lyric_excerpt TEXT,
+    is_lyric_excerpt BOOLEAN NOT NULL DEFAULT false,
+    lyricist_name TEXT,
+    boost_points NUMERIC(4,2) NOT NULL DEFAULT 0.35,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_community_recommendations_created_at 
+ON public.community_recommendations (created_at DESC);
 
 -- ----------------------------------------------------------------------------
--- 7. SÉCURITÉ ROW LEVEL SECURITY (RLS) — TABLES & STORAGE
+-- 7. BUCKETS SUPABASE STORAGE : 'audio_files' (Opus) & 'cover_files' (Pochettes/Bannières)
+-- ----------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+    (
+        'audio_files', 
+        'audio_files', 
+        true, 
+        52428800, 
+        ARRAY['audio/ogg', 'audio/opus', 'audio/webm', 'audio/mpeg', 'audio/wav', 'audio/flac']
+    ),
+    (
+        'cover_files', 
+        'cover_files', 
+        true, 
+        10485760, 
+        ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+    )
+ON CONFLICT (id) DO UPDATE SET 
+    public = true,
+    file_size_limit = EXCLUDED.file_size_limit,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- ----------------------------------------------------------------------------
+-- 8. SÉCURITÉ ROW LEVEL SECURITY (RLS) — TABLES & STORAGE
 -- ----------------------------------------------------------------------------
 ALTER TABLE public.tracks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.studio_entities ENABLE ROW LEVEL SECURITY;
@@ -1349,6 +1402,7 @@ ALTER TABLE public.user_playlists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_library_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ad_banners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ad_banner_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.community_recommendations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Acces complet aux pistes" ON public.tracks;
 DROP POLICY IF EXISTS "Acces complet au repertoire metiers" ON public.studio_entities;
@@ -1356,6 +1410,7 @@ DROP POLICY IF EXISTS "Acces complet aux playlists" ON public.user_playlists;
 DROP POLICY IF EXISTS "Acces complet aux favoris et ecoutes" ON public.user_library_state;
 DROP POLICY IF EXISTS "Acces complet aux bannieres pub" ON public.ad_banners;
 DROP POLICY IF EXISTS "Acces complet aux reglages bannieres" ON public.ad_banner_settings;
+DROP POLICY IF EXISTS "Acces complet aux recommandations" ON public.community_recommendations;
 
 CREATE POLICY "Acces complet aux pistes" ON public.tracks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acces complet au repertoire metiers" ON public.studio_entities FOR ALL USING (true) WITH CHECK (true);
@@ -1363,6 +1418,7 @@ CREATE POLICY "Acces complet aux playlists" ON public.user_playlists FOR ALL USI
 CREATE POLICY "Acces complet aux favoris et ecoutes" ON public.user_library_state FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acces complet aux bannieres pub" ON public.ad_banners FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acces complet aux reglages bannieres" ON public.ad_banner_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acces complet aux recommandations" ON public.community_recommendations FOR ALL USING (true) WITH CHECK (true);
 
 -- Politiques Storage pour 'audio_files' et 'cover_files'
 DROP POLICY IF EXISTS "Lecture publique audio et pochettes" ON storage.objects;
@@ -1381,6 +1437,42 @@ ON storage.objects FOR UPDATE USING (bucket_id IN ('audio_files', 'cover_files')
 
 CREATE POLICY "Suppression publique audio et pochettes"
 ON storage.objects FOR DELETE USING (bucket_id IN ('audio_files', 'cover_files'));
+
+-- ----------------------------------------------------------------------------
+-- 9. TRIGGERS TEMPS RÉEL : ACTUALISATION AUTOMATIQUE DE updated_at
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_tracks_updated ON public.tracks;
+CREATE TRIGGER on_tracks_updated
+    BEFORE UPDATE ON public.tracks
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_user_playlists_updated ON public.user_playlists;
+CREATE TRIGGER on_user_playlists_updated
+    BEFORE UPDATE ON public.user_playlists
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_user_library_state_updated ON public.user_library_state;
+CREATE TRIGGER on_user_library_state_updated
+    BEFORE UPDATE ON public.user_library_state
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_ad_banners_updated ON public.ad_banners;
+CREATE TRIGGER on_ad_banners_updated
+    BEFORE UPDATE ON public.ad_banners
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_ad_banner_settings_updated ON public.ad_banner_settings;
+CREATE TRIGGER on_ad_banner_settings_updated
+    BEFORE UPDATE ON public.ad_banner_settings
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 `;
 
 // ============================================================================
