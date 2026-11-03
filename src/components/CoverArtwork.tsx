@@ -477,17 +477,17 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
   );
 };
 
-// --- Logo Officiel DROP (PNG Officiel + Rendu Vectoriel Haute Précision) ---
+// --- Logo Officiel DROP (PNG Officiel Haute Précision Zéro Déformation) ---
 export const DropOfficialLogo: React.FC<{ className?: string }> = ({
   className = 'h-[20px] w-auto',
 }) => {
   return (
     <img
-      src="/drop-logo.webp"
+      src="/drop-logo.png?v=2"
       alt="DROP"
       draggable={false}
       decoding="async"
-      className={`${className} object-contain select-none drop-shadow-[0_2px_10px_rgba(255,255,255,0.22)]`}
+      className={`${className} object-contain select-none`}
     />
   );
 };

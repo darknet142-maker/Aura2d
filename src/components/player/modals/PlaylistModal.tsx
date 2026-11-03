@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Check, Plus } from 'lucide-react';
 import { UserPlaylist } from '../../ReusableAnalyticsSheets';
+import { DropOfficialLogo } from '../../CoverArtwork';
 
 export interface PlaylistModalProps {
   isOpen: boolean;
@@ -41,7 +42,10 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">Ajouter à mes playlists</h2>
+            <div className="flex items-center gap-2 mb-0.5">
+              <DropOfficialLogo className="h-4 w-auto max-w-[80px]" />
+              <h2 className="text-base font-bold text-white">Ajouter à mes playlists</h2>
+            </div>
             <p className="text-xs text-zinc-400">
               Retrouvez et gérez toutes vos playlists dans Mon Profil
             </p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Video } from 'lucide-react';
-import { CoverArtwork } from '../../CoverArtwork';
+import { CoverArtwork, DropOfficialLogo } from '../../CoverArtwork';
 import { CertificationBadgeSvg } from '../../ReusableAnalyticsSheets';
 import { CertificationInfo } from '../../../utils/rankingEngine';
 import { PlayerTrackItem } from '../types';
@@ -43,9 +43,12 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">
-              Recommander à la communauté DROP
-            </h2>
+            <div className="flex items-center gap-2 mb-0.5">
+              <DropOfficialLogo className="h-4 w-auto max-w-[80px]" />
+              <h2 className="text-base font-bold text-white">
+                Recommander à la communauté
+              </h2>
+            </div>
             <p className="text-xs text-zinc-400">
               Propulsez « {currentTrack.title} » dans le Fil Commun et boostez son score d&apos;explosion
             </p>

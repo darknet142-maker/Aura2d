@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { ProLockBadgeSvg } from '../PlayerIcons';
+import { DropOfficialLogo } from '../../CoverArtwork';
 
 export interface OptionsMenuModalProps {
   isOpen: boolean;
@@ -49,7 +50,10 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
         className="w-full bg-zinc-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl max-h-[88dvh] overflow-y-auto animate-fade-in"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-white">Contrôles Audio &amp; Compte</h2>
+          <div className="flex items-center gap-2.5">
+            <DropOfficialLogo className="h-[18px] w-auto max-w-[90px]" />
+            <h2 className="text-base font-bold text-white">Contrôles Audio &amp; Compte</h2>
+          </div>
           <button
             type="button"
             onClick={onClose}

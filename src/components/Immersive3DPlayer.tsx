@@ -4342,9 +4342,12 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                     <div className="space-y-3 animate-fade-in">
                       <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-2.5">
                         <div>
-                          <h3 className="text-sm font-bold text-white">
-                            Fil Commun des Recommandations DROP
-                          </h3>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <DropOfficialLogo className="h-[15px] w-auto max-w-[70px]" />
+                            <h3 className="text-sm font-bold text-white">
+                              Fil Commun des Recommandations
+                            </h3>
+                          </div>
                           <p className="text-xs text-zinc-400">
                             Titres et extraits de paroles poussés par la
                             communauté pour faire découvrir de nouveaux talents

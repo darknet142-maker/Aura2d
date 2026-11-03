@@ -41,7 +41,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
           aria-label="DROP — Ouvrir la file de lecture"
           title="File de lecture DROP"
         >
-          <DropOfficialLogo className="h-[18px] sm:h-[20px] w-auto max-w-[125px]" />
+          <DropOfficialLogo className="h-[20px] sm:h-[22px] w-auto max-w-[130px]" />
         </button>
       </div>
 

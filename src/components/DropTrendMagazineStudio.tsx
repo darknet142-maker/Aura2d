@@ -11,7 +11,7 @@ import {
   Pause,
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { ArtworkType } from './CoverArtwork';
+import { ArtworkType, DropOfficialLogo } from './CoverArtwork';
 import { FeaturingSplitMode } from '../utils/rankingEngine';
 import { getPersistentAudioBlobUrl } from '../services/musicService';
 
@@ -70,7 +70,7 @@ type FullscreenStep = 'CAMERA_CAPTURE' | 'INSTANT_PREVIEW';
 const CANVAS_W = 1080;
 const CANVAS_H = 1920;
 
-const OFFICIAL_DROP_LOGO_SRC = '/drop-logo.webp';
+const OFFICIAL_DROP_LOGO_SRC = '/drop-logo.png?v=2';
 
 // Dimensions du logo officiel écrit DROP sur le canvas 1080×1920 (ratio 5:1 préservé)
 const DROP_LOGO_W = 220;
@@ -1425,13 +1425,15 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
               <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
             </button>
 
-            {isRecording && (
+            {isRecording ? (
               <div className="px-3 py-1 sm:px-3.5 rounded-full bg-[#ff3b30] text-white font-mono text-[11px] sm:text-xs font-bold tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg">
                 <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" />
                 <span>
                   00:{Math.floor(recordedSeconds).toString().padStart(2, '0')}
                 </span>
               </div>
+            ) : (
+              <DropOfficialLogo className="h-5 sm:h-6 w-auto max-w-[110px]" />
             )}
 
             <div className="w-7 h-7 sm:w-10 sm:h-10" />
@@ -1521,6 +1523,12 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
             {/* ZONE 1 (PRIORITAIRE) : ESPACE DÉDIÉ À LA VIDÉO EN GRAND SANS BORDURE NOIRE */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden z-10">
+              {/* Logo DROP discret en haut à gauche */}
+              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-xl border border-white/20">
+                <DropOfficialLogo className="h-4 sm:h-[18px] w-auto max-w-[80px]" />
+                <span className="text-[11px] font-mono text-zinc-300 font-semibold tracking-wider">Trend</span>
+              </div>
+
               {/* Bouton Fermer dans le coin supérieur droit (plus compact sur mobile) */}
               <button
                 type="button"

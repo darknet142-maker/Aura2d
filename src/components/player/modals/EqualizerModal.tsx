@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { EQ_PRESETS, EQ_BANDS_META } from '../types';
+import { DropOfficialLogo } from '../../CoverArtwork';
 
 export interface EqualizerModalProps {
   isOpen: boolean;
@@ -72,9 +73,12 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">
-              Égaliseur 5 Bandes &amp; Gain
-            </h2>
+            <div className="flex items-center gap-2 mb-0.5">
+              <DropOfficialLogo className="h-4 w-auto max-w-[80px]" />
+              <h2 className="text-base font-bold text-white">
+                Égaliseur &amp; Audio
+              </h2>
+            </div>
             <p className="text-[11px] text-zinc-400">
               Traitement fréquentiel temps réel au demi-décibel (0.5 dB)
             </p>
