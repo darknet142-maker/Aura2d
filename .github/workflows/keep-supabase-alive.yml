@@ -1,0 +1,65 @@
+name: Keep Supabase Alive (Anti-Pause)
+
+on:
+  schedule:
+    # S'exécute automatiquement tous les lundis, mercredis et vendredis à 10:00 UTC
+    # Empêche Supabase Free Tier de s'endormir après 7 jours d'inactivité
+    - cron: '0 10 * * 1,3,5'
+  workflow_dispatch: # Permet de déclencher manuellement le ping en 1 clic pour tester
+
+jobs:
+  keep-alive:
+    name: Ping Supabase REST & Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping Supabase Database to Prevent Pause
+        run: |
+          # Récupération de l'URL et de la clé (Secrets GitHub ou configuration de fallback du projet)
+          URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://djjgozsaylesngxshxey.supabase.co"
+          fi
+
+          KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          if [ -z "$KEY" ]; then
+            KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqamdvenNheWxlc25neHNoeGV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NzMyODcsImV4cCI6MjEwOTE0OTI4N30.EBY4zazR4kkqnMBs7gV_dEFLSwiyYSVrpYfhP1ygni4"
+          fi
+
+          echo "=========================================================="
+          echo "🚀 PING ANTI-VEILLE SUPABASE : $(date -u)"
+          echo "Cible : ${URL}"
+          echo "=========================================================="
+
+          # 1. Ping de l'API Root Supabase
+          echo "1. Ping API Root..."
+          ROOT_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${URL}/rest/v1/" \
+            -H "apikey: ${KEY}" \
+            -H "Authorization: Bearer ${KEY}")
+          echo "Statut API Root : $ROOT_HTTP_CODE"
+
+          # 2. Requête ciblée sur PostgreSQL (Table tracks) pour simuler une vraie activité DB
+          echo "2. Requête active sur PostgreSQL (public.tracks)..."
+          DB_HTTP_CODE=$(curl -s -o /tmp/supabase_response.json -w "%{http_code}" -X GET "${URL}/rest/v1/tracks?select=id&limit=1" \
+            -H "apikey: ${KEY}" \
+            -H "Authorization: Bearer ${KEY}")
+
+          echo "Code réponse PostgreSQL : $DB_HTTP_CODE"
+          echo "Extrait réponse :"
+          cat /tmp/supabase_response.json
+          echo ""
+
+          # 3. Validation de l'activité
+          if [ "$DB_HTTP_CODE" -ge 200 ] && [ "$DB_HTTP_CODE" -lt 400 ]; then
+            echo "=========================================================="
+            echo "✅ SUCCÈS : Base de données Supabase active !"
+            echo "Le projet ne sera pas mis en pause."
+            echo "=========================================================="
+            exit 0
+          else
+            echo "=========================================================="
+            echo "❌ ATTENTION : Réponse inattendue (HTTP $DB_HTTP_CODE)"
+            echo "=========================================================="
+            exit 1
+          fi
