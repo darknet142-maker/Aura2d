@@ -112,6 +112,13 @@ import {
   subscribeToLiveSync,
   broadcastLiveSync,
 } from './services/realtimeSync';
+import { buildRoyaltyLedger } from './features/royalties/royaltyLedger';
+import {
+  useRoyaltyLedgerState,
+  type StatsBaseline,
+} from './features/royalties/royaltyLedgerStore';
+import { BugadaRoyaltiesAdminPanel } from './features/royalties/BugadaRoyaltiesAdminPanel';
+import { ArtistRoyaltyAndTipCard } from './features/royalties/ArtistRoyaltyAndTipCard';
 
 // --- Types ---
 export interface AppNotification {
@@ -1635,11 +1642,18 @@ export function App() {
 
   // --- Admin Navigation & Sub-tabs ---
   const [adminMainTab, setAdminMainTab] = useState<
-    'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS'
+    'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS' | 'ROYALTIES_BUGADA'
   >('CATALOGUE');
   const [catalogueSubTab, setCatalogueSubTab] = useState<'REPERTOIRE' | 'ALGO' | 'RULES'>(
     'REPERTOIRE'
   );
+  const {
+    state: royaltyLedgerState,
+    updateSettings: updateRoyaltySettings,
+    resetSettings: resetRoyaltySettings,
+    setTaxStatus: setHolderTaxStatus,
+    closePeriod: closeRoyaltyPeriod,
+  } = useRoyaltyLedgerState();
 
   // --- Bannières Publicitaires Slideshow (Haut & Bas de Central) ---
   const [adBanners, setAdBanners] = useState<AdBannerSlide[]>(() =>
@@ -2358,6 +2372,44 @@ export function App() {
 
   // --- Compute Live Ranks & Rank Deltas Across All Tracks ---
   const allTracksFlat = useMemo(() => catalogue.flatMap((a) => a.tracks), [catalogue]);
+
+  const royaltyLedger = useMemo(() => {
+    const mappedListeners = users.map((u, idx) => ({
+      id: u.id,
+      name: u.name,
+      billing: {
+        plan:
+          idx === 0
+            ? ('PREMIUM_MENSUEL' as const)
+            : idx === 1
+              ? ('PASS_7J' as const)
+              : ('PREMIUM_MENSUEL' as const),
+        channel: 'MOBILE_MONEY' as const,
+        passesPurchased: 2,
+      },
+      trackStats: u.trackStats,
+    }));
+    return buildRoyaltyLedger({
+      tracks: allTracksFlat.map((t) => ({
+        id: t.id,
+        title: t.title,
+        isrc: t.dropContentId || `GA-DRP-26-${t.id.replace(/[^0-9A-Za-z]/g, '').slice(-5).padStart(5, '0')}`,
+        artist: t.artist,
+        featuringArtists: t.featuringArtists,
+        featuringSplitMode: t.featuringSplitMode,
+        labelName: t.labelName,
+        beatmakerName: t.beatmakerName,
+        lyricistName: t.lyricistName,
+        isInstrumental: t.isInstrumental,
+        gabonTerritoryPct: t.gabonTerritoryPct,
+      })),
+      listeners: mappedListeners,
+      settings: royaltyLedgerState.settings,
+      baseline: royaltyLedgerState.baseline,
+      previousBalances: royaltyLedgerState.previousBalances,
+      taxStatusOverrides: royaltyLedgerState.taxStatusOverrides,
+    });
+  }, [allTracksFlat, users, royaltyLedgerState]);
 
   const trackRankMap = useMemo(() => {
     const sorted = [...allTracksFlat].sort((a, b) => b.algoPoints - a.algoPoints);
@@ -3426,6 +3478,29 @@ export function App() {
 
   // --- Toggle Offline Download Cache on Bottom-Right Button ---
   const handleToggleOfflineDownload = () => {
+    const isCurrentlyDownloaded = Boolean(currentTrack.downloadedOffline);
+    if (!isCurrentlyDownloaded) {
+      if (subscriptionPass === 'FREEMIUM_PUB' || subscriptionPass === 'ESSAI_GRATUIT') {
+        pushNotification(
+          'Cache Hors-Ligne réservé aux Pass Mobile Money',
+          'Activez un Pass 7 Jours (500 FCFA, max 25 titres) ou le Premium Mensuel (1 500 FCFA, illimité) pour écouter sans consommer votre forfait Internet.',
+          'CERTIFICATION',
+          currentTrack.id
+        );
+        return;
+      }
+      const downloadedCount = allTracksFlat.filter((t) => t.downloadedOffline).length;
+      if (subscriptionPass === 'PASS_JOURNALIER' && downloadedCount >= 25) {
+        pushNotification(
+          'Plafond Pass 7 Jours atteint (25/25 titres)',
+          'Passez au Premium Mensuel (1 500 FCFA) pour débloquer le téléchargement hors-ligne illimité.',
+          'CERTIFICATION',
+          currentTrack.id
+        );
+        return;
+      }
+    }
+
     setCatalogue((prev) =>
       prev.map((alb) => ({
         ...alb,
@@ -5080,6 +5155,9 @@ export function App() {
             adBanners={adBanners}
             adBannerSettings={adBannerSettings}
             enableAwardsCeremony={enableAwardsCeremony}
+            rightsLines={royaltyLedger.rightsLines}
+            payoutStatements={royaltyLedger.statements}
+            royaltySettings={royaltyLedgerState.settings}
           />
         </main>
       )}
@@ -5638,6 +5716,18 @@ export function App() {
                   </button>
                 </div>
 
+                <ArtistRoyaltyAndTipCard
+                  entityName={selectedArtistAnalytics.artistName}
+                  entityRole="ARTIST"
+                  rightsLines={royaltyLedger.rightsLines}
+                  statement={royaltyLedger.statements.find(
+                    (s) =>
+                      s.holderName.trim().toLowerCase() ===
+                      selectedArtistAnalytics.artistName.trim().toLowerCase()
+                  )}
+                  settings={royaltyLedgerState.settings}
+                />
+
                 <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2.5">
                   <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
                     Discographie &amp; Featurings ({selectedArtistAnalytics.tracks.length})
@@ -5962,6 +6052,17 @@ export function App() {
                 >
                   <Users className="w-3.5 h-3.5 shrink-0" />
                   <span>Auditeurs</span>
+                </button>
+                <button
+                  onClick={() => setAdminMainTab('ROYALTIES_BUGADA')}
+                  className={`flex-1 min-w-[135px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
+                    adminMainTab === 'ROYALTIES_BUGADA'
+                      ? 'bg-emerald-500 text-[#07080C] font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                      : 'text-emerald-300 hover:text-white border border-emerald-500/30 bg-emerald-500/10'
+                  }`}
+                >
+                  <Shield className="w-3.5 h-3.5 shrink-0" />
+                  <span>Royalties &amp; BUGADA</span>
                 </button>
               </div>
 
@@ -8985,6 +9086,40 @@ export function App() {
                       </div>
                     ))}
                 </div>
+              )}
+
+              {adminMainTab === 'ROYALTIES_BUGADA' && (
+                <BugadaRoyaltiesAdminPanel
+                  ledger={royaltyLedger}
+                  settings={royaltyLedgerState.settings}
+                  closedPeriods={royaltyLedgerState.closedPeriods}
+                  onUpdateSettings={updateRoyaltySettings}
+                  onResetSettings={resetRoyaltySettings}
+                  onChangeHolderTaxStatus={setHolderTaxStatus}
+                  onCloseAccountingPeriod={(period) => {
+                    const currentStats: StatsBaseline = {};
+                    users.forEach((u) => {
+                      currentStats[u.id] = {};
+                      Object.values(u.trackStats).forEach((st) => {
+                        currentStats[u.id][st.trackId] = {
+                          plays: st.playsCount,
+                          seconds: st.listenSeconds,
+                        };
+                      });
+                    });
+                    closeRoyaltyPeriod({
+                      period,
+                      statements: royaltyLedger.statements,
+                      bugadaTotal: royaltyLedger.bugada.totalAuthorship,
+                      currentStats,
+                    });
+                    pushNotification(
+                      `Clôture BUGADA & Paie (${period})`,
+                      'Bordereau BUGADA 12% validé et paiements directs Master 48% ordonnancés.',
+                      'CERTIFICATION'
+                    );
+                  }}
+                />
               )}
             </>
           )}

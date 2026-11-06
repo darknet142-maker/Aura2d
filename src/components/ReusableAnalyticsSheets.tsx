@@ -42,6 +42,16 @@ import {
   generateDropContentId,
   computeDeterministicWaveformPeaks,
 } from '../services/musicService';
+import {
+  DEFAULT_ROYALTY_SETTINGS,
+  type ListenerPlanId,
+  type PaymentChannel,
+  type RoyaltySettings,
+} from '../features/economics/economicConfig';
+import type { RightsLine } from '../features/economics/rightsSplitEngine';
+import type { PayoutStatement } from '../features/economics/payoutEngine';
+import { ArtistRoyaltyAndTipCard } from '../features/royalties/ArtistRoyaltyAndTipCard';
+import { ListenerPassAndDataSaverCard } from '../features/royalties/ListenerPassAndDataSaverCard';
 
 export type StudioEntityRole =
   | 'ARTIST'
@@ -1920,6 +1930,9 @@ export interface ReusableArtistDetailSheetProps {
   currentTrackId: string;
   isPlaying: boolean;
   isAdminView?: boolean;
+  rightsLines?: RightsLine[];
+  payoutStatement?: PayoutStatement;
+  royaltySettings?: RoyaltySettings;
   onClose: () => void;
   onSelectTrackDetail: (trackId: string) => void;
   onPlayOrToggleTrack: (albumIdx: number, trackIdx: number) => void;
@@ -1936,6 +1949,9 @@ export const ReusableArtistDetailSheet: React.FC<
   currentTrackId,
   isPlaying,
   isAdminView = false,
+  rightsLines,
+  payoutStatement,
+  royaltySettings,
   onClose,
   onSelectTrackDetail,
   onPlayOrToggleTrack,
@@ -2161,6 +2177,15 @@ export const ReusableArtistDetailSheet: React.FC<
             </div>
           </div>
         )}
+
+        {/* Portail Royalties & Soutien Direct Mobile Money (Convention BUGADA) */}
+        <ArtistRoyaltyAndTipCard
+          entityName={analytics.entityName}
+          entityRole={analytics.role}
+          rightsLines={rightsLines}
+          statement={payoutStatement}
+          settings={royaltySettings}
+        />
 
         {/* Discography / Productions List */}
         <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
@@ -2447,6 +2472,18 @@ export const ReusableUserProfileSheet: React.FC<
   const [profileSectionTab, setProfileSectionTab] = useState<
     'PLAYLISTS' | 'FAVORIS' | 'ECOUTES' | 'PASS'
   >('PLAYLISTS');
+  const [selectedListenerPlan, setSelectedListenerPlan] = useState<ListenerPlanId>(
+    subscriptionPass === 'FREEMIUM_PUB' || subscriptionPass === 'ESSAI_GRATUIT'
+      ? 'FREE'
+      : subscriptionPass === 'PASS_JOURNALIER'
+        ? 'PASS_7J'
+        : 'PREMIUM_MENSUEL'
+  );
+  const [selectedPaymentChannel, setSelectedPaymentChannel] =
+    useState<PaymentChannel>('MOBILE_MONEY');
+  const [selectedAudioProfile, setSelectedAudioProfile] = useState<
+    'DATA_SAVER_32K' | 'STANDARD_96K' | 'HIRES_256K'
+  >('DATA_SAVER_32K');
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistColor, setNewPlaylistColor] = useState('#e11d38');
   const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(
@@ -3236,6 +3273,37 @@ export const ReusableUserProfileSheet: React.FC<
                 ))}
               </div>
             )}
+
+            <ListenerPassAndDataSaverCard
+              selectedPlan={selectedListenerPlan}
+              onSelectPlan={(plan) => {
+                setSelectedListenerPlan(plan);
+                if (onChangeSubscriptionPass) {
+                  if (plan === 'FREE') {
+                    onChangeSubscriptionPass('FREEMIUM_PUB');
+                  } else if (plan === 'PASS_7J') {
+                    onChangeSubscriptionPass('PASS_JOURNALIER');
+                  } else {
+                    onChangeSubscriptionPass('PASS_MENSUEL_HEBDO');
+                  }
+                }
+              }}
+              paymentChannel={selectedPaymentChannel}
+              onSelectPaymentChannel={setSelectedPaymentChannel}
+              audioProfile={selectedAudioProfile}
+              onSelectAudioProfile={setSelectedAudioProfile}
+              offlineDownloadedCount={
+                allTracksFlat.filter((x) => x.track.downloadedOffline).length
+              }
+              listenerTracks={statsList.map((x) => ({
+                trackId: x.track.id,
+                title: x.track.title,
+                artist: x.track.artist,
+                validStreams: x.stat.playsCount || 0,
+                listenSeconds: x.stat.listenSeconds || 0,
+              }))}
+              settings={DEFAULT_ROYALTY_SETTINGS}
+            />
           </div>
         )}
 

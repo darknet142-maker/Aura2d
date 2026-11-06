@@ -103,6 +103,9 @@ import { PlaylistModal } from './player/modals/PlaylistModal';
 import { QueueModal } from './player/modals/QueueModal';
 import { OptionsMenuModal } from './player/modals/OptionsMenuModal';
 import { RecommendModal } from './player/modals/RecommendModal';
+import type { RoyaltySettings } from '../features/economics/economicConfig';
+import type { RightsLine } from '../features/economics/rightsSplitEngine';
+import type { PayoutStatement } from '../features/economics/payoutEngine';
 
 export interface LyricLine {
   time: number;
@@ -314,6 +317,9 @@ export interface Immersive3DPlayerProps {
   adBanners?: AdBannerSlide[];
   adBannerSettings?: AdBannerSettings;
   enableAwardsCeremony?: boolean;
+  rightsLines?: RightsLine[];
+  payoutStatements?: PayoutStatement[];
+  royaltySettings?: RoyaltySettings;
 }
 
 const CentralAdSlideshowBanner: React.FC<{
@@ -783,6 +789,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
   adBanners = DEFAULT_AD_BANNERS,
   adBannerSettings = DEFAULT_AD_BANNER_SETTINGS,
   enableAwardsCeremony = false,
+  rightsLines = [],
+  payoutStatements = [],
+  royaltySettings,
 }) => {
   const safeRankInfo = rankInfo || currentRankInfo || { rank: 4, delta: 3 };
   const isPro = userPlan === 'PRO';
@@ -2094,6 +2103,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   trackRankMap={trackRankMap}
                   currentTrackId={currentTrack.id}
                   isPlaying={isPlaying}
+                  rightsLines={rightsLines}
+                  payoutStatement={payoutStatements.find(
+                    (s) =>
+                      s.holderName.trim().toLowerCase() ===
+                      activeEntitySheetData.entityName.trim().toLowerCase()
+                  )}
+                  royaltySettings={royaltySettings}
                   onClose={closeAllAnalyticsSheets}
                   onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                   onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
@@ -4795,6 +4811,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                   trackRankMap={trackRankMap}
                   currentTrackId={currentTrack.id}
                   isPlaying={isPlaying}
+                  rightsLines={rightsLines}
+                  payoutStatement={payoutStatements.find(
+                    (s) =>
+                      s.holderName.trim().toLowerCase() ===
+                      activeEntitySheetData.entityName.trim().toLowerCase()
+                  )}
+                  royaltySettings={royaltySettings}
                   onClose={closeAllAnalyticsSheets}
                   onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                   onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
