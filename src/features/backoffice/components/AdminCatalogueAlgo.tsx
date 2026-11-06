@@ -267,3 +267,4 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
     </div>
   );
 };
+

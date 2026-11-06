@@ -92,3 +92,4 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     read: false,
   },
 ];
+

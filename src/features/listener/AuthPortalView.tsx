@@ -156,3 +156,4 @@ export const AuthPortalView: React.FC<AuthPortalViewProps> = ({
     </main>
   );
 };
+

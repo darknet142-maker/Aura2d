@@ -58,3 +58,4 @@ Chaque fonctionnalité complexe est systématiquement divisée en 4 couches :
 
 - [`eslint.config.js`](file:///c:/Users/HP%20VICTUS/Documents/Aura2d%20-%20music%20stream%20app/Drop/Aura2d/eslint.config.js) : Règles `max-lines` (250), `max-lines-per-function` (80) et `complexity` (12).
 - [`.cursorrules`](file:///c:/Users/HP%20VICTUS/Documents/Aura2d%20-%20music%20stream%20app/Drop/Aura2d/.cursorrules) : Directives permanentes d'architecture modulaire pour tous les assistants IA.
+

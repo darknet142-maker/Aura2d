@@ -4,3 +4,4 @@
  * par les boucles nocturnes et le Jukebox Social QR Code sur table.
  */
 export { B2bHorecaBugadaPanel } from '../royalties/B2bHorecaBugadaPanel';
+
