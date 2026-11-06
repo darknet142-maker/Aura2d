@@ -418,7 +418,7 @@ const CentralAdSlideshowBanner: React.FC<{
 
       {matchingSlides.length > 1 && (
         <div
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/45 backdrop-blur-sm z-10"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#07090E]/45 backdrop-blur-sm z-10"
           onClick={(e) => e.stopPropagation()}
         >
           {matchingSlides.map((s, idx) => (
@@ -1817,7 +1817,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
               onRecommendTrack?.(currentTrack.id, cleanExcerpt, true);
               showToast(
                 `Extrait partagé dans le Fil DROP (+Score Parolier : ${currentLyricist})`,
-                'bg-violet-400'
+                'bg-sky-400'
               );
             }}
             formatTime={formatTime}
@@ -2244,7 +2244,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     title={t.title}
                                     artist={t.artist}
                                   />
-                                  <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
+                                  <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white">
                                     {isThisPlaying ? (
                                       <Pause className="w-4 h-4 fill-current" />
                                     ) : (
@@ -2358,7 +2358,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     title={t.title}
                                     artist={t.artist}
                                   />
-                                  <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
+                                  <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white">
                                     {isThisPlaying ? (
                                       <Pause className="w-4 h-4 fill-current" />
                                     ) : (
@@ -2716,7 +2716,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                             e.stopPropagation();
                                             openUserTrackSheet(t.id);
                                           }}
-                                          className="px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-[10px] font-bold text-white shrink-0"
+                                          className="px-2.5 py-1 rounded-lg bg-[#07090E]/60 hover:bg-[#07090E]/80 border border-white/20 text-[10px] font-bold text-white shrink-0"
                                         >
                                           Fiche
                                         </button>
@@ -3188,7 +3188,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                               title={t.title}
                                               artist={t.artist}
                                             />
-                                            <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white font-bold text-xs">
+                                            <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white font-bold text-xs">
                                               {isThisPlaying ? (
                                                 <Pause className="w-4 h-4 fill-current" />
                                               ) : (
@@ -3290,7 +3290,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     'border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.3)]',
                                     'border-[#e11d38] shadow-[0_0_16px_rgba(225,29,56,0.3)]',
                                     'border-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.3)]',
-                                    'border-violet-400 shadow-[0_0_16px_rgba(139,92,246,0.3)]',
+                                    'border-sky-400 shadow-[0_0_16px_rgba(139,92,246,0.3)]',
                                     'border-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.3)]',
                                   ];
                                   return (
@@ -3656,7 +3656,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                           title={t.title}
                                           artist={t.artist}
                                         />
-                                        <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white text-xs">
+                                        <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white text-xs">
                                           {isThisPlaying ? (
                                             <Pause className="w-3.5 h-3.5 fill-current" />
                                           ) : (
@@ -4004,7 +4004,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     return (
                                       <div
                                         key={`${award.id}-${nom.rank}-${nom.name}`}
-                                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-black/45 border border-white/5 text-xs"
+                                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#07090E]/45 border border-white/5 text-xs"
                                       >
                                         <div
                                           onClick={() => {
@@ -4327,7 +4327,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                     <div
                                       key={t.id}
                                       onClick={() => openUserTrackSheet(t.id)}
-                                      className="p-3 rounded-xl bg-black/65 hover:bg-black/80 border border-white/15 flex items-center justify-between gap-3 cursor-pointer transition"
+                                      className="p-3 rounded-xl bg-[#07090E]/65 hover:bg-[#07090E]/80 border border-white/15 flex items-center justify-between gap-3 cursor-pointer transition"
                                     >
                                       <div className="min-w-0 flex-1 space-y-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -4440,13 +4440,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                 <p
                                   className={`text-xs px-3 py-2 rounded-xl border ${
                                     rec.isLyricExcerpt
-                                      ? 'bg-violet-500/15 border-violet-400/35 text-violet-200 italic font-semibold'
-                                      : 'bg-black/40 border-white/5 text-zinc-200'
+                                      ? 'bg-sky-500/15 border-sky-400/35 text-sky-200 italic font-semibold'
+                                      : 'bg-[#07090E]/40 border-white/5 text-zinc-200'
                                   }`}
                                 >
                                   {rec.commentOrLyricExcerpt}
                                   {rec.isLyricExcerpt && rec.lyricistName && (
-                                    <span className="block text-[10px] font-mono text-violet-300 mt-1 not-italic">
+                                    <span className="block text-[10px] font-mono text-sky-300 mt-1 not-italic">
                                       — Plume : {rec.lyricistName}
                                     </span>
                                   )}
@@ -4552,7 +4552,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = ({
                                             : ent.role === 'BEATMAKER'
                                               ? 'bg-emerald-500/20 text-emerald-300'
                                               : ent.role === 'LYRICIST'
-                                                ? 'bg-violet-500/20 text-violet-300'
+                                                ? 'bg-sky-500/20 text-sky-300'
                                                 : 'bg-sky-500/20 text-sky-300'
                                       }`}
                                     >

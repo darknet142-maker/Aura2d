@@ -12,7 +12,7 @@ export function RankBadge({ rank, delta }: { rank: number; delta: number }) {
               ? 'bg-slate-300/15 text-slate-200 border-slate-300/35'
               : rank === 3
                 ? 'bg-orange-500/15 text-orange-300 border-orange-500/35'
-                : 'bg-white/[0.04] text-[#8E93A4] border-white/[0.08]'
+                : 'bg-white/[0.04] text-[#A3A9BA] border-white/[0.08]'
         }`}
       >
         <span>#{rank}</span>

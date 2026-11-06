@@ -644,7 +644,7 @@ export const CertificationBadgeSvg: React.FC<{
               e.stopPropagation();
               setOpenPopup(false);
             }}
-            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+            className="fixed inset-0 z-[9999] bg-[#07090E]/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -1267,7 +1267,7 @@ export const ReusableTrackDetailSheet: React.FC<
                     Instrumental
                   </span>
                 )}
-                <span className="text-[11px] text-[#8E93A4] truncate">
+                <span className="text-[11px] text-[#A3A9BA] truncate">
                   {album.albumTitle} ({album.year})
                 </span>
                 <span
@@ -1543,7 +1543,7 @@ export const ReusableTrackDetailSheet: React.FC<
         {/* 4 Cartes Statistiques Claires (Sans Jargon Technique) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase text-[#8E93A4]">
+            <span className="text-[10px] font-mono uppercase text-[#A3A9BA]">
               Écoutes Certifiées
             </span>
             <div className="flex items-center justify-between">
@@ -1560,7 +1560,7 @@ export const ReusableTrackDetailSheet: React.FC<
           </div>
 
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase text-[#8E93A4]">
+            <span className="text-[10px] font-mono uppercase text-[#A3A9BA]">
               Recommandations
             </span>
             <div className="flex items-center justify-between">
@@ -1580,7 +1580,7 @@ export const ReusableTrackDetailSheet: React.FC<
           </div>
 
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase text-[#8E93A4]">
+            <span className="text-[10px] font-mono uppercase text-[#A3A9BA]">
               Favoris (Cœurs)
             </span>
             <div className="flex items-center justify-between">
@@ -1597,7 +1597,7 @@ export const ReusableTrackDetailSheet: React.FC<
           </div>
 
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase text-[#8E93A4]">
+            <span className="text-[10px] font-mono uppercase text-[#A3A9BA]">
               Écoutes en boucle
             </span>
             <div className="flex items-center justify-between">
@@ -1623,7 +1623,7 @@ export const ReusableTrackDetailSheet: React.FC<
         {/* Crédits de l'œuvre & Progression des Certifications */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-4 flex flex-col gap-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
               Crédits Officiels de l&apos;Œuvre
             </span>
 
@@ -1632,7 +1632,7 @@ export const ReusableTrackDetailSheet: React.FC<
               onClick={() => onOpenEntityProfile(track.artist, 'ARTIST')}
               className="flex items-center justify-between p-2 rounded-lg bg-[#0D1017] hover:bg-white/[0.06] border border-white/[0.05] text-xs transition"
             >
-              <span className="text-[#8E93A4]">Artiste Principal</span>
+              <span className="text-[#A3A9BA]">Artiste Principal</span>
               <span className="font-semibold text-amber-300 flex items-center gap-1 truncate max-w-[180px]">
                 <span className="truncate">{track.artist}</span>
                 <span>→</span>
@@ -1641,7 +1641,7 @@ export const ReusableTrackDetailSheet: React.FC<
 
             {track.featuringArtists && track.featuringArtists.length > 0 && (
               <div className="flex items-center justify-between p-2 rounded-lg bg-[#0D1017] border border-white/[0.05] text-xs">
-                <span className="text-[#8E93A4]">Featuring</span>
+                <span className="text-[#A3A9BA]">Featuring</span>
                 <div className="flex items-center gap-1 flex-wrap justify-end">
                   {track.featuringArtists.map((feat) => (
                     <button
@@ -1662,10 +1662,10 @@ export const ReusableTrackDetailSheet: React.FC<
                 <button
                   type="button"
                   onClick={() => onOpenEntityProfile(lyricistName, 'LYRICIST')}
-                  className="flex items-center justify-between w-full text-left hover:text-violet-200 transition"
+                  className="flex items-center justify-between w-full text-left hover:text-sky-200 transition"
                 >
-                  <span className="text-[#8E93A4] shrink-0">Auteur / Parolier</span>
-                  <span className="font-semibold text-violet-300 truncate">
+                  <span className="text-[#A3A9BA] shrink-0">Auteur / Parolier</span>
+                  <span className="font-semibold text-sky-300 truncate">
                     {lyricistName} →
                   </span>
                 </button>
@@ -1673,7 +1673,7 @@ export const ReusableTrackDetailSheet: React.FC<
               </div>
             ) : (
               <div className="flex items-center justify-between p-2 rounded-lg bg-[#0D1017] border border-white/[0.05] text-xs">
-                <span className="text-[#8E93A4]">Type d&apos;œuvre</span>
+                <span className="text-[#A3A9BA]">Type d&apos;œuvre</span>
                 <span className="font-semibold text-amber-300">
                   Instrumental Pur (Sans voix)
                 </span>
@@ -1688,7 +1688,7 @@ export const ReusableTrackDetailSheet: React.FC<
                 }
                 className="flex items-center justify-between w-full text-left hover:text-emerald-200 transition"
               >
-                <span className="text-[#8E93A4] shrink-0">
+                <span className="text-[#A3A9BA] shrink-0">
                   Beatmaker / Compositeur
                 </span>
                 <span className="font-semibold text-emerald-300 truncate">
@@ -1759,7 +1759,7 @@ export const ReusableTrackDetailSheet: React.FC<
               onClick={() => onOpenEntityProfile(track.labelName, 'LABEL')}
               className="flex items-center justify-between p-2 rounded-lg bg-[#0D1017] hover:bg-white/[0.06] border border-white/[0.05] text-xs transition"
             >
-              <span className="text-[#8E93A4]">Label / Production</span>
+              <span className="text-[#A3A9BA]">Label / Production</span>
               <span className="font-semibold text-[#F5F2EB] flex items-center gap-1 truncate max-w-[180px]">
                 <span className="truncate">{track.labelName}</span>
                 <span className="text-[#DE1B34]">→</span>
@@ -1804,7 +1804,7 @@ export const ReusableTrackDetailSheet: React.FC<
                       type="text"
                       value={disputeReasonInput}
                       onChange={(e) => setDisputeReasonInput(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-black/60 border border-white/15 text-xs text-white"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#07090E]/60 border border-white/15 text-xs text-white"
                       placeholder="Motif du litige"
                     />
                     <button
@@ -1824,7 +1824,7 @@ export const ReusableTrackDetailSheet: React.FC<
           </div>
 
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-4 flex flex-col justify-between gap-2.5">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
               Certifications &amp; Informations Audio
             </span>
 
@@ -1843,7 +1843,7 @@ export const ReusableTrackDetailSheet: React.FC<
                   className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-cyan-300"
                 />
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-[#8E93A4]">
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#A3A9BA]">
                 <span>Or 100K • Platine 250K • Diamant 500K</span>
                 {trackCert.nextLevelLabel && (
                   <span className="text-amber-200">
@@ -1855,26 +1855,26 @@ export const ReusableTrackDetailSheet: React.FC<
 
             <div className="space-y-1.5 my-auto">
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#8E93A4]">Format &amp; Volume Audio</span>
+                <span className="text-[#A3A9BA]">Format &amp; Volume Audio</span>
                 <span className="text-emerald-400 font-bold">
                   Opus • Niveau Constant (-14 LUFS)
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#8E93A4]">Durée du titre</span>
+                <span className="text-[#A3A9BA]">Durée du titre</span>
                 <span className="text-white font-bold">
                   {formatShortTime(track.duration)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#8E93A4]">Extrait Drop</span>
+                <span className="text-[#A3A9BA]">Extrait Drop</span>
                 <span className="text-amber-300 font-bold">
                   {formatShortTime(track.dropStart)} (
                   {track.dropDuration}s)
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#8E93A4]">Temps d&apos;écoute total</span>
+                <span className="text-[#A3A9BA]">Temps d&apos;écoute total</span>
                 <span className="text-emerald-400 font-bold">
                   {formatLongListenDuration(track.totalListenSeconds)}
                 </span>
@@ -2135,7 +2135,7 @@ export const ReusableArtistDetailSheet: React.FC<
                   </button>
                 )}
               </div>
-              <p className="text-xs text-[#8E93A4] mt-1">
+              <p className="text-xs text-[#A3A9BA] mt-1">
                 {analytics.tracks.length} titre(s) au catalogue •{' '}
                 {formatLongListenDuration(analytics.totalListenSeconds)} d&apos;écoute
               </p>
@@ -2144,19 +2144,19 @@ export const ReusableArtistDetailSheet: React.FC<
 
           <div className="grid grid-cols-3 gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
             <div className="px-3 py-1.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-center">
-              <span className="text-[10px] text-[#8E93A4] block">Écoutes</span>
+              <span className="text-[10px] text-[#A3A9BA] block">Écoutes</span>
               <span className="font-mono text-xs font-bold text-white">
                 {formatCompactNumber(analytics.totalPlays)}
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-center">
-              <span className="text-[10px] text-[#8E93A4] block">Favoris</span>
+              <span className="text-[10px] text-[#A3A9BA] block">Favoris</span>
               <span className="font-mono text-xs font-bold text-rose-300">
                 {formatCompactNumber(analytics.totalLikes)}
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-center">
-              <span className="text-[10px] text-[#8E93A4] block">Boucles</span>
+              <span className="text-[10px] text-[#A3A9BA] block">Boucles</span>
               <span className="font-mono text-xs font-bold text-amber-300">
                 {formatCompactNumber(analytics.totalLoops)}
               </span>
@@ -2177,7 +2177,7 @@ export const ReusableArtistDetailSheet: React.FC<
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div className="p-2 rounded-xl bg-[#0D1017] border border-white/[0.06]">
-                <span className="text-[10px] font-mono text-[#8E93A4] block">
+                <span className="text-[10px] font-mono text-[#A3A9BA] block">
                   {dr.primaryMetricLabel}
                 </span>
                 <span className="text-xs font-bold text-amber-300 font-mono">
@@ -2185,7 +2185,7 @@ export const ReusableArtistDetailSheet: React.FC<
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-[#0D1017] border border-white/[0.06]">
-                <span className="text-[10px] font-mono text-[#8E93A4] block">
+                <span className="text-[10px] font-mono text-[#A3A9BA] block">
                   {dr.secondaryMetricLabel}
                 </span>
                 <span className="text-xs font-bold text-emerald-300 font-mono">
@@ -2193,7 +2193,7 @@ export const ReusableArtistDetailSheet: React.FC<
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-[#0D1017] border border-white/[0.06]">
-                <span className="text-[10px] font-mono text-[#8E93A4] block">
+                <span className="text-[10px] font-mono text-[#A3A9BA] block">
                   {dr.tertiaryMetricLabel}
                 </span>
                 <span className="text-xs font-bold text-sky-300 font-mono">
@@ -2215,7 +2215,7 @@ export const ReusableArtistDetailSheet: React.FC<
 
         {/* Discography / Productions List */}
         <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
             Titres &amp; Collaborations ({analytics.tracks.length})
           </span>
           {analytics.tracks.map(
@@ -2249,7 +2249,7 @@ export const ReusableArtistDetailSheet: React.FC<
                         title={t.title}
                         artist={t.artist}
                       />
-                      <span className="absolute inset-0 bg-black/55 flex items-center justify-center text-white">
+                      <span className="absolute inset-0 bg-[#07090E]/55 flex items-center justify-center text-white">
                         {isThisPlaying ? (
                           <svg
                             className="w-4 h-4 fill-current text-amber-300"
@@ -2285,7 +2285,7 @@ export const ReusableArtistDetailSheet: React.FC<
                           playsCount={t.realPlays}
                         />
                       </div>
-                      <div className="text-[11px] font-mono text-[#8E93A4] truncate">
+                      <div className="text-[11px] font-mono text-[#A3A9BA] truncate">
                         {t.artist}
                         {t.featuringArtists && t.featuringArtists.length > 0
                           ? ` feat. ${t.featuringArtists.join(', ')}`
@@ -2299,7 +2299,7 @@ export const ReusableArtistDetailSheet: React.FC<
                   <div className="flex items-center gap-2 shrink-0">
                     <RankBadgeSvg rank={rInfo.rank} delta={rInfo.delta} />
                     <svg
-                      className="w-4 h-4 text-[#8E93A4]"
+                      className="w-4 h-4 text-[#A3A9BA]"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -2321,7 +2321,7 @@ export const ReusableArtistDetailSheet: React.FC<
         {/* Studio Team & Top Listeners */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
               Collaborateurs &amp; Équipe Studio
             </span>
             {allTeamMembers.length === 0 ? (
@@ -2346,7 +2346,7 @@ export const ReusableArtistDetailSheet: React.FC<
                             : member.role === 'BEATMAKER'
                               ? 'bg-emerald-500/20 text-emerald-300'
                               : member.role === 'LYRICIST'
-                                ? 'bg-violet-500/20 text-violet-300'
+                                ? 'bg-sky-500/20 text-sky-300'
                                 : 'bg-sky-500/20 text-sky-300'
                       }`}
                     >
@@ -2364,7 +2364,7 @@ export const ReusableArtistDetailSheet: React.FC<
                       {member.name}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-[#8E93A4] shrink-0">
+                  <span className="text-[10px] font-mono text-[#A3A9BA] shrink-0">
                     {member.tracksCount} titre(s) →
                   </span>
                 </button>
@@ -2373,7 +2373,7 @@ export const ReusableArtistDetailSheet: React.FC<
           </div>
 
           <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#8E93A4]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
               Meilleurs Auditeurs
             </span>
             {!analytics.topListeners || analytics.topListeners.length === 0 ? (
@@ -2399,7 +2399,7 @@ export const ReusableArtistDetailSheet: React.FC<
                         {listener.user.name}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#8E93A4] shrink-0">
+                    <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#A3A9BA] shrink-0">
                       <span>
                         {formatLongListenDuration(listener.listenSeconds || 0)}
                       </span>
@@ -2656,7 +2656,7 @@ export const ReusableUserProfileSheet: React.FC<
                 </h2>
                 <RankBadgeSvg rank={userRank || 1} delta={0} />
               </div>
-              <div className="text-xs text-[#8E93A4] font-mono truncate mt-0.5">
+              <div className="text-xs text-[#A3A9BA] font-mono truncate mt-0.5">
                 {userPlaylists.length} playlist(s) · {likedTracksList.length}{' '}
                 likes · {byListenTime.length} titres écoutés
               </div>
@@ -3031,7 +3031,7 @@ export const ReusableUserProfileSheet: React.FC<
                                     title={t.title}
                                     artist={t.artist}
                                   />
-                                  <span className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs">
+                                  <span className="absolute inset-0 bg-[#07090E]/50 flex items-center justify-center text-white text-xs">
                                     {isThisPlaying ? (
                                       <Pause className="w-3.5 h-3.5 fill-current" />
                                     ) : (
@@ -3160,7 +3160,7 @@ export const ReusableUserProfileSheet: React.FC<
                               title={t.title}
                               artist={t.artist}
                             />
-                            <span className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs">
+                            <span className="absolute inset-0 bg-[#07090E]/50 flex items-center justify-center text-white text-xs">
                               {isThisPlaying ? (
                                 <Pause className="w-3.5 h-3.5 fill-current" />
                               ) : (
@@ -3364,7 +3364,7 @@ export const ReusableUserProfileSheet: React.FC<
                         <div className="text-xs font-bold text-[#F5F2EB] truncate">
                           {topLoopedItem.track.title}
                         </div>
-                        <div className="text-[11px] text-[#8E93A4] truncate">
+                        <div className="text-[11px] text-[#A3A9BA] truncate">
                           {topLoopedItem.track.artist}
                         </div>
                         <div className="text-[11px] font-mono text-amber-300 mt-0.5">
@@ -3402,7 +3402,7 @@ export const ReusableUserProfileSheet: React.FC<
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-[#8E93A4]">
+                  <div className="text-xs text-[#A3A9BA]">
                     Aucune écoute en boucle enregistrée.
                   </div>
                 )}
@@ -3436,7 +3436,7 @@ export const ReusableUserProfileSheet: React.FC<
 
             {/* Per-Track Listening History */}
             <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#8E93A4]">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#A3A9BA]">
                 Historique des titres écoutés ({byListenTime.length})
               </span>
               {byListenTime.length === 0 ? (
@@ -3473,7 +3473,7 @@ export const ReusableUserProfileSheet: React.FC<
                               title={track.title}
                               artist={track.artist}
                             />
-                            <span className="absolute inset-0 bg-black/55 flex items-center justify-center text-white">
+                            <span className="absolute inset-0 bg-[#07090E]/55 flex items-center justify-center text-white">
                               {isThisPlaying ? (
                                 <svg
                                   className="w-3.5 h-3.5 fill-current text-amber-300"
@@ -3495,7 +3495,7 @@ export const ReusableUserProfileSheet: React.FC<
                             <div className="text-xs font-bold text-[#F5F2EB] truncate">
                               {track.title}
                             </div>
-                            <div className="text-[11px] font-mono text-[#8E93A4] truncate">
+                            <div className="text-[11px] font-mono text-[#A3A9BA] truncate">
                               {formatLongListenDuration(stat.listenSeconds)} ·{' '}
                               {stat.playsCount} écoutes · {stat.loopsCount}x
                               boucles

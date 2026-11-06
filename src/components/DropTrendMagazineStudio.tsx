@@ -1315,7 +1315,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const progressPct = Math.min(100, (recordedSeconds / hardLimitSec) * 100);
 
   return (
-    <div className="fixed inset-0 z-[150] w-full h-[100dvh] max-h-[100dvh] bg-black overflow-hidden select-none flex flex-col justify-between">
+    <div className="fixed inset-0 z-[150] w-full h-[100dvh] max-h-[100dvh] bg-[#07090E] overflow-hidden select-none flex flex-col justify-between">
       {/* Canvas haute définition 1080×1920 invisibles servant à l'enregistrement temps réel */}
       <canvas
         ref={exportWatermarkedCanvasRef}
@@ -1344,7 +1344,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
           ÉTAPE 1 : CAMÉRA EN PLEIN ÉCRAN (FACECAM OU ARRIÈRE) AVEC LE SEUL BOUTON ROUGE
           ==================================================================== */}
       {step === 'CAMERA_CAPTURE' && (
-        <div className="relative w-full h-full bg-black overflow-hidden">
+        <div className="relative w-full h-full bg-[#07090E] overflow-hidden">
           {/* Flux vidéo caméra plein écran TOUJOURS monté dans le DOM */}
           <video
             ref={liveViewfinderVideoRef}
@@ -1419,7 +1419,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 stopTrendRecording();
                 onClose();
               }}
-              className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition"
+              className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-[#07090E]/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition"
               aria-label="Fermer"
             >
               <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
@@ -1454,7 +1454,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                     startTrendRecording();
                   }
                 }}
-                className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-full border-[5px] border-white/90 bg-black/40 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_35px_rgba(255,59,48,0.75)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-400 cursor-pointer"
+                className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-full border-[5px] border-white/90 bg-[#07090E]/40 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_35px_rgba(255,59,48,0.75)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-400 cursor-pointer"
                 aria-label={
                   isRecording
                     ? "Couper l'enregistrement"
@@ -1524,7 +1524,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             {/* ZONE 1 (PRIORITAIRE) : ESPACE DÉDIÉ À LA VIDÉO EN GRAND SANS BORDURE NOIRE */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden z-10">
               {/* Logo DROP discret en haut à gauche */}
-              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-xl border border-white/20">
+              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#07090E]/45 backdrop-blur-xl border border-white/20">
                 <DropOfficialLogo className="h-4 sm:h-[18px] w-auto max-w-[80px]" />
                 <span className="text-[11px] font-mono text-zinc-300 font-semibold tracking-wider">Trend</span>
               </div>
@@ -1542,7 +1542,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                   }
                   onClose();
                 }}
-                className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black/45 hover:bg-black/60 backdrop-blur-xl border border-white/25 flex items-center justify-center text-white shadow-lg active:scale-95 transition"
+                className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-[#07090E]/45 hover:bg-[#07090E]/60 backdrop-blur-xl border border-white/25 flex items-center justify-center text-white shadow-lg active:scale-95 transition"
                 aria-label="Fermer"
               >
                 <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
@@ -1635,7 +1635,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 {/* BARRE DE LECTURE INTERACTIVE (PLAY/PAUSE + CURSEUR POUR REVENIR EN ARRIÈRE / AVANCER) */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-2 inset-x-2 sm:bottom-2.5 sm:inset-x-2.5 z-20 flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-xl border border-white/25 shadow-lg overflow-hidden max-w-full"
+                  className="absolute bottom-2 inset-x-2 sm:bottom-2.5 sm:inset-x-2.5 z-20 flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-[#07090E]/45 backdrop-blur-xl border border-white/25 shadow-lg overflow-hidden max-w-full"
                 >
                   <button
                     type="button"
@@ -1790,7 +1790,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition ${
                           activeSocialShareId === 'AUTRE'
                             ? 'bg-emerald-500 scale-105 shadow-emerald-500/40'
-                            : 'bg-gradient-to-tr from-violet-600 to-indigo-500 shadow-violet-600/35 group-hover:scale-105'
+                            : 'bg-gradient-to-tr from-sky-600 to-sky-500 shadow-sky-600/35 group-hover:scale-105'
                         }`}
                       >
                         {activeSocialShareId === 'AUTRE' ? (

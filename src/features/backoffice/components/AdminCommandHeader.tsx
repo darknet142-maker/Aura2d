@@ -7,8 +7,11 @@ import {
   Layers,
   Database,
   Users,
+  Zap,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import type { AdminMainTabId } from '../backoffice.types';
+import { SPRING_SNAPPY, SUBTLE_ENTRANCE_VARIANTS } from '../../../shared/ui/springMotion';
 
 export interface AdminCommandHeaderProps {
   isRealtimeConnected: boolean;
@@ -22,6 +25,8 @@ export interface AdminCommandHeaderProps {
   tracksCount: number;
   bannersCount: number;
   usersCount: number;
+  isBreakUiMode?: boolean;
+  onToggleBreakUiMode?: () => void;
 }
 
 export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
@@ -36,17 +41,24 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
   tracksCount,
   bannersCount,
   usersCount,
+  isBreakUiMode = false,
+  onToggleBreakUiMode,
 }) => {
   return (
-    <>
-      <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-[#0E1118] via-[#121621] to-[#0E1118] border border-emerald-500/30 grid grid-cols-1 lg:grid-cols-12 gap-3 items-center shadow-lg">
-        <div className="lg:col-span-5 flex items-center gap-3 min-w-0">
+    <motion.div
+      variants={SUBTLE_ENTRANCE_VARIANTS}
+      initial="initial"
+      animate="animate"
+      className="flex flex-col gap-3 w-full"
+    >
+      <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-[#0D1017] via-[#131722] to-[#0D1017] border border-emerald-500/30 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]">
+        <div className="lg:col-span-4 flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
             <Shield className="w-4 h-4" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-extrabold text-[#F5F2EB]">
+              <span className="text-xs font-extrabold text-[#F8FAFC]">
                 Studio Admin &amp; Cloud Sync
               </span>
               <span
@@ -59,7 +71,7 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
                 {isRealtimeConnected ? '● Temps Réel Actif' : '● Sync Hybride'}
               </span>
             </div>
-            <span className="text-[10.5px] font-mono text-zinc-400 block truncate mt-0.5">
+            <span className="text-[10.5px] font-mono text-[#A3A9BA] block truncate mt-0.5">
               {lastAdminSavedAt
                 ? `✓ Dernière sauvegarde multi-appareils : ${lastAdminSavedAt}`
                 : 'Modifications synchronisées sur Mobile, Tablette et PC'}
@@ -67,52 +79,82 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
           </div>
         </div>
 
-        <div className="lg:col-span-4">
-          <button
+        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <motion.button
             type="button"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.97 }}
+            transition={SPRING_SNAPPY}
             onClick={onToggleAwardsCeremony}
-            className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-bold border flex items-center justify-center gap-1.5 cursor-pointer truncate ${
               enableAwardsCeremony
-                ? 'bg-amber-400 text-[#07080C] border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]'
-                : 'bg-[#07080C] hover:bg-white/[0.08] text-amber-200 border-amber-400/30'
+                ? 'bg-amber-400 text-[#080A0F] border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]'
+                : 'bg-[#07090E] hover:bg-[#131722] text-amber-200 border-amber-400/35'
             }`}
           >
-            <span>
+            <span className="truncate">
               {enableAwardsCeremony
-                ? '★ Cérémonie Awards : ACTIVE (Public)'
-                : '☆ Activer Cérémonie DROP Awards'}
+                ? '★ Awards : ACTIFS (Public)'
+                : '☆ Activer DROP Awards'}
             </span>
-          </button>
+          </motion.button>
+
+          {onToggleBreakUiMode && (
+            <motion.button
+              type="button"
+              whileHover={{ y: -1.5 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING_SNAPPY}
+              onClick={onToggleBreakUiMode}
+              className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-bold border flex items-center justify-center gap-1.5 cursor-pointer truncate ${
+                isBreakUiMode
+                  ? 'bg-[#DE1B34] text-white border-[#FF4D64] shadow-[0_0_15px_rgba(222,27,52,0.4)]'
+                  : 'bg-[#07090E] hover:bg-[#131722] text-[#A3A9BA] hover:text-[#F8FAFC] border-white/15'
+              }`}
+              title="Protocole break-ui : injecter des titres de 80+ caractères et des pochettes manquantes pour vérifier l'alignement"
+            >
+              <Zap className="w-3.5 h-3.5 shrink-0 text-amber-300" />
+              <span className="truncate">
+                {isBreakUiMode ? 'Crash-Test 80+ car. : ACTIF' : 'Crash-Test 80+ car. & Sans Image'}
+              </span>
+            </motion.button>
+          )}
         </div>
 
         <div className="lg:col-span-3">
-          <button
+          <motion.button
             type="button"
             disabled={isSavingAdmin}
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.97 }}
+            transition={SPRING_SNAPPY}
             onClick={() => onSaveAndSyncAll()}
-            className="w-full px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition cursor-pointer disabled:opacity-50"
+            className="w-full px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#080A0F] font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 cursor-pointer disabled:opacity-50"
           >
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>
+            <span className="truncate">
               {isSavingAdmin
                 ? 'Synchronisation...'
                 : 'Sauvegarder & Synchroniser Tout'}
             </span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
       <nav
         aria-label="Sections principales de l'administration"
-        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0E1118] p-2 rounded-2xl border border-white/[0.08]"
+        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
       >
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('CATALOGUE')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'CATALOGUE'
-              ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
-              : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+              ? 'bg-[#DE1B34] border-[#FF4D64] text-white shadow-md shadow-[#DE1B34]/25'
+              : 'bg-[#07090E] border-white/[0.08] text-[#CBD5E1] hover:text-white hover:border-white/20'
           }`}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -120,21 +162,24 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <FolderOpen className="w-3.5 h-3.5 shrink-0 opacity-90" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'CATALOGUE' ? 'text-white/90' : 'text-zinc-500'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'CATALOGUE' ? 'text-white/95' : 'text-[#A3A9BA]'
             }`}
           >
             {tracksCount} pistes • Rangs &amp; DRM
           </span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('UPLOAD')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'UPLOAD'
-              ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
-              : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+              ? 'bg-[#DE1B34] border-[#FF4D64] text-white shadow-md shadow-[#DE1B34]/25'
+              : 'bg-[#07090E] border-white/[0.08] text-[#CBD5E1] hover:text-white hover:border-white/20'
           }`}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -142,21 +187,24 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <Upload className="w-3.5 h-3.5 shrink-0 opacity-90" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'UPLOAD' ? 'text-white/90' : 'text-zinc-500'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'UPLOAD' ? 'text-white/95' : 'text-[#A3A9BA]'
             }`}
           >
             Opus -14 LUFS &amp; CID
           </span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('BANNERS')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'BANNERS'
-              ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
-              : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+              ? 'bg-[#DE1B34] border-[#FF4D64] text-white shadow-md shadow-[#DE1B34]/25'
+              : 'bg-[#07090E] border-white/[0.08] text-[#CBD5E1] hover:text-white hover:border-white/20'
           }`}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -164,21 +212,24 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <Layers className="w-3.5 h-3.5 shrink-0 opacity-90" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'BANNERS' ? 'text-white/90' : 'text-zinc-500'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'BANNERS' ? 'text-white/95' : 'text-[#A3A9BA]'
             }`}
           >
             {bannersCount} slide(s) Central
           </span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('DATABASE')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'DATABASE'
-              ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
-              : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+              ? 'bg-[#DE1B34] border-[#FF4D64] text-white shadow-md shadow-[#DE1B34]/25'
+              : 'bg-[#07090E] border-white/[0.08] text-[#CBD5E1] hover:text-white hover:border-white/20'
           }`}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -186,21 +237,24 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <Database className="w-3.5 h-3.5 shrink-0 opacity-90" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'DATABASE' ? 'text-white/90' : 'text-zinc-500'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'DATABASE' ? 'text-white/95' : 'text-[#A3A9BA]'
             }`}
           >
             Métiers &amp; SQL Cloud
           </span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('USERS')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'USERS'
-              ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
-              : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+              ? 'bg-[#DE1B34] border-[#FF4D64] text-white shadow-md shadow-[#DE1B34]/25'
+              : 'bg-[#07090E] border-white/[0.08] text-[#CBD5E1] hover:text-white hover:border-white/20'
           }`}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -208,20 +262,23 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <Users className="w-3.5 h-3.5 shrink-0 opacity-90" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'USERS' ? 'text-white/90' : 'text-zinc-500'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'USERS' ? 'text-white/95' : 'text-[#A3A9BA]'
             }`}
           >
             {usersCount} comptes actifs
           </span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
           onClick={() => onSelectMainTab('ROYALTIES_BUGADA')}
-          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
             adminMainTab === 'ROYALTIES_BUGADA'
-              ? 'bg-emerald-500 border-emerald-400 text-[#07080C] shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+              ? 'bg-emerald-500 border-emerald-400 text-[#080A0F] shadow-[0_0_15px_rgba(16,185,129,0.3)]'
               : 'bg-emerald-500/10 border-emerald-500/35 text-emerald-300 hover:bg-emerald-500/20'
           }`}
         >
@@ -230,15 +287,14 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             <Shield className="w-3.5 h-3.5 shrink-0" />
           </div>
           <span
-            className={`text-[10px] font-mono block ${
-              adminMainTab === 'ROYALTIES_BUGADA' ? 'text-[#07080C]/80 font-bold' : 'text-emerald-300/80'
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'ROYALTIES_BUGADA' ? 'text-[#080A0F]/85 font-bold' : 'text-emerald-300/90'
             }`}
           >
             60/40 • B2B • Modèle 36M
           </span>
-        </button>
+        </motion.button>
       </nav>
-    </>
+    </motion.div>
   );
 };
-

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { motion } from 'motion/react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { CertificationBadgeSvg } from '../../../components/ReusableAnalyticsSheets';
 import {
@@ -9,6 +10,7 @@ import {
 import { triggerBeatAudioDownload } from '../../../services/musicService';
 import type { AlbumNode } from '../../../shared/types/domain.types';
 import { RankBadge } from '../../../shared/ui/RankBadge';
+import { SPRING_SNAPPY, SUBTLE_ENTRANCE_VARIANTS } from '../../../shared/ui/springMotion';
 
 export interface AdminCatalogueRepertoireProps {
   catalogue: AlbumNode[];
@@ -43,7 +45,12 @@ export const AdminCatalogueRepertoire: React.FC<
   const q = normSearch(searchQuery.trim());
 
   return (
-    <div className="w-full flex flex-col gap-2.5">
+    <motion.div
+      variants={SUBTLE_ENTRANCE_VARIANTS}
+      initial="initial"
+      animate="animate"
+      className="w-full flex flex-col gap-2.5"
+    >
       <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-2 items-center">
         <div className="relative lg:col-span-7 min-w-0">
           <input
@@ -51,13 +58,13 @@ export const AdminCatalogueRepertoire: React.FC<
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Recherche instantanée dès la 1re lettre (Titre, Artiste, Beatmaker, Ingé, Parolier, Genre, DROP-CID)..."
-            className="w-full bg-[#0D1017] border border-white/[0.12] rounded-xl pl-3 pr-8 py-2.5 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
+            className="w-full bg-[#0D1017] border border-white/[0.12] rounded-xl pl-3 pr-8 py-2.5 text-xs text-[#F8FAFC] placeholder:text-[#A3A9BA]/70 focus:outline-none focus:border-[#DE1B34]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A3A9BA] hover:text-white"
               aria-label="Effacer la recherche"
             >
               <X className="w-3.5 h-3.5" />
@@ -65,22 +72,28 @@ export const AdminCatalogueRepertoire: React.FC<
           )}
         </div>
         <div className="lg:col-span-5 grid grid-cols-2 gap-2">
-          <button
+          <motion.button
             type="button"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.97 }}
+            transition={SPRING_SNAPPY}
             onClick={onAutoReorderByAlgo}
-            className="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-200 text-xs font-bold transition cursor-pointer"
+            className="px-3 py-2.5 rounded-xl bg-[#0D1017] hover:bg-[#131722] border border-white/15 text-[#F8FAFC] text-xs font-bold cursor-pointer truncate"
           >
             Trier 2D (Score Algo)
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.97 }}
+            transition={SPRING_SNAPPY}
             onClick={() =>
               onSaveAndSyncAll('Ordre 2D & Catalogue des Pistes')
             }
-            className="px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] text-xs font-extrabold transition cursor-pointer"
+            className="px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#080A0F] text-xs font-extrabold cursor-pointer truncate"
           >
             Sauvegarder Catalogue
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -111,22 +124,25 @@ export const AdminCatalogueRepertoire: React.FC<
         return (
           <div
             key={alb.id}
-            className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3 flex flex-col gap-2"
+            className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3 flex flex-col gap-2 shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]"
           >
-            <div className="w-full flex items-center justify-between gap-2 pb-1.5 border-b border-white/[0.06]">
+            <div className="w-full flex items-center justify-between gap-2 pb-1.5 border-b border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => onSelectArtist(alb.artist)}
                 className="min-w-0 flex-1 flex items-center gap-2 text-left group"
               >
-                <span className="px-1.5 py-0.5 rounded bg-[#DE1B34]/15 text-[#DE1B34] font-mono text-[10px] shrink-0">
+                <span className="px-1.5 py-0.5 rounded bg-[#DE1B34]/15 text-[#FF4D64] font-mono text-[10px] font-bold shrink-0">
                   X:{aIdx + 1}
                 </span>
-                <span className="text-xs font-bold text-[#F5F2EB] group-hover:text-[#DE1B34] truncate">
+                <span className="text-xs font-bold text-[#F8FAFC] group-hover:text-[#FF4D64] truncate">
                   {alb.artist}
                 </span>
+                <span className="hidden md:inline text-[11px] font-mono text-[#A3A9BA] truncate max-w-[320px]">
+                  — {alb.albumTitle}
+                </span>
                 <CertificationBadgeSvg cert={albCert} compact />
-                <ChevronRight className="w-3.5 h-3.5 text-[#8E93A4] shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-[#A3A9BA] shrink-0" />
               </button>
 
               <div className="flex items-center gap-1 shrink-0">
@@ -134,7 +150,8 @@ export const AdminCatalogueRepertoire: React.FC<
                   type="button"
                   onClick={() => onMoveAlbumOrder(aIdx, -1)}
                   disabled={aIdx === 0}
-                  className="p-1 rounded bg-white/[0.04] text-[#8E93A4] disabled:opacity-30"
+                  aria-label="Monter l'album"
+                  className="p-1.5 rounded bg-[#07090E] border border-white/[0.08] text-[#A3A9BA] hover:text-white disabled:opacity-30"
                 >
                   <ArrowUp className="w-3 h-3" />
                 </button>
@@ -142,7 +159,8 @@ export const AdminCatalogueRepertoire: React.FC<
                   type="button"
                   onClick={() => onMoveAlbumOrder(aIdx, 1)}
                   disabled={aIdx === catalogue.length - 1}
-                  className="p-1 rounded bg-white/[0.04] text-[#8E93A4] disabled:opacity-30"
+                  aria-label="Descendre l'album"
+                  className="p-1.5 rounded bg-[#07090E] border border-white/[0.08] text-[#A3A9BA] hover:text-white disabled:opacity-30"
                 >
                   <ArrowDown className="w-3 h-3" />
                 </button>
@@ -158,13 +176,16 @@ export const AdminCatalogueRepertoire: React.FC<
                   t.isBeatDownloadable ||
                   t.category === 'Beats & Instrumentales';
                 return (
-                  <div
+                  <motion.div
                     key={t.id}
+                    whileHover={{ y: -1.5 }}
+                    whileTap={{ scale: 0.992 }}
+                    transition={SPRING_SNAPPY}
                     onClick={() => onSelectTrack(t.id)}
-                    className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/40 cursor-pointer transition-colors"
+                    className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#07090E] border border-white/[0.08] hover:border-[#DE1B34]/45 cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
+                      <div className="w-11 h-11 rounded-lg overflow-hidden cover-card-bevel cover-gloss-sheen shrink-0">
                         <CoverArtwork
                           artworkType={t.artworkType}
                           coverUrl={t.cover}
@@ -174,21 +195,23 @@ export const AdminCatalogueRepertoire: React.FC<
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-bold text-[#F5F2EB] truncate">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs font-bold text-[#F8FAFC] truncate">
                             {t.title}
                           </span>
-                          <CertificationBadgeSvg cert={tCert} compact />
-                          {isBeat && (
-                            <span className="px-1.5 py-0.2 rounded bg-amber-400/15 border border-amber-400/40 text-amber-300 text-[9px] font-mono font-bold">
-                              BEAT • {t.bpm} BPM
+                          <div className="flex items-center gap-1 shrink-0">
+                            <CertificationBadgeSvg cert={tCert} compact />
+                            {isBeat && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-400/15 border border-amber-400/40 text-amber-300 text-[9px] font-mono font-bold">
+                                BEAT • {t.bpm} BPM
+                              </span>
+                            )}
+                            <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-sky-500/10 border border-sky-400/25 text-sky-300 text-[9px] font-mono">
+                              {t.dropContentId || 'DROP-CID'}
                             </span>
-                          )}
-                          <span className="px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-400/25 text-cyan-300 text-[9px] font-mono">
-                            {t.dropContentId || 'DROP-CID'}
-                          </span>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-[#8E93A4] truncate">
+                        <div className="text-[11px] text-[#A3A9BA] truncate mt-0.5">
                           {t.artist}
                           {t.featuringArtists && t.featuringArtists.length > 0
                             ? ` feat. ${t.featuringArtists.join(', ')}`
@@ -221,16 +244,15 @@ export const AdminCatalogueRepertoire: React.FC<
                         </button>
                       )}
                       <RankBadge rank={rInfo.rank} delta={rInfo.delta} />
-                      <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                      <ChevronRight className="w-4 h-4 text-[#A3A9BA]" />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
           </div>
         );
       })}
-    </div>
+    </motion.div>
   );
 };
-

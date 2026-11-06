@@ -37,7 +37,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
     <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto flex flex-col gap-4">
       <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-[#07080C] to-amber-500/10 border border-emerald-500/30 flex flex-col gap-3">
         {supabaseHealthMsg && (
-          <div className="px-3 py-2 rounded-xl bg-black/50 border border-emerald-500/25 text-[11px] text-emerald-300 font-medium">
+          <div className="px-3 py-2 rounded-xl bg-[#07090E]/50 border border-emerald-500/25 text-[11px] text-emerald-300 font-medium">
             {supabaseHealthMsg}
           </div>
         )}
@@ -63,7 +63,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
                     : 'Mode Hybride Local Actif'}
                 </span>
               </div>
-              <p className="text-[11px] text-[#8E93A4]">
+              <p className="text-[11px] text-[#A3A9BA]">
                 4 Tables (`tracks`, `studio_entities`, `user_playlists`, `user_library_state`) + 2 Buckets (`audio_files` Opus &amp; `cover_files` Pochettes)
               </p>
             </div>
@@ -109,7 +109,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
               </span>
               <span>Idempotent (exécutable plusieurs fois sans erreur)</span>
             </div>
-            <pre className="w-full max-h-64 overflow-y-auto p-3 rounded-xl bg-black/80 border border-white/10 text-[11px] font-mono text-emerald-300/95 select-all whitespace-pre-wrap">
+            <pre className="w-full max-h-64 overflow-y-auto p-3 rounded-xl bg-[#07090E]/80 border border-white/10 text-[11px] font-mono text-emerald-300/95 select-all whitespace-pre-wrap">
               {SUPABASE_SQL_SETUP_SCRIPT}
             </pre>
           </div>
@@ -122,7 +122,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Base de Données Réutilisable (Listes Déroulantes)</span>
           </h3>
-          <p className="text-xs text-[#8E93A4]">
+          <p className="text-xs text-[#A3A9BA]">
             Enregistrez les noms d'artistes, labels, beatmakers, ingénieurs et auteurs une seule fois pour les sélectionner partout.
           </p>
         </div>
@@ -197,7 +197,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
             {
               key: 'engineers',
               title: 'Ingénieurs du Son',
-              color: 'text-violet-300',
+              color: 'text-sky-300',
             },
             {
               key: 'lyricists',
@@ -214,7 +214,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
               <span className={`text-xs font-bold ${group.color}`}>
                 {group.title}
               </span>
-              <span className="text-[10px] font-mono text-[#8E93A4]">
+              <span className="text-[10px] font-mono text-[#A3A9BA]">
                 {entityDb[group.key].length} enregistré(s)
               </span>
             </div>
@@ -228,7 +228,7 @@ export const AdminDatabaseManager: React.FC<AdminDatabaseManagerProps> = ({
                   <button
                     type="button"
                     onClick={() => onDeleteEntity(group.key, item)}
-                    className="text-[#8E93A4] hover:text-rose-400"
+                    className="text-[#A3A9BA] hover:text-rose-400"
                     title="Supprimer de la liste"
                   >
                     <X className="w-3 h-3" />

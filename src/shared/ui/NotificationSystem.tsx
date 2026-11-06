@@ -50,7 +50,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
 
       {showNotificationsModal && (
         <div
-          className="fixed inset-0 z-[98] bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-[98] bg-[#07090E]/75 backdrop-blur-md flex items-center justify-center p-4"
           onClick={onCloseNotificationsModal}
         >
           <div
@@ -86,7 +86,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
 
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5">
               {notifications.length === 0 ? (
-                <div className="py-10 text-center text-xs text-[#8E93A4]">
+                <div className="py-10 text-center text-xs text-[#A3A9BA]">
                   Aucune notification pour le moment.
                 </div>
               ) : (
@@ -115,7 +115,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
                       <span className="text-xs font-bold text-[#F5F2EB] truncate">
                         {n.title}
                       </span>
-                      <span className="text-[10px] font-mono text-[#8E93A4] shrink-0">
+                      <span className="text-[10px] font-mono text-[#A3A9BA] shrink-0">
                         {n.createdAt}
                       </span>
                     </div>

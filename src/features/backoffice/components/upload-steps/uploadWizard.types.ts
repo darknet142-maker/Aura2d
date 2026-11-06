@@ -1,0 +1,108 @@
+import type React from 'react';
+import type { FeaturingSplitMode } from '../../../../utils/rankingEngine';
+import type { WaveformConcordanceResult } from '../../../../services/musicService';
+import type { EntityDatabase, Track } from '../../../../shared/types/domain.types';
+
+export interface WaveformVerificationReportData {
+  candidatePeaks: number[];
+  candidateCid: string;
+  matchedTrack: Track | null;
+  matchedPeaks: number[];
+  matchedCid: string;
+  concordance: WaveformConcordanceResult;
+  isBlocked: boolean;
+}
+
+export interface AdminUploadWizardProps {
+  wizardStep: 1 | 2 | 3 | 4;
+  setWizardStep: React.Dispatch<React.SetStateAction<1 | 2 | 3 | 4>>;
+  isWizardStep1Valid: boolean;
+  isWizardStep2Valid: boolean;
+  isWizardStep3Valid: boolean;
+  canAccessWizardStep: (step: 1 | 2 | 3 | 4) => boolean;
+  uploadSuccess: string | null;
+  uploadSourceType: 'FILE' | 'STREAM';
+  setUploadSourceType: React.Dispatch<React.SetStateAction<'FILE' | 'STREAM'>>;
+  newAudioFileName: string;
+  handleAudioFileDrop: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleLoadStudioOpusMasterPreset: () => void;
+  handleSimulateDuplicateWaveformUpload: (targetExistingTrack?: Track) => void;
+  allTracksFlat: Track[];
+  newExternalUrl: string;
+  setNewExternalUrl: React.Dispatch<React.SetStateAction<string>>;
+  isUploadingFile: boolean;
+  uploadProgress: number;
+  newCoverFileUrl: string;
+  newCoverFileName: string;
+  handleRemoveNewCover: () => void;
+  handleCoverFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  waveformVerificationReport: WaveformVerificationReportData | null;
+  handleCancelDuplicateUpload: () => void;
+  newIsInstrumental: boolean;
+  setNewIsInstrumental: React.Dispatch<React.SetStateAction<boolean>>;
+  setNewIsBeatDownloadable: React.Dispatch<React.SetStateAction<boolean>>;
+  newCategory: string;
+  setNewCategory: React.Dispatch<React.SetStateAction<string>>;
+  newTitle: string;
+  setNewTitle: React.Dispatch<React.SetStateAction<string>>;
+  newArtist: string;
+  setNewArtist: React.Dispatch<React.SetStateAction<string>>;
+  inlineNewEntityField: string | null;
+  setInlineNewEntityField: React.Dispatch<React.SetStateAction<string | null>>;
+  inlineNewEntityValue: string;
+  setInlineNewEntityValue: React.Dispatch<React.SetStateAction<string>>;
+  entityDb: EntityDatabase;
+  handleRegisterEntityInDb: (
+    category: keyof EntityDatabase,
+    rawNames: string,
+    silent?: boolean
+  ) => void;
+  newFeaturingInput: string;
+  setNewFeaturingInput: React.Dispatch<React.SetStateAction<string>>;
+  newFeaturingSplitMode: FeaturingSplitMode;
+  setNewFeaturingSplitMode: React.Dispatch<React.SetStateAction<FeaturingSplitMode>>;
+  newDurationFormatted: string;
+  setNewDurationFormatted: React.Dispatch<React.SetStateAction<string>>;
+  newGabonTerritoryPct: number;
+  setNewGabonTerritoryPct: React.Dispatch<React.SetStateAction<number>>;
+  newAlbum: string;
+  setNewAlbum: React.Dispatch<React.SetStateAction<string>>;
+  newBpm: number;
+  setNewBpm: React.Dispatch<React.SetStateAction<number>>;
+  newMusicalKey: string;
+  setNewMusicalKey: React.Dispatch<React.SetStateAction<string>>;
+  categories: string[];
+  customCategoryInput: string;
+  setCustomCategoryInput: React.Dispatch<React.SetStateAction<string>>;
+  handleAddCategory: () => void;
+  newLabelName: string;
+  setNewLabelName: React.Dispatch<React.SetStateAction<string>>;
+  newBeatmakerName: string;
+  setNewBeatmakerName: React.Dispatch<React.SetStateAction<string>>;
+  newRecordingEngineerName: string;
+  setNewRecordingEngineerName: React.Dispatch<React.SetStateAction<string>>;
+  newMixingEngineerName: string;
+  setNewMixingEngineerName: React.Dispatch<React.SetStateAction<string>>;
+  newSoundEngineerName: string;
+  setNewSoundEngineerName: React.Dispatch<React.SetStateAction<string>>;
+  newMasteringEngineerName: string;
+  setNewMasteringEngineerName: React.Dispatch<React.SetStateAction<string>>;
+  newLyricistName: string;
+  setNewLyricistName: React.Dispatch<React.SetStateAction<string>>;
+  newIsExternalLyricist: boolean;
+  setNewIsExternalLyricist: React.Dispatch<React.SetStateAction<boolean>>;
+  newDropContentId: string;
+  newAudioCodec: 'OPUS' | 'AAC' | 'WAV';
+  newMeasuredLufs: number;
+  parsedNewDuration: number;
+  toggleUploadDropPreview: () => void;
+  isPreviewingUploadDrop: boolean;
+  uploadPreviewTime: number;
+  newDropStart: number;
+  setNewDropStart: React.Dispatch<React.SetStateAction<number>>;
+  newDropDuration: number;
+  setNewDropDuration: React.Dispatch<React.SetStateAction<number>>;
+  newCopyrightText: string;
+  waveformPeaks: number[];
+  handlePublishTrack: () => void;
+}

@@ -65,7 +65,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
               Gestionnaire des Bannières Slideshow « Central » (Haut &amp; Bas)
             </span>
           </h3>
-          <p className="text-xs text-[#8E93A4]">
+          <p className="text-xs text-[#A3A9BA]">
             Importez vos visuels manuellement depuis votre appareil (sans texte superposé), réglez la vitesse de défilement et choisissez la redirection au clic.
           </p>
         </div>
@@ -115,7 +115,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
 
         <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] flex flex-col gap-1">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-[#8E93A4]">Timing par slide</span>
+            <span className="text-[#A3A9BA]">Timing par slide</span>
             <span className="font-mono font-bold text-amber-300">
               {adBannerSettings.slideIntervalSec}s
             </span>
@@ -138,7 +138,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
 
         <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.07] flex flex-col gap-1">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-[#8E93A4]">Vitesse défilement</span>
+            <span className="text-[#A3A9BA]">Vitesse défilement</span>
             <span className="font-mono font-bold text-emerald-400">
               {adBannerSettings.transitionDurationMs} ms
             </span>
@@ -196,7 +196,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
                   <span className="text-xs font-bold text-[#F5F2EB] text-center px-2">
                     Choisir une image Full HD (1920×1080)
                   </span>
-                  <span className="text-[10px] text-[#8E93A4]">
+                  <span className="text-[10px] text-[#A3A9BA]">
                     Format 16:9 Full HD • JPG, PNG, WebP (Sans texte)
                   </span>
                 </>
@@ -233,7 +233,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
 
           <div className="flex flex-col gap-2.5">
             <div>
-              <label className="block text-[11px] text-[#8E93A4] mb-1">
+              <label className="block text-[11px] text-[#A3A9BA] mb-1">
                 Emplacement dans « Central »
               </label>
               <select
@@ -250,7 +250,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] text-[#8E93A4] mb-1">
+              <label className="block text-[11px] text-[#A3A9BA] mb-1">
                 Action au clic sur l'image
               </label>
               <select
@@ -323,7 +323,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
             )}
 
             {newBannerRedirectType === 'NONE' && (
-              <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-[11px] text-[#8E93A4]">
+              <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-[11px] text-[#A3A9BA]">
                 L'image défilera dans la bannière sans action au clic.
               </div>
             )}
@@ -381,7 +381,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
         </span>
 
         {adBanners.length === 0 ? (
-          <div className="p-6 text-center rounded-2xl bg-[#07080C] border border-white/[0.06] text-xs text-[#8E93A4]">
+          <div className="p-6 text-center rounded-2xl bg-[#07080C] border border-white/[0.06] text-xs text-[#A3A9BA]">
             Aucune bannière enregistrée. Importez une image ci-dessus pour démarrer le slideshow.
           </div>
         ) : (
@@ -395,13 +395,13 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
                     : 'border-white/[0.05] opacity-60'
                 }`}
               >
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-white/10">
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-[#07090E] border border-white/10">
                   <img
                     src={slide.imageUrl}
                     alt=""
                     className="w-full h-full object-cover"
                   />
-                  <label className="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg bg-black/75 hover:bg-black text-[10px] font-bold text-amber-300 border border-white/15 cursor-pointer backdrop-blur-sm">
+                  <label className="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg bg-[#07090E]/75 hover:bg-[#07090E] text-[10px] font-bold text-amber-300 border border-white/15 cursor-pointer backdrop-blur-sm">
                     Remplacer l'image (1920×1080)
                     <input
                       type="file"
@@ -576,7 +576,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
                           }));
                         })
                       }
-                      className="p-1 rounded bg-white/[0.05] text-[#8E93A4] disabled:opacity-30"
+                      className="p-1 rounded bg-white/[0.05] text-[#A3A9BA] disabled:opacity-30"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
@@ -595,7 +595,7 @@ export const AdminBannersManager: React.FC<AdminBannersManagerProps> = ({
                           }));
                         })
                       }
-                      className="p-1 rounded bg-white/[0.05] text-[#8E93A4] disabled:opacity-30"
+                      className="p-1 rounded bg-white/[0.05] text-[#A3A9BA] disabled:opacity-30"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </button>

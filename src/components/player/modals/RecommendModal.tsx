@@ -35,7 +35,7 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex flex-col justify-end p-4"
+      className="absolute inset-0 z-40 bg-[#07090E]/80 backdrop-blur-md flex flex-col justify-end p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -90,7 +90,7 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
             value={recommendNote}
             onChange={(e) => setRecommendNote(e.target.value)}
             placeholder="Ex: Le drop à 1:16 et le mix sont incroyables..."
-            className="w-full bg-black/50 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
+            className="w-full bg-[#07090E]/50 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
           />
         </div>
 

@@ -102,7 +102,7 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
               className={`min-h-[40px] py-2 px-2.5 rounded-xl text-[11px] font-semibold text-center leading-tight transition-all flex items-center justify-center border cursor-pointer ${
                 algoDimension === dim.id
                   ? 'bg-[#DE1B34] border-[#DE1B34] text-white font-extrabold shadow-md shadow-[#DE1B34]/20'
-                  : 'bg-[#07080C] border-white/[0.06] text-[#8E93A4] hover:text-white hover:border-white/20'
+                  : 'bg-[#07080C] border-white/[0.06] text-[#A3A9BA] hover:text-white hover:border-white/20'
               }`}
             >
               {dim.label}
@@ -112,7 +112,7 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
 
         {algoDimension !== 'GENERAL' && algoDimension !== 'AWARDS' && (
           <div className="w-full flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-[#8E93A4] shrink-0" />
+            <Filter className="w-3.5 h-3.5 text-[#A3A9BA] shrink-0" />
             <select
               value={algoFilterValue}
               onChange={(e) => setAlgoFilterValue(e.target.value)}
@@ -149,7 +149,7 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
                   />
                 )}
               </div>
-              <p className="text-[11px] text-[#8E93A4]">{award.subtitle}</p>
+              <p className="text-[11px] text-[#A3A9BA]">{award.subtitle}</p>
               <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06] flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-[#F5F2EB] truncate">
@@ -193,11 +193,11 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 shrink-0">
                       <span>{grp.totalPoints.toFixed(1)} pts</span>
-                      <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                      <ChevronRight className="w-4 h-4 text-[#A3A9BA]" />
                     </div>
                   </div>
                   {grp.primaryMetricLabel && (
-                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono text-[#8E93A4]">
+                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono text-[#A3A9BA]">
                       <span className="truncate">{grp.primaryMetricLabel}</span>
                       <span>
                         Δx{grp.deltaImpactFactor?.toFixed(2)} • Poly x
@@ -244,7 +244,7 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
                         </span>
                         <CertificationBadgeSvg cert={cert} compact />
                       </div>
-                      <div className="text-[11px] text-[#8E93A4] truncate">
+                      <div className="text-[11px] text-[#A3A9BA] truncate">
                         {t.artist}
                         {t.featuringArtists && t.featuringArtists.length > 0
                           ? ` feat. ${t.featuringArtists.join(', ')}`
@@ -256,7 +256,7 @@ export const AdminCatalogueAlgo: React.FC<AdminCatalogueAlgoProps> = ({
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     <RankBadge rank={displayRank} delta={globalRank.delta} />
-                    <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                    <ChevronRight className="w-4 h-4 text-[#A3A9BA]" />
                   </div>
                 </div>
               );

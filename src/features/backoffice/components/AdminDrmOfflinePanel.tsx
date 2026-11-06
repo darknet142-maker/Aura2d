@@ -54,7 +54,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
               <h3 className="text-xs font-bold text-[#F5F2EB] truncate">
                 Coffre-fort DRM Sandbox (Exclusif Admin)
               </h3>
-              <p className="text-[11px] text-[#8E93A4] truncate">
+              <p className="text-[11px] text-[#A3A9BA] truncate">
                 Web Crypto API • AES-256-GCM (extractable: false) &amp;
                 Auto-destruction
               </p>
@@ -92,11 +92,11 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
           <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06]">
-            <span className="text-[#8E93A4] block">Statut Clé CryptoKey</span>
+            <span className="text-[#A3A9BA] block">Statut Clé CryptoKey</span>
             <span
               className={
                 !drmRec
-                  ? 'font-semibold text-[#8E93A4]'
+                  ? 'font-semibold text-[#A3A9BA]'
                   : drmRec.corrupted
                     ? 'font-bold text-rose-500'
                     : 'font-semibold text-emerald-400'
@@ -110,11 +110,11 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
             </span>
           </div>
           <div className="p-2.5 rounded-xl bg-[#07080C] border border-white/[0.06]">
-            <span className="text-[#8E93A4] block">Conteneur Audio Local</span>
+            <span className="text-[#A3A9BA] block">Conteneur Audio Local</span>
             <span
               className={
                 !drmRec
-                  ? 'font-semibold text-[#8E93A4]'
+                  ? 'font-semibold text-[#A3A9BA]'
                   : drmRec.corrupted
                     ? 'font-bold text-rose-500'
                     : 'font-semibold text-amber-300'
@@ -131,12 +131,12 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
 
         <div className="p-3 rounded-xl bg-[#07080C] border border-white/[0.06] space-y-1.5">
           <div className="flex items-center justify-between text-[10px]">
-            <span className="text-[#8E93A4] uppercase tracking-wider font-semibold">
+            <span className="text-[#A3A9BA] uppercase tracking-wider font-semibold">
               Inspecteur Binaire Stocké (Illisible par VLC / Fichiers)
             </span>
             <span className="text-emerald-400 font-mono">IV: 96-bit GCM</span>
           </div>
-          <p className="font-mono text-[10px] leading-relaxed text-amber-300/90 break-all select-all bg-black/50 p-2 rounded-lg border border-white/5">
+          <p className="font-mono text-[10px] leading-relaxed text-amber-300/90 break-all select-all bg-[#07090E]/50 p-2 rounded-lg border border-white/5">
             {!drmRec
               ? 'Aucun flux binaire chiffré pour ce titre. Cliquez sur "Chiffrer en Sandbox" pour générer les chunks AES-256-GCM.'
               : drmRec.corrupted
@@ -171,7 +171,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
             <h3 className="text-xs font-bold text-[#F5F2EB] truncate">
               Synchronisation Offline-First (/api/sync-metrics)
             </h3>
-            <p className="text-[11px] text-[#8E93A4] truncate">
+            <p className="text-[11px] text-[#A3A9BA] truncate">
               Comptage silencieux en tâche de fond + Idempotence UUID
             </p>
           </div>
@@ -223,7 +223,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
               En attente ({syncSnapshot.queue.length})
             </span>
             {syncSnapshot.queue.length === 0 ? (
-              <div className="py-4 text-center text-[11px] font-mono text-[#8E93A4]">
+              <div className="py-4 text-center text-[11px] font-mono text-[#A3A9BA]">
                 File locale vide.
               </div>
             ) : (
@@ -237,7 +237,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
                     <span className="text-[#F5F2EB] truncate mx-2">
                       {evt.trackId}
                     </span>
-                    <span className="text-[#8E93A4] text-[10px] shrink-0">
+                    <span className="text-[#A3A9BA] text-[10px] shrink-0">
                       {evt.eventId.slice(0, 6)}
                     </span>
                   </div>
@@ -251,7 +251,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
               Synchronisés ({syncSnapshot.totalSyncedCount})
             </span>
             {syncSnapshot.syncedHistory.length === 0 ? (
-              <div className="py-4 text-center text-[11px] font-mono text-[#8E93A4]">
+              <div className="py-4 text-center text-[11px] font-mono text-[#A3A9BA]">
                 Aucun lot envoyé.
               </div>
             ) : (

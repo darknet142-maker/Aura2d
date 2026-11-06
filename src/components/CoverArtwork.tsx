@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Disc } from 'lucide-react';
 
 export type ArtworkType =
   | 'creative_yellow'
@@ -434,18 +433,18 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <linearGradient id="bgViolet" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7e22ce" />
-            <stop offset="50%" stopColor="#4c1d95" />
-            <stop offset="100%" stopColor="#1e1b4b" />
+          <linearGradient id="bgStudioHorizon" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#0c4a6e" />
+            <stop offset="50%" stopColor="#082f49" />
+            <stop offset="100%" stopColor="#080a0f" />
           </linearGradient>
         </defs>
-        <rect width="400" height="430" fill="url(#bgViolet)" />
-        <circle cx="200" cy="215" r="105" fill="#c084fc" opacity="0.25" />
+        <rect width="400" height="430" fill="url(#bgStudioHorizon)" />
+        <circle cx="200" cy="215" r="105" fill="#38bdf8" opacity="0.22" />
         <path
           d="M 70 320 Q 200 120 330 320"
           fill="none"
-          stroke="#f0abfc"
+          stroke="#fbbf24"
           strokeWidth="16"
           strokeLinecap="round"
         />
@@ -456,7 +455,7 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
           fontFamily="Plus Jakarta Sans, sans-serif"
           fontWeight="900"
           fontSize="36"
-          fill="#ffffff"
+          fill="#f8fafc"
           letterSpacing="3"
         >
           HORIZON
@@ -465,14 +464,67 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
     );
   }
 
+  const monogram = (title || artist || 'DR')
+    .replace(/[^a-zA-Z0-9À-ÿ]/g, '')
+    .slice(0, 2)
+    .toUpperCase() || 'DR';
+
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#281E18] to-[#0B0809] text-white/70">
-      <Disc className="w-10 h-10 text-[#F59E0B] mb-1.5" />
-      {artist && (
-        <span className="text-[10px] font-mono uppercase tracking-widest px-2 text-center truncate max-w-full">
-          {artist}
+    <div
+      className={`relative overflow-hidden flex flex-col items-center justify-between p-2.5 bg-gradient-to-br from-[#131722] via-[#0D1017] to-[#080A0F] text-[#F8FAFC] select-none ${className}`}
+      role="img"
+      aria-label={`Master Audio Studio : ${title}${artist ? ` — ${artist}` : ''}`}
+    >
+      {/* Sillons de vinyle Studio Broadcast SVG locaux */}
+      <svg
+        viewBox="0 0 200 200"
+        className="absolute inset-0 w-full h-full opacity-35 pointer-events-none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <radialGradient id="vinylSheen" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#DE1B34" stopOpacity="0.35" />
+            <stop offset="55%" stopColor="#F59E0B" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#080A0F" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="100" cy="100" r="92" fill="url(#vinylSheen)" />
+        <circle cx="100" cy="100" r="84" fill="none" stroke="#F8FAFC" strokeOpacity="0.08" strokeWidth="1" />
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#F8FAFC" strokeOpacity="0.06" strokeWidth="1" strokeDasharray="6 4" />
+        <circle cx="100" cy="100" r="56" fill="none" stroke="#F59E0B" strokeOpacity="0.16" strokeWidth="1.2" />
+        <circle cx="100" cy="100" r="42" fill="none" stroke="#DE1B34" strokeOpacity="0.28" strokeWidth="1.5" />
+        <circle cx="100" cy="100" r="24" fill="#0D1017" stroke="#F59E0B" strokeOpacity="0.45" strokeWidth="1.5" />
+        <circle cx="100" cy="100" r="5" fill="#F59E0B" />
+      </svg>
+
+      {/* En-tête technique Broadcast */}
+      <div className="relative z-10 w-full flex items-center justify-between gap-1 text-[8px] font-mono uppercase tracking-wider text-[#A3A9BA]">
+        <span className="truncate px-1.5 py-0.5 rounded bg-[#07090E]/80 border border-white/10 text-amber-300 font-bold">
+          MASTER +241
         </span>
-      )}
+        <span className="shrink-0 text-[7px] text-[#A3A9BA]/90 font-mono">-14 LUFS</span>
+      </div>
+
+      {/* Monogramme & Disque Central */}
+      <div className="relative z-10 my-auto flex flex-col items-center justify-center">
+        <div className="w-9 h-9 rounded-full bg-[#07090E]/90 border border-amber-500/40 flex items-center justify-center shadow-[0_4px_14px_rgba(222,27,52,0.3)]">
+          <span className="text-[11px] font-black tracking-tighter text-amber-300 font-mono">
+            {monogram}
+          </span>
+        </div>
+      </div>
+
+      {/* Pied typographique textuel résilient aux titres de 80+ caractères */}
+      <div className="relative z-10 w-full min-w-0 bg-[#07090E]/85 backdrop-blur-xs border border-white/10 rounded-lg px-2 py-1 text-center">
+        <p className="text-[9px] font-extrabold text-[#F8FAFC] truncate leading-tight">
+          {title || ' Piste Studio Sans Titre '}
+        </p>
+        {artist && (
+          <p className="text-[8px] font-mono uppercase tracking-wider text-[#A3A9BA] truncate leading-tight mt-0.5">
+            {artist}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

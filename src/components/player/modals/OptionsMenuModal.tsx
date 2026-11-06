@@ -43,7 +43,7 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex flex-col justify-end p-4"
+      className="absolute inset-0 z-40 bg-[#07090E]/75 backdrop-blur-md flex flex-col justify-end p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}

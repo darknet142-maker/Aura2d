@@ -88,7 +88,7 @@ export const PlayerUtilityDock: React.FC<PlayerUtilityDockProps> = ({
           <Video className="w-5 h-5 stroke-[2.2] text-white drop-shadow" />
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-sm" />
         </span>
-        <span className="absolute -bottom-1 px-1.5 py-[1.5px] rounded-full bg-black/85 text-amber-300 text-[8px] font-mono font-black tracking-wider leading-none border border-amber-400/40 shadow">
+        <span className="absolute -bottom-1 px-1.5 py-[1.5px] rounded-full bg-[#07090E]/85 text-amber-300 text-[8px] font-mono font-black tracking-wider leading-none border border-amber-400/40 shadow">
           REC 30s
         </span>
       </button>

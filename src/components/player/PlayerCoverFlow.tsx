@@ -204,12 +204,12 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
                 <div className="cover-glare" />
 
                 {!isActiveCard && (
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-[#07090E]/40 pointer-events-none transition-opacity duration-300" />
                 )}
 
                 {/* Track switcher indicator dots (min 44px tap zone) */}
                 {isActiveCard && currentAlbum && currentAlbum.tracks.length > 1 && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 py-2 px-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 py-2 px-1.5 rounded-full bg-[#07090E]/60 backdrop-blur-md border border-white/15">
                     {currentAlbum.tracks.map((t, tIdx) => (
                       <button
                         key={t.id}

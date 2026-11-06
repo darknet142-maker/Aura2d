@@ -469,7 +469,7 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
             </div>
             <div className="flex justify-between p-2 rounded-xl bg-[#0D1017] border border-white/[0.05]">
               <span className="text-zinc-300">4. Commission Soutien Direct des Fans (10%)</span>
-              <span className="font-mono font-bold text-purple-300">
+              <span className="font-mono font-bold text-amber-300">
                 {formatFcfa(simResult.tipsContribution)} / mois
               </span>
             </div>

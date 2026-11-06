@@ -281,7 +281,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                     {row.restoredRoyaltyWithoutVat.toFixed(2)} FCFA/titre
                   </span>
                 </div>
-                <div className="text-[10px] font-semibold text-indigo-300 pt-0.5">
+                <div className="text-[10px] font-semibold text-sky-300 pt-0.5">
                   → {row.recommendedPack}
                 </div>
               </div>
@@ -332,13 +332,13 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                 }}
                 className={`rounded-2xl p-4 border transition-all cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-indigo-600/15 border-indigo-500 shadow-lg shadow-indigo-500/10'
+                    ? 'bg-sky-600/15 border-sky-500 shadow-lg shadow-sky-500/10'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-indigo-500/20 text-indigo-300">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-sky-500/20 text-sky-300">
                       {pack.id.replace('_', ' ')} ({pack.multiplierVsB2c}x B2C)
                     </span>
                     <span className="text-[11px] text-slate-400 font-semibold">
@@ -356,8 +356,8 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                         {formatFcfa(pack.weeklyPriceFcfa)}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-indigo-500/20 border border-indigo-500/30 p-2">
-                      <p className="text-[10px] text-indigo-300 font-bold">Mois</p>
+                    <div className="rounded-lg bg-sky-500/20 border border-sky-500/30 p-2">
+                      <p className="text-[10px] text-sky-300 font-bold">Mois</p>
                       <p className="text-[11px] font-black text-white">
                         {formatFcfa(pack.monthlyPriceFcfa)}
                       </p>
@@ -390,7 +390,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                       {formatFcfa(Math.round(metrics.bugadaPublicPerf12))}
                     </span>
                   </div>
-                  <div className="flex justify-between text-indigo-300">
+                  <div className="flex justify-between text-sky-300">
                     <span>• Marge Plateforme DROP (40% net) :</span>
                     <span className="font-bold">
                       {formatFcfa(Math.round(metrics.platformShare40))}
@@ -413,7 +413,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 text-indigo-400 shrink-0" />
+                <Smartphone className="w-4 h-4 text-sky-400 shrink-0" />
                 <span>
                   Verrouillage Matériel (1 Licence = 1 Device ID actif) &amp; Remise
                   Multi-Établissements
@@ -438,7 +438,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                 onClick={() => setVenueCountTier(tier)}
                 className={`py-2 px-3 rounded-xl text-xs font-bold cursor-pointer transition ${
                   venueCountTier === tier
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-sky-600 text-white'
                     : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
                 }`}
               >
@@ -522,9 +522,9 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                   +{formatFcfa(annualArtistsNet90)}
                 </p>
               </div>
-              <div className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 p-2.5">
-                <p className="text-[10px] text-indigo-300 font-bold">Net Plateforme (8%)</p>
-                <p className="text-xs font-black text-indigo-300">
+              <div className="rounded-lg bg-sky-500/15 border border-sky-500/30 p-2.5">
+                <p className="text-[10px] text-sky-300 font-bold">Net Plateforme (8%)</p>
+                <p className="text-xs font-black text-sky-300">
                   +{formatFcfa(annualPlatformNet8)}
                 </p>
               </div>
@@ -655,10 +655,10 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
         <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4 sm:p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-indigo-400 shrink-0" />
+              <Sliders className="w-4 h-4 text-sky-400 shrink-0" />
               <span>5. Console « Mode Jukebox Pro » &amp; Catalogue Mixte CHR</span>
             </h4>
-            <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-bold">
+            <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[11px] font-bold">
               60% Gabon (+241) / 40% Hits Panafricains
             </span>
           </div>
@@ -676,7 +676,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
             <div className="rounded-xl bg-slate-950 p-3 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
                 <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Disc3 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <Disc3 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                   <span>Fondu Enchaîné Automatique (Crossfade Auto-DJ)</span>
                 </p>
                 <p className="text-[11px] text-slate-400">
@@ -691,7 +691,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                     onClick={() => setCrossfadeSeconds(sec)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
                       crossfadeSeconds === sec
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-sky-600 text-white'
                         : 'bg-slate-900 text-slate-400 border border-slate-800'
                     }`}
                   >

@@ -48,7 +48,7 @@ export const PlayerLyricsPanel: React.FC<PlayerLyricsPanelProps> = ({
             <span className="text-xs font-bold tracking-wide text-amber-300">
               Paroles Synchronisées
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-violet-500/20 border border-violet-400/35 text-violet-300 text-[10px] font-mono">
+            <span className="px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/35 text-sky-300 text-[10px] font-mono">
               Score Plume Actif
             </span>
           </div>
@@ -106,11 +106,11 @@ export const PlayerLyricsPanel: React.FC<PlayerLyricsPanelProps> = ({
                   e.stopPropagation();
                   onShareExcerpt(`« ${cleanLine.replace('[DROP] ', '')} »`);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/35 border border-violet-400/40 text-violet-200 text-[10px] font-mono font-bold shrink-0 transition flex items-center gap-1 active:scale-95"
+                className="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/35 border border-sky-400/40 text-sky-200 text-[10px] font-mono font-bold shrink-0 transition flex items-center gap-1 active:scale-95"
                 title="Partager cet extrait dans le fil commun DROP et valoriser le parolier"
               >
                 <span>Extrait</span>
-                <Share2 className="w-2.5 h-2.5 text-violet-300" />
+                <Share2 className="w-2.5 h-2.5 text-sky-300" />
               </button>
             </div>
           );

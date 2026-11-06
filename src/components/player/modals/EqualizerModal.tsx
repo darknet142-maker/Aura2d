@@ -65,7 +65,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex flex-col justify-end p-3.5 sm:p-4"
+      className="absolute inset-0 z-40 bg-[#07090E]/80 backdrop-blur-md flex flex-col justify-end p-3.5 sm:p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -151,7 +151,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({
         </div>
 
         {/* Courbe graphique + boutons fréquences */}
-        <div className="p-3.5 rounded-2xl bg-black/55 border border-white/10 space-y-3">
+        <div className="p-3.5 rounded-2xl bg-[#07090E]/55 border border-white/10 space-y-3">
           <div className="relative h-20 w-full">
             <svg viewBox="0 0 280 88" className="w-full h-full overflow-visible">
               <line

@@ -28,7 +28,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
   if (!editingTrack) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-[#07090E]/75 backdrop-blur-sm flex items-center justify-center p-4">
       <form
         onSubmit={onSaveEditedTrack}
         className="w-full max-w-md bg-[#0E1118] border border-white/15 rounded-2xl p-4 flex flex-col gap-3 max-h-[90dvh] overflow-y-auto"
@@ -40,7 +40,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
           <button
             type="button"
             onClick={() => setEditingTrack(null)}
-            className="p-1 text-[#8E93A4]"
+            className="p-1 text-[#A3A9BA]"
           >
             <X className="w-4 h-4" />
           </button>
@@ -68,7 +68,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
 
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Titre
             </label>
             <input
@@ -84,7 +84,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Artiste
             </label>
             <select
@@ -123,7 +123,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-violet-300 mb-1">
+            <label className="block text-[11px] text-sky-300 mb-1">
               Artistes en Featuring
             </label>
             <input
@@ -140,11 +140,11 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
                 })
               }
               placeholder="Ex: Eboloko, Ng Bling"
-              className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+              className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
             />
           </div>
           <div>
-            <label className="block text-[11px] text-violet-300 mb-1">
+            <label className="block text-[11px] text-sky-300 mb-1">
               Partage Featuring
             </label>
             <select
@@ -158,14 +158,14 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
                   },
                 })
               }
-              className="w-full bg-[#07080C] border border-violet-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+              className="w-full bg-[#07080C] border border-sky-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
             >
               <option value="70_30">70% Lead / 30% Feat</option>
               <option value="50_50">50% / 50% Co-Lead</option>
             </select>
           </div>
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Catégorie
             </label>
             <select
@@ -186,7 +186,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             </select>
           </div>
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Durée (MM:SS)
             </label>
             <input
@@ -202,7 +202,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Label
             </label>
             <select
@@ -241,7 +241,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-[#8E93A4] mb-1">
+            <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Beatmaker
             </label>
             <select
@@ -435,7 +435,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
           <button
             type="button"
             onClick={() => setEditingTrack(null)}
-            className="px-3.5 py-1.5 rounded-xl bg-white/[0.05] text-xs text-[#8E93A4]"
+            className="px-3.5 py-1.5 rounded-xl bg-white/[0.05] text-xs text-[#A3A9BA]"
           >
             Annuler
           </button>

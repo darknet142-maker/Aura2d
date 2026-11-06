@@ -25,7 +25,7 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
               Classement &amp; Télémétrie des Auditeurs ({users.length})
             </span>
           </h3>
-          <p className="text-xs text-[#8E93A4]">
+          <p className="text-xs text-[#A3A9BA]">
             Sélectionnez un auditeur pour inspecter ses écoutes par morceau et sa répartition User-Centric.
           </p>
         </div>
@@ -56,7 +56,7 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
                   <div className="text-xs font-bold text-[#F5F2EB] truncate">
                     {u.name}
                   </div>
-                  <div className="text-[11px] font-mono text-[#8E93A4] truncate">
+                  <div className="text-[11px] font-mono text-[#A3A9BA] truncate">
                     {formatLongDuration(u.totalListenSeconds)} d'écoute
                   </div>
                 </div>
@@ -64,7 +64,7 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
 
               <div className="flex items-center gap-1.5 shrink-0">
                 <RankBadge rank={idx + 1} delta={0} />
-                <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                <ChevronRight className="w-4 h-4 text-[#A3A9BA]" />
               </div>
             </div>
           ))}
