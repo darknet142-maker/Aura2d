@@ -1,0 +1,19 @@
+# Règles strictes d'architecture du code (Feature-Based Modular Architecture)
+
+1. Ne crée et ne modifie JAMAIS un nouveau fichier pour qu'il dépasse 250 lignes de code (hors lignes vides et commentaires).
+   - Composant d'interface (UI) : Maximum 150 lignes (affichage visuel pur, zéro appel réseau ni calcul financier).
+   - Page ou Écran : Maximum 200 lignes (assemblage de sous-composants + appel d'un Hook personnalisé).
+   - Hook personnalisé (`useX.ts`) : Maximum 120 lignes (état local, effets de bord et interactions d'une seule fonctionnalité).
+   - Service métier ou API (`.service.ts`) : Maximum 150 lignes (fonctions pures de calcul des royalties ou requêtes serveur).
+   - Fichier de types ou constantes (`.types.ts` / `.constants.ts`) : Maximum 100 lignes.
+2. Si une demande nécessite d'ajouter du code dans un fichier qui approche 200 lignes, extrais d'abord un sous-composant, un Hook personnalisé ou un service avant d'ajouter la nouvelle fonctionnalité.
+3. N'écris jamais de données statiques (tableaux de morceaux, listes d'artistes, textes longs) dans un composant `.tsx` : place-les toujours dans `src/mocks/` ou `src/shared/constants/`.
+4. Sépare systématiquement la logique métier (calcul des royalties, synchronisation hors ligne, appels API) dans un fichier `.service.ts` ou un Hook `useX.ts`.
+5. Un fichier `.tsx` ne doit exporter qu'un seul composant React.
+6. Respecte scrupuleusement le découpage en 6 domaines métier dans `src/features/` :
+   - `src/features/listener/` (Lot 1 : Lecteur audio 2D/3D, playlists, cache hors ligne)
+   - `src/features/payments/` (Lot 2 : Airtel Money, Moov Money, reçus, abonnements, pourboires fans)
+   - `src/features/artist-portal/` (Lot 3 : Dépôt catalogue, splits ayants droit, relevés, Studio Magazine)
+   - `src/features/royalties/` (Lot 4 : Moteur User-Centric 60/40, BUGADA 12%, DGI 9,5%/20%, Modèle 36M)
+   - `src/features/backoffice/` (Lot 5 : Administration, modération, lutte antifraude, régie pub, BDD)
+   - `src/features/b2b-horeca/` (Lot 6 : Mode Bar/Snack/Maquis, jukebox QR, anti-dilution boucles)
