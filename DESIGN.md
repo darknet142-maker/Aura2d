@@ -30,3 +30,4 @@
 ## 4. Résilience & Crash-Test (`break-ui`)
 - Titres de 80+ caractères contenus via `min-w-0`, `truncate` ou `line-clamp-2` sans jamais pousser les boutons d'action (`shrink-0`) hors de l'écran.
 - Fallback vectoriel et typographique local automatique dans `CoverArtwork` lorsque `coverUrl` est vide ou inaccessible.
+

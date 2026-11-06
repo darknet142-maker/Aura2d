@@ -19,6 +19,7 @@ const files = walkFiles('src');
 const tsxFiles = files.filter((f) => f.endsWith('.tsx'));
 
 const appLines = fs.readFileSync('src/App.tsx', 'utf8').split(/\r?\n/).length;
+const immersivePlayerLines = fs.readFileSync('src/components/Immersive3DPlayer.tsx', 'utf8').split(/\r?\n/).length;
 const rankingBarrelLines = fs.readFileSync('src/utils/rankingEngine.ts', 'utf8').split(/\r?\n/).length;
 const musicBarrelLines = fs.readFileSync('src/services/musicService.ts', 'utf8').split(/\r?\n/).length;
 
@@ -53,6 +54,7 @@ const has80CharTitles = breakUiTxt.includes(
 const report = {
   architecture: {
     'src/App.tsx lines (target <= 150)': appLines,
+    'src/components/Immersive3DPlayer.tsx lines (reduced from 4932)': immersivePlayerLines,
     'src/utils/rankingEngine.ts lines': rankingBarrelLines,
     'src/services/musicService.ts lines': musicBarrelLines,
     totalModularSourceFiles: files.length,
@@ -86,3 +88,4 @@ console.log(JSON.stringify(report, null, 2));
 if (!report.passed) {
   process.exit(1);
 }
+

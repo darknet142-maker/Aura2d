@@ -1,6 +1,8 @@
 import React from 'react';
-import { ChevronDown, Bell, Ellipsis } from 'lucide-react';
+import { ChevronDown, Bell, Ellipsis, Compass } from 'lucide-react';
+import { motion } from 'motion/react';
 import { DropOfficialLogo } from '../CoverArtwork';
+import { SPRING_SNAPPY } from '../../shared/ui/springMotion';
 
 export interface PlayerHeaderProps {
   onOpenCentral: () => void;
@@ -8,6 +10,11 @@ export interface PlayerHeaderProps {
   onOpenOptions: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationsCount?: number;
+  albumIdx?: number;
+  albumsTotal?: number;
+  trackIdx?: number;
+  tracksTotal?: number;
+  lufsLevel?: number;
 }
 
 export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
@@ -16,62 +23,109 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
   onOpenOptions,
   onOpenNotifications,
   unreadNotificationsCount = 0,
+  albumIdx = 0,
+  albumsTotal = 1,
+  trackIdx = 0,
+  tracksTotal = 1,
+  lufsLevel = -14.0,
 }) => {
+  const pad2 = (n: number) => String(Math.max(1, n)).padStart(2, '0');
+
   return (
-    <header className="relative z-20 w-full px-4 sm:px-6 pt-3 sm:pt-4 pb-1 shrink-0 flex items-center justify-between">
-      {/* 1. Bloc gauche : Bouton Flèche vers le bas (Ouvre l'écran Central) */}
-      <div className="flex items-center justify-start z-10 w-24">
-        <button
-          type="button"
-          onClick={onOpenCentral}
-          className="w-11 h-11 -ml-1.5 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          aria-label="Ouvrir Central"
-          title="Central"
-        >
-          <ChevronDown className="w-6 h-6 stroke-[2.2]" />
-        </button>
-      </div>
-
-      {/* 2. Bloc central STRICTEMENT SYMÉTRIQUE : Logo DROP centré au pixel près */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <button
-          type="button"
-          onClick={onOpenQueue}
-          className="pointer-events-auto flex items-center justify-center px-4 py-1.5 rounded-full hover:bg-white/[0.08] active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-          aria-label="DROP — Ouvrir la file de lecture"
-          title="File de lecture DROP"
-        >
-          <DropOfficialLogo className="h-[20px] sm:h-[22px] w-auto max-w-[130px]" />
-        </button>
-      </div>
-
-      {/* 3. Bloc droit : Cloche de Notifications + Menu Options (•••) */}
-      <div className="flex items-center justify-end gap-1 z-10 w-24 -mr-1.5">
-        {onOpenNotifications && (
-          <button
+    <header className="relative z-20 w-full px-4 sm:px-5 pt-2.5 sm:pt-3.5 pb-1 shrink-0 flex flex-col gap-1.5">
+      {/* Rangée 1 : Barre de commande symétrique Studio */}
+      <div className="relative w-full flex items-center justify-between">
+        {/* 1. Bloc gauche : Bouton d'accès à Central */}
+        <div className="flex items-center justify-start z-10 w-28">
+          <motion.button
             type="button"
-            onClick={onOpenNotifications}
-            className="relative w-10 h-10 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label="Notifications"
-            title="Notifications"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.94 }}
+            transition={SPRING_SNAPPY}
+            onClick={onOpenCentral}
+            className="h-9 px-2.5 rounded-full bg-[#0C0F17]/85 hover:bg-[#131824] border border-white/[0.1] flex items-center gap-1.5 text-[#F8FAFC] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            aria-label="Ouvrir l'explorateur Central"
+            title="Ouvrir Central (Catalogue, Classements & Profil)"
           >
-            <Bell className="w-5 h-5 stroke-[2]" />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#ff3b30] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow">
-                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-              </span>
-            )}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onOpenOptions}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          aria-label="Options et Paramètres"
-          title="Options et Paramètres"
-        >
-          <Ellipsis className="w-5 h-5" />
-        </button>
+            <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-[11px] font-bold tracking-tight">Central</span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#A3A9BA] shrink-0 lg:hidden" />
+          </motion.button>
+        </div>
+
+        {/* 2. Bloc central STRICTEMENT SYMÉTRIQUE : Logo DROP centré au pixel près */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            transition={SPRING_SNAPPY}
+            onClick={onOpenQueue}
+            className="pointer-events-auto flex items-center justify-center px-3.5 py-1.5 rounded-full hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+            aria-label="DROP — Ouvrir la file de lecture"
+            title="File de lecture DROP"
+          >
+            <DropOfficialLogo className="h-[19px] sm:h-[21px] w-auto max-w-[124px]" />
+          </motion.button>
+        </div>
+
+        {/* 3. Bloc droit : Cloche de Notifications + Menu Options (•••) */}
+        <div className="flex items-center justify-end gap-1.5 z-10 w-28">
+          {onOpenNotifications && (
+            <motion.button
+              type="button"
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.92 }}
+              transition={SPRING_SNAPPY}
+              onClick={onOpenNotifications}
+              className="relative w-9 h-9 rounded-full bg-[#0C0F17]/85 hover:bg-[#131824] border border-white/[0.1] flex items-center justify-center text-[#F8FAFC] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4 stroke-[2]" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
+            </motion.button>
+          )}
+          <motion.button
+            type="button"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.92 }}
+            transition={SPRING_SNAPPY}
+            onClick={onOpenOptions}
+            className="w-9 h-9 rounded-full bg-[#0C0F17]/85 hover:bg-[#131824] border border-white/[0.1] flex items-center justify-center text-[#F8FAFC] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            aria-label="Options et Paramètres"
+            title="Options et Paramètres"
+          >
+            <Ellipsis className="w-4 h-4" />
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Rangée 2 : Bandeau de Télémétrie Acoustique Matérielle (Signature DROP +241) */}
+      <div className="w-full flex items-center justify-between px-2.5 py-1 rounded-xl bg-[#080A0F]/75 border border-white/[0.06] text-[9.5px] font-mono text-[#A3A9BA] tracking-wider uppercase">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-amber-400 font-bold">2D</span>
+          <span className="text-[#F8FAFC] font-bold">
+            X:{pad2(albumIdx + 1)}/{pad2(albumsTotal)}
+          </span>
+          <span className="text-white/25">·</span>
+          <span className="text-[#CBD5E1]">
+            Y:{pad2(trackIdx + 1)}/{pad2(tracksTotal)}
+          </span>
+        </div>
+
+        <div className="hidden xs:flex items-center gap-1.5 text-[#A3A9BA]">
+          <span>MASTER {lufsLevel.toFixed(1)} LUFS</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+          <span className="text-emerald-300 font-semibold">ECG +241</span>
+        </div>
       </div>
     </header>
   );

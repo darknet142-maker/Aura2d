@@ -206,9 +206,6 @@ export const AdminCatalogueRepertoire: React.FC<
                                 BEAT • {t.bpm} BPM
                               </span>
                             )}
-                            <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-sky-500/10 border border-sky-400/25 text-sky-300 text-[9px] font-mono">
-                              {t.dropContentId || 'DROP-CID'}
-                            </span>
                           </div>
                         </div>
                         <div className="text-[11px] text-[#A3A9BA] truncate mt-0.5">
@@ -216,7 +213,7 @@ export const AdminCatalogueRepertoire: React.FC<
                           {t.featuringArtists && t.featuringArtists.length > 0
                             ? ` feat. ${t.featuringArtists.join(', ')}`
                             : ''}{' '}
-                          • Prod: {t.beatmakerName} • Plume: {t.lyricistName}
+                          • {t.category}
                         </div>
                       </div>
                     </div>

@@ -6,7 +6,9 @@ import {
   UserPlus,
   UserCheck,
   ArrowDownToLine,
+  Flame,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import {
   AutoMarqueeText,
   CertificationBadgeSvg,
@@ -14,6 +16,7 @@ import {
 import { RankMedalSvg } from '../CoverArtwork';
 import { CertificationInfo } from '../../utils/rankingEngine';
 import { triggerBeatAudioDownload } from '../../services/musicService';
+import { SPRING_SNAPPY } from '../../shared/ui/springMotion';
 import { PlayerTrackItem } from './types';
 
 export interface PlayerMetadataBarProps {
@@ -71,8 +74,11 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
   const dropStartPct = Math.min(100, Math.max(0, (currentTrack.dropStart / duration) * 100));
   const dropWidthPct = Math.min(
     100 - dropStartPct,
-    Math.max(0, (currentTrack.dropDuration / duration) * 100)
+    Math.max(4, (currentTrack.dropDuration / duration) * 100)
   );
+  const isInsideDropZone =
+    currentTime >= currentTrack.dropStart &&
+    currentTime <= currentTrack.dropStart + currentTrack.dropDuration;
 
   const calculateScrubPosition = useCallback(
     (clientX: number) => {
@@ -107,7 +113,7 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
   };
 
   return (
-    <section className="relative z-20 px-5 sm:px-6 pt-0.5 pb-1 sm:pb-2 shrink-0">
+    <section className="relative z-20 px-4 sm:px-5 pt-0.5 pb-1 sm:pb-1.5 shrink-0">
       {/* 1. Titre, Artiste & Actions Sociales */}
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0 flex-1">
@@ -117,11 +123,11 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
               onClick={onOpenTrackSheet}
               title={
                 isPro
-                  ? 'Ouvrir la fiche du titre'
+                  ? 'Ouvrir la fiche analytique du titre'
                   : 'Fiche détaillée réservée aux comptes DROP Pro'
               }
-              className={`min-w-0 flex-1 text-[20px] sm:text-[24px] leading-tight font-bold text-white tracking-tight transition-colors ${
-                isPro ? 'cursor-pointer hover:text-amber-200' : 'cursor-default opacity-90'
+              className={`min-w-0 flex-1 text-[19px] sm:text-[22px] leading-tight font-extrabold text-[#F8FAFC] tracking-tight transition-colors ${
+                isPro ? 'cursor-pointer hover:text-amber-300' : 'cursor-default opacity-95'
               }`}
             >
               <AutoMarqueeText text={currentTrack.title} />
@@ -145,8 +151,8 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                   ? 'Ouvrir le profil artiste'
                   : 'Profil artiste réservé aux comptes DROP Pro'
               }
-              className={`min-w-0 flex-1 text-[13.5px] sm:text-[15px] leading-snug font-semibold text-zinc-200 transition-colors ${
-                isPro ? 'cursor-pointer hover:text-amber-300' : 'cursor-default opacity-80'
+              className={`min-w-0 flex-1 text-[13px] sm:text-[14.5px] leading-snug font-semibold text-[#A3A9BA] transition-colors ${
+                isPro ? 'cursor-pointer hover:text-[#F8FAFC]' : 'cursor-default'
               }`}
             >
               <AutoMarqueeText
@@ -160,8 +166,11 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
             </div>
 
             {/* Bouton d'Abonnement Mobile */}
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.92 }}
+              transition={SPRING_SNAPPY}
               onClick={() => {
                 onToggleSubscribeArtist?.(currentTrack.artist);
                 onToast(
@@ -171,10 +180,10 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                   !currentArtistSubscribed ? 'bg-emerald-400' : 'bg-zinc-400'
                 );
               }}
-              className={`w-7 h-7 rounded-full text-[10.5px] font-bold border shrink-0 transition flex items-center justify-center ${
+              className={`w-7 h-7 rounded-full text-[10.5px] font-bold border shrink-0 flex items-center justify-center ${
                 currentArtistSubscribed
                   ? 'bg-emerald-500/20 border-emerald-500/45 text-emerald-300'
-                  : 'bg-white/10 hover:bg-white/20 border-white/20 text-white active:scale-95'
+                  : 'bg-[#0C0F17] hover:bg-[#131824] border-white/15 text-[#F8FAFC]'
               }`}
               aria-label={
                 currentArtistSubscribed
@@ -192,7 +201,7 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
               ) : (
                 <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
               )}
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -200,8 +209,11 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
         <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
           {(currentTrack.isInstrumental ||
             currentTrack.category === 'Beats & Instrumentales') && (
-            <button
+            <motion.button
               type="button"
+              whileHover={{ y: -1.5 }}
+              whileTap={{ scale: 0.94 }}
+              transition={SPRING_SNAPPY}
               onClick={() => {
                 triggerBeatAudioDownload({
                   title: currentTrack.title,
@@ -214,36 +226,42 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                 });
                 onToast(
                   `Téléchargement du Beat « ${currentTrack.title} » lancé !`,
-                  'bg-cyan-400'
+                  'bg-amber-400'
                 );
               }}
-              className="h-10 px-2.5 sm:px-3 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 flex items-center gap-1.5 active:scale-90 transition shadow-[0_0_14px_rgba(6,182,212,0.28)]"
+              className="h-9 px-2.5 rounded-full bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 flex items-center gap-1"
               title="Télécharger cette instrumentale / Beat (WAV Studio)"
             >
               <ArrowDownToLine className="w-3.5 h-3.5 stroke-[2.2]" />
               <span className="text-[11px] font-extrabold tracking-tight">Beat</span>
-            </button>
+            </motion.button>
           )}
 
-          <button
+          <motion.button
             type="button"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.94 }}
+            transition={SPRING_SNAPPY}
             onClick={onOpenRecommendModal}
-            className={`h-10 px-2.5 sm:px-3 rounded-full border flex items-center gap-1.5 active:scale-90 transition ${
+            className={`h-9 px-2.5 sm:px-3 rounded-full border flex items-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
               isCurrentRecommended
-                ? 'bg-amber-400/20 border-amber-400/50 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.28)]'
-                : 'bg-white/[0.07] hover:bg-white/[0.14] border-white/15 text-zinc-200'
+                ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
+                : 'bg-[#0C0F17]/90 hover:bg-[#131824] border-white/[0.1] text-[#F8FAFC]'
             }`}
             aria-label="Partager ou recommander ce titre"
             title="Partager en vidéo Trend 30s ou recommander dans le Fil DROP"
           >
-            <Share2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.1]" />
+            <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 stroke-[2.1]" />
             <span className="text-xs font-mono font-bold">
               {formatCompactPlays(currentRecsCount)}
             </span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
+            transition={SPRING_SNAPPY}
             onClick={(e) => {
               setHeartAnimKey((prev) => prev + 1);
               onToggleLike(e);
@@ -252,27 +270,27 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                 !isCurrentLiked ? 'bg-rose-500' : 'bg-zinc-400'
               );
             }}
-            className="w-10 h-10 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 flex items-center justify-center active:scale-90 transition relative shrink-0"
+            className="w-9 h-9 rounded-full bg-[#0C0F17]/90 hover:bg-[#131824] border border-white/[0.1] flex items-center justify-center relative shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
             aria-label="Ajouter aux favoris"
           >
             <Heart
               key={heartAnimKey}
-              className={`w-5 h-5 sm:w-6 sm:h-6 transition-all ${
+              className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-all ${
                 heartAnimKey > 0 ? 'heart-animate' : ''
               } ${
                 isCurrentLiked
-                  ? 'text-[#ef233c] fill-[#ef233c] drop-shadow-[0_0_12px_rgba(239,35,60,0.45)]'
-                  : 'text-zinc-300 stroke-[2]'
+                  ? 'text-[#DE1B34] fill-[#DE1B34] drop-shadow-[0_0_10px_rgba(222,27,52,0.5)]'
+                  : 'text-[#CBD5E1] stroke-[2]'
               }`}
             />
-          </button>
+          </motion.button>
         </div>
       </div>
 
-      {/* 2. Ligne Classement & Lectures */}
-      <div className="flex items-center justify-between mt-1.5 sm:mt-2 text-[12px] sm:text-[13px] tabular-nums gap-2">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-white tracking-tight inline-flex items-center gap-1 shrink-0">
+      {/* 2. Ligne Classement, Bouton Tactile [CUE DROP] & Lectures Certifiées */}
+      <div className="flex items-center justify-between mt-1.5 text-[12px] tabular-nums gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-bold text-[#F8FAFC] tracking-tight inline-flex items-center gap-1 shrink-0">
             <span>#{safeRankInfo.rank}</span>
             <RankMedalSvg rank={safeRankInfo.rank} className="w-3.5 h-3.5" />
           </span>
@@ -293,23 +311,39 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
               <span>{safeRankInfo.delta > 0 ? `+${safeRankInfo.delta}` : `${safeRankInfo.delta}`}</span>
             </span>
           )}
-          {isDropMode && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/35 text-amber-300 text-[10px] font-mono font-bold shrink-0">
-              Aperçu Drop
-            </span>
-          )}
+
+          {/* Bouton CUE DROP : Saut instantané vers le refrain / Drop ambré */}
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            transition={SPRING_SNAPPY}
+            onClick={() => {
+              onSeek(currentTrack.dropStart);
+              onToast(`Saut direct au Drop (${formatTime(currentTrack.dropStart)})`, 'bg-amber-400');
+            }}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold inline-flex items-center gap-1 border shrink-0 cursor-pointer ${
+              isDropMode || isInsideDropZone
+                ? 'bg-amber-400 text-[#080A0F] border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                : 'bg-amber-400/12 hover:bg-amber-400/22 border-amber-400/35 text-amber-300'
+            }`}
+            title="Aller directement au segment Drop de ce titre"
+          >
+            <Flame className="w-2.5 h-2.5 fill-current shrink-0" />
+            <span>DROP {formatTime(currentTrack.dropStart)}</span>
+          </motion.button>
         </div>
 
-        <div className="flex items-center gap-1.5 text-zinc-300/90 shrink-0">
-          <Play className="w-3.5 h-3.5 text-white fill-current" />
-          <span className="font-bold text-white">
+        <div className="flex items-center gap-1.5 text-[#A3A9BA] shrink-0">
+          <Play className="w-3 h-3 text-[#F8FAFC] fill-current" />
+          <span className="font-bold text-[#F8FAFC] font-mono text-xs">
             {formatCompactPlays(currentTrack.realPlays, currentTrack.displayPlaysFormatted)}
           </span>
         </div>
       </div>
 
       {/* 3. Barre de Progression Interactive avec Segment Drop Ambré */}
-      <div className="mt-2 sm:mt-2.5">
+      <div className="mt-1.5 sm:mt-2">
         <div
           ref={scrubberRef}
           onPointerDown={handleScrubberPointerDown}
@@ -331,9 +365,9 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                 width: `${dropWidthPct}%`,
               }}
               className={`absolute -top-[1.5px] -bottom-[1.5px] rounded-full transition-all pointer-events-none ${
-                isDropMode
-                  ? 'bg-amber-400/60 ring-1 ring-amber-300/90 shadow-[0_0_16px_rgba(251,191,36,0.85)]'
-                  : 'bg-amber-400/35 border-x border-amber-300/70'
+                isDropMode || isInsideDropZone
+                  ? 'bg-amber-400/70 ring-1 ring-amber-300/90 shadow-[0_0_16px_rgba(251,191,36,0.85)]'
+                  : 'bg-amber-400/40 border-x border-amber-300/75'
               }`}
             />
 
@@ -344,7 +378,7 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[12px] font-medium text-zinc-300/80 mt-0.5 tabular-nums">
+        <div className="flex items-center justify-between text-[11.5px] font-mono text-[#A3A9BA] mt-0.5 tabular-nums">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(currentTrack.duration)}</span>
         </div>
