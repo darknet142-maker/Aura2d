@@ -11,6 +11,7 @@ export interface PlayerCoverFlowProps {
   onSelectAlbumIndex: (newAlbumIdx: number, newTrackIdx?: number, startFullPlay?: boolean) => void;
   onNavigateTrack: (dir: 1 | -1) => void;
   onSelectTrackIndex: (newTrackIdx: number) => void;
+  onOpenActiveTrackSheet?: () => void;
   onToast?: (msg: string) => void;
   children?: React.ReactNode; // Optional lyrics overlay or extra overlay
 }
@@ -24,6 +25,7 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
   onSelectAlbumIndex,
   onNavigateTrack,
   onSelectTrackIndex,
+  onOpenActiveTrackSheet,
   onToast,
   children,
 }) => {
@@ -184,15 +186,22 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
                 if (dragMovedRef.current) return;
                 if (!isActiveCard) {
                   onSelectAlbumIndex(idx, 0, false);
+                } else {
+                  onOpenActiveTrackSheet?.();
                 }
               }}
+              title={
+                isActiveCard
+                  ? `Inspecter « ${displayedTrack.title} » (Crédits Studio, Split Royalties & Paramètres)`
+                  : `Basculer vers l'album « ${alb.albumTitle} »`
+              }
               style={{
                 zIndex,
                 opacity,
                 transform: `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) scale(${scale})`,
                 pointerEvents: absOffset > 1.5 ? 'none' : 'auto',
               }}
-              className={`cover-card ${isDragging ? 'dragging' : ''}`}
+              className={`cover-card group cursor-pointer ${isDragging ? 'dragging' : ''}`}
             >
               <div className="cover-card-inner">
                 <CoverArtwork
@@ -202,6 +211,21 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
                   artist={displayedTrack.artist}
                 />
                 <div className="cover-glare" />
+
+                {isActiveCard && onOpenActiveTrackSheet && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenActiveTrackSheet();
+                    }}
+                    className="absolute bottom-2.5 left-2.5 z-20 px-2.5 py-1 rounded-full bg-[#07090E]/75 hover:bg-[#07090E]/95 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-[#F8FAFC] hover:text-amber-300 flex items-center gap-1 shadow-lg transition-all"
+                    title="Ouvrir la fiche analytique, les crédits studio et les paramètres du titre"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>Fiche &amp; Crédits</span>
+                  </button>
+                )}
 
                 {!isActiveCard && (
                   <div className="absolute inset-0 bg-[#07090E]/40 pointer-events-none transition-opacity duration-300" />

@@ -228,13 +228,39 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         </span>
                                       </div>
                                       <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
-                                        <div>
-                                          <p className="text-sm font-extrabold text-white truncate drop-shadow">
-                                            {t.title}
-                                          </p>
-                                          <p className="text-xs text-amber-300 font-semibold truncate">
-                                            {t.artist}
-                                          </p>
+                                        <div className="flex items-end justify-between gap-1.5">
+                                          <div className="min-w-0 flex-1">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserTrackSheet(t.id);
+                                              }}
+                                              className="text-sm font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                            >
+                                              {t.title}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserEntitySheet(t.artist, 'ARTIST');
+                                              }}
+                                              className="text-xs text-amber-300 hover:underline font-semibold truncate block max-w-full text-left"
+                                            >
+                                              {t.artist}
+                                            </button>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserTrackSheet(t.id);
+                                            }}
+                                            className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
+                                          >
+                                            Fiche
+                                          </button>
                                         </div>
                                         {(t.isInstrumental ||
                                           t.category ===
@@ -323,13 +349,27 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         </span>
                                       </div>
                                       <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
-                                        <div className="min-w-0">
-                                          <p className="text-base font-extrabold text-white truncate drop-shadow">
+                                        <div className="min-w-0 flex-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserTrackSheet(t.id);
+                                            }}
+                                            className="text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                          >
                                             {t.title}
-                                          </p>
-                                          <p className="text-xs text-amber-300 font-bold truncate">
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserEntitySheet(t.artist, 'ARTIST');
+                                            }}
+                                            className="text-xs text-amber-300 hover:underline font-bold truncate block max-w-full text-left"
+                                          >
                                             {t.artist}
-                                          </p>
+                                          </button>
                                         </div>
                                         <button
                                           type="button"
@@ -337,7 +377,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             e.stopPropagation();
                                             openUserTrackSheet(t.id);
                                           }}
-                                          className="px-2.5 py-1 rounded-lg bg-[#07090E]/60 hover:bg-[#07090E]/80 border border-white/20 text-[10px] font-bold text-white shrink-0"
+                                          className="px-2.5 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
                                         >
                                           Fiche
                                         </button>
@@ -418,13 +458,39 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                                       </span>
                                     </div>
-                                    <div className="absolute bottom-3 left-3 right-3">
-                                      <p className="text-sm font-extrabold text-white truncate drop-shadow">
-                                        {alb.albumTitle}
-                                      </p>
-                                      <p className="text-xs text-amber-300 font-semibold truncate">
-                                        {alb.artist}
-                                      </p>
+                                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-1.5">
+                                      <div className="min-w-0 flex-1">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openUserTrackSheet(firstTrack.id);
+                                          }}
+                                          className="text-sm font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                        >
+                                          {alb.albumTitle}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openUserEntitySheet(alb.artist, 'ARTIST');
+                                          }}
+                                          className="text-xs text-amber-300 hover:underline font-semibold truncate block max-w-full text-left"
+                                        >
+                                          {alb.artist}
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openUserTrackSheet(firstTrack.id);
+                                        }}
+                                        className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
+                                      >
+                                        Album
+                                      </button>
                                     </div>
                                   </div>
                                 );
@@ -731,14 +797,40 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         </span>
                                       </div>
 
-                                      {/* Titre court directement sur la carte rectangulaire */}
-                                      <div className="absolute bottom-3 left-3.5 right-3.5">
-                                        <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">
-                                          {t.title}
-                                        </p>
-                                        <p className="text-xs font-bold text-amber-300 truncate">
-                                          {t.artist}
-                                        </p>
+                                      {/* Titre & artiste cliquables directement sur la carte rectangulaire */}
+                                      <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserTrackSheet(t.id);
+                                            }}
+                                            className="text-sm sm:text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                          >
+                                            {t.title}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserEntitySheet(t.artist, 'ARTIST');
+                                            }}
+                                            className="text-xs font-bold text-amber-300 hover:underline truncate block max-w-full text-left"
+                                          >
+                                            {t.artist}
+                                          </button>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openUserTrackSheet(t.id);
+                                          }}
+                                          className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
+                                        >
+                                          Fiche
+                                        </button>
                                       </div>
                                     </div>
                                   );
@@ -818,12 +910,29 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             </span>
                                           </div>
                                           <div className="min-w-0 flex-1">
-                                            <p className="text-xs sm:text-sm font-extrabold text-white truncate">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserTrackSheet(t.id);
+                                              }}
+                                              className="text-xs sm:text-sm font-extrabold text-white hover:text-amber-300 truncate block max-w-full text-left transition-colors"
+                                            >
                                               {t.title}
-                                            </p>
-                                            <p className="text-[11px] text-cyan-300 font-bold truncate">
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserEntitySheet(
+                                                  t.beatmakerName || t.artist,
+                                                  'BEATMAKER'
+                                                );
+                                              }}
+                                              className="text-[11px] text-cyan-300 hover:underline font-bold truncate block max-w-full text-left"
+                                            >
                                               Prod. {t.beatmakerName || t.artist}
-                                            </p>
+                                            </button>
                                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                               <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 text-[9px] font-mono font-bold">
                                                 {t.bpm || 120} BPM
@@ -1112,13 +1221,39 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         <Play className="w-3 h-3 fill-current ml-0.5" />
                                       </span>
                                     </div>
-                                    <div className="absolute bottom-3 left-3 right-3">
-                                      <p className="text-sm font-extrabold text-white truncate drop-shadow">
-                                        {alb.albumTitle}
-                                      </p>
-                                      <p className="text-xs text-amber-300 font-semibold truncate">
-                                        {alb.artist}
-                                      </p>
+                                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-1.5">
+                                      <div className="min-w-0 flex-1">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openUserTrackSheet(firstTrack.id);
+                                          }}
+                                          className="text-sm font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                        >
+                                          {alb.albumTitle}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openUserEntitySheet(alb.artist, 'ARTIST');
+                                          }}
+                                          className="text-xs text-amber-300 hover:underline font-semibold truncate block max-w-full text-left"
+                                        >
+                                          {alb.artist}
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openUserTrackSheet(firstTrack.id);
+                                        }}
+                                        className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
+                                      >
+                                        Album
+                                      </button>
                                     </div>
                                   </div>
                                 );

@@ -52,28 +52,15 @@ export const PlayerUtilityDock: React.FC<PlayerUtilityDockProps> = ({
       <button
         type="button"
         onClick={() => {
-          if (!isPro) {
-            onNotifyProRequired('Paroles synchronisées');
-            return;
-          }
           onToggleLyrics();
         }}
         className={`utility-pill ${
-          !isPro
-            ? 'opacity-40 grayscale cursor-not-allowed'
-            : lyricsOpen
-            ? 'active-pill'
-            : ''
+          lyricsOpen ? 'active-pill' : ''
         }`}
         aria-label="Paroles synchronisées"
-        title={
-          isPro
-            ? 'Paroles synchronisées & Partage d’extrait'
-            : 'Paroles synchronisées (Réservé DROP Pro)'
-        }
+        title="Paroles synchronisées & Partage d’extrait"
       >
         <MicVocal className="w-5 h-5 stroke-[2]" />
-        {!isPro && <ProLockBadgeSvg />}
       </button>
 
       {/* 3. BOUTON ROUGE PHARE D'ENREGISTREMENT VIDÉO TREND 30S (Toujours visible et mis en avant) */}
@@ -82,43 +69,30 @@ export const PlayerUtilityDock: React.FC<PlayerUtilityDockProps> = ({
         onClick={onOpenTrendStudio}
         className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#ff3b30] via-rose-600 to-[#e11d38] text-white shadow-[0_0_24px_rgba(255,59,48,0.55)] border border-rose-400/50 hover:brightness-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         aria-label="Lancer l'enregistrement d'une vidéo Trend 30s"
-        title="Lancer l'enregistrement d'une vidéo Trend 30s (Verrouillée sur les 30s du Drop)"
+        title="Lancer l'enregistrement d'une vidéo Trend 30s (Format Vertical 1080x1920)"
       >
         <span className="relative flex items-center justify-center">
           <Video className="w-5 h-5 stroke-[2.2] text-white drop-shadow" />
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-sm" />
         </span>
         <span className="absolute -bottom-1 px-1.5 py-[1.5px] rounded-full bg-[#07090E]/85 text-amber-300 text-[8px] font-mono font-black tracking-wider leading-none border border-amber-400/40 shadow">
-          REC 30s
+          REC 9:16
         </span>
       </button>
 
-      {/* 4. Égaliseur 5 Bandes & Préréglages Audio */}
+      {/* 4. Égaliseur Paramétrique 5 Bandes & Analyseur Spectral */}
       <button
         type="button"
         onClick={() => {
-          if (!isPro) {
-            onNotifyProRequired('Égaliseur 5 bandes & Préréglages');
-            return;
-          }
           onOpenEqModal();
         }}
         className={`utility-pill ${
-          !isPro
-            ? 'opacity-40 grayscale cursor-not-allowed'
-            : isEqCustomOrActive
-            ? 'active-pill'
-            : ''
+          isEqCustomOrActive ? 'active-pill' : ''
         }`}
         aria-label="Égaliseur 5 bandes et Préréglages"
-        title={
-          isPro
-            ? 'Égaliseur 5 bandes & Préréglages'
-            : 'Égaliseur 5 bandes (Réservé DROP Pro)'
-        }
+        title="Console Égaliseur Paramétrique 5 bandes & Analyseur Spectral"
       >
         <SlidersHorizontal className="w-5 h-5 stroke-[2]" />
-        {!isPro && <ProLockBadgeSvg />}
       </button>
 
       {/* 5. Téléchargement Hors-Ligne */}

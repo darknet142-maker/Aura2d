@@ -137,13 +137,30 @@ export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersiveP
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-bold text-[#F8FAFC] truncate">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openUserTrackSheet(t.id);
+                      }}
+                      className="text-xs sm:text-sm font-bold text-[#F8FAFC] hover:text-amber-300 truncate block max-w-full text-left transition-colors"
+                    >
                       {highlightMatchedText(t.title, hubSearchQuery)}
-                    </p>
-                    <p className="text-[11px] text-[#A3A9BA] truncate">
-                      Prod. {highlightMatchedText(t.beatmakerName || t.artist, hubSearchQuery)} ·{' '}
-                      <span className="font-mono text-amber-300">{t.bpm || 120} BPM</span>
-                    </p>
+                    </button>
+                    <div className="text-[11px] text-[#A3A9BA] truncate flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUserEntitySheet(t.beatmakerName || t.artist, 'BEATMAKER');
+                        }}
+                        className="hover:text-amber-300 hover:underline truncate text-left"
+                      >
+                        Prod. {highlightMatchedText(t.beatmakerName || t.artist, hubSearchQuery)}
+                      </button>
+                      <span>·</span>
+                      <span className="font-mono text-amber-300 shrink-0">{t.bpm || 120} BPM</span>
+                    </div>
                   </div>
                 </div>
 
@@ -224,18 +241,36 @@ export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersiveP
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-xs sm:text-sm font-bold text-[#F8FAFC] truncate">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUserTrackSheet(t.id);
+                        }}
+                        className="text-xs sm:text-sm font-bold text-[#F8FAFC] hover:text-amber-300 truncate text-left transition-colors"
+                      >
                         {highlightMatchedText(t.title, hubSearchQuery)}
-                      </p>
+                      </button>
                       <CertificationBadgeSvg cert={cert} compact />
                     </div>
-                    <p className="text-[11px] text-[#A3A9BA] truncate">
-                      {highlightMatchedText(t.artist, hubSearchQuery)}
-                      {t.featuringArtists && t.featuringArtists.length > 0
-                        ? ` feat. ${t.featuringArtists.join(', ')}`
-                        : ''}{' '}
-                      · {highlightMatchedText(t.category, hubSearchQuery)}
-                    </p>
+                    <div className="text-[11px] text-[#A3A9BA] truncate flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUserEntitySheet(t.artist, 'ARTIST');
+                        }}
+                        className="hover:text-amber-300 hover:underline truncate text-left"
+                      >
+                        {highlightMatchedText(t.artist, hubSearchQuery)}
+                        {t.featuringArtists && t.featuringArtists.length > 0
+                          ? ` feat. ${t.featuringArtists.join(', ')}`
+                          : ''}
+                      </button>
+                      <span className="shrink-0">
+                        · {highlightMatchedText(t.category, hubSearchQuery)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

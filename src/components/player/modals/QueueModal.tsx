@@ -11,6 +11,8 @@ export interface QueueModalProps {
   isPlaying: boolean;
   onClose: () => void;
   onSelectTrack: (albumIdx: number, trackIdx: number) => void;
+  onOpenTrackSheet?: (trackId: string) => void;
+  onOpenArtistProfile?: (artistName: string) => void;
   formatCompactPlays: (count: number, fallback?: string) => string;
   formatTime: (sec: number) => string;
 }
@@ -23,6 +25,8 @@ export const QueueModal: React.FC<QueueModalProps> = ({
   isPlaying,
   onClose,
   onSelectTrack,
+  onOpenTrackSheet,
+  onOpenArtistProfile,
   formatCompactPlays,
   formatTime,
 }) => {
@@ -57,20 +61,28 @@ export const QueueModal: React.FC<QueueModalProps> = ({
             alb.tracks.map((t, tIdx) => {
               const isCurrent = aIdx === albumIdx && tIdx === trackIdx;
               return (
-                <button
+                <div
                   key={t.id}
-                  type="button"
                   onClick={() => {
                     onSelectTrack(aIdx, tIdx);
                     onClose();
                   }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-2xl border transition text-left ${
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-2xl border transition text-left cursor-pointer ${
                     isCurrent
                       ? 'bg-white/15 border-amber-400/50'
                       : 'bg-white/5 border-white/5 hover:bg-white/10'
                   }`}
                 >
-                  <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0">
+                  <div
+                    onClick={(e) => {
+                      if (onOpenTrackSheet) {
+                        e.stopPropagation();
+                        onOpenTrackSheet(t.id);
+                      }
+                    }}
+                    title="Ouvrir la fiche et les paramètres du titre"
+                    className="w-11 h-11 rounded-xl overflow-hidden shrink-0 hover:ring-2 hover:ring-amber-400 transition"
+                  >
                     <CoverArtwork
                       artworkType={t.artworkType}
                       coverUrl={t.cover}
@@ -79,23 +91,57 @@ export const QueueModal: React.FC<QueueModalProps> = ({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{t.title}</p>
+                    <p
+                      onClick={(e) => {
+                        if (onOpenTrackSheet) {
+                          e.stopPropagation();
+                          onOpenTrackSheet(t.id);
+                        }
+                      }}
+                      className="text-sm font-semibold text-white hover:text-amber-300 truncate transition"
+                    >
+                      {t.title}
+                    </p>
                     <p className="text-xs text-zinc-400 truncate">
-                      {t.artist}
+                      <span
+                        onClick={(e) => {
+                          if (onOpenArtistProfile) {
+                            e.stopPropagation();
+                            onOpenArtistProfile(t.artist);
+                          }
+                        }}
+                        className="hover:text-amber-300 hover:underline transition"
+                      >
+                        {t.artist}
+                      </span>
                       {t.featuringArtists && t.featuringArtists.length > 0
                         ? ` feat. ${t.featuringArtists.join(', ')}`
                         : ''}{' '}
                       • {formatCompactPlays(t.realPlays, t.displayPlaysFormatted)} écoutes
                     </p>
                   </div>
-                  <span className="text-xs font-medium text-amber-400">
-                    {isCurrent
-                      ? isPlaying
-                        ? 'En écoute'
-                        : 'En pause'
-                      : formatTime(t.duration)}
-                  </span>
-                </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {onOpenTrackSheet && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenTrackSheet(t.id);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-white/10 hover:bg-amber-400 hover:text-black text-[10px] font-bold text-zinc-200 transition"
+                      >
+                        Fiche
+                      </button>
+                    )}
+                    <span className="text-xs font-medium text-amber-400">
+                      {isCurrent
+                        ? isPlaying
+                          ? 'En écoute'
+                          : 'En pause'
+                        : formatTime(t.duration)}
+                    </span>
+                  </div>
+                </div>
               );
             })
           )}

@@ -227,9 +227,16 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                       </div>
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                          <p className="text-xs font-bold text-white truncate">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserTrackSheet(t.id);
+                                            }}
+                                            className="text-xs font-bold text-white hover:text-amber-300 truncate text-left transition-colors"
+                                          >
                                             {t.title}
-                                          </p>
+                                          </button>
                                           <CertificationBadgeSvg
                                             cert={cert}
                                             compact
@@ -240,13 +247,24 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             </span>
                                           )}
                                         </div>
-                                        <p className="text-[11px] text-[#A3A9BA] truncate">
-                                          {t.artist}
-                                          {t.featuringArtists &&
-                                          t.featuringArtists.length > 0
-                                            ? ` feat. ${t.featuringArtists.join(', ')}`
-                                            : ''}{' '}
-                                          • {formatCompactPlays(t.realPlays)} ECG
+                                        <p className="text-[11px] text-[#A3A9BA] truncate flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openUserEntitySheet(t.artist, 'ARTIST');
+                                            }}
+                                            className="hover:text-amber-300 hover:underline truncate text-left"
+                                          >
+                                            {t.artist}
+                                            {t.featuringArtists &&
+                                            t.featuringArtists.length > 0
+                                              ? ` feat. ${t.featuringArtists.join(', ')}`
+                                              : ''}
+                                          </button>
+                                          <span className="shrink-0">
+                                            • {formatCompactPlays(t.realPlays)} ECG
+                                          </span>
                                         </p>
                                       </div>
                                     </div>

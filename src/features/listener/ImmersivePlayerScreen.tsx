@@ -8,13 +8,15 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     catalogue, safeAlbumIdx, safeTrackIdx, currentTrack, isPlaying, isDropMode, currentTime,
     isShuffle, repeatMode, isCurrentLiked, likedTrackIds, recommendedTrackIds, subscribedArtists,
     artistSubscribers, communityRecommendations, currentRankInfo, trackRankMap, users, currentUser,
-    categories, syncSnapshot, masterVolume, eqGains, userPlan, setUserPlan, navigateAlbum,
+    categories, syncSnapshot, masterVolume, eqGains, eqBypassed, preampDb, eqQFactor,
+    userPlan, setUserPlan, navigateAlbum,
     handleSelectAlbumIndex, navigateTrack, handleSelectTrackIndex, handleCentralPlayToggle,
     setIsPlaying, handleSeekFromPlayer, setIsShuffle, setRepeatMode, toggleLike,
     handleRecommendTrack, handleToggleSubscribeArtist, handleRecordLyricsOpen,
     handleToggleOfflineDownload, setAppView, unreadNotificationsCount, setShowNotificationsModal,
     markAllNotificationsRead, handleChangeMasterVolume, handleChangeEqBand, handleApplyEqPreset,
-    handleResetEq, subscriptionPass, setSubscriptionPass, networkOperator, setNetworkOperator,
+    handleResetEq, handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor,
+    getAudioSpectrumData, subscriptionPass, setSubscriptionPass, networkOperator, setNetworkOperator,
     lastEcgValidationMsg, handleConfirmCreditHandshake, handleOpenCreditDispute,
     handleResolveCreditDispute, adBanners, adBannerSettings, enableAwardsCeremony,
     royaltyLedger, royaltyLedgerState,
@@ -78,6 +80,13 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             onChangeEqBand={handleChangeEqBand}
             onApplyEqPreset={handleApplyEqPreset}
             onResetEq={handleResetEq}
+            eqBypassed={eqBypassed}
+            preampDb={preampDb}
+            eqQFactor={eqQFactor}
+            onToggleEqBypass={handleToggleEqBypass}
+            onChangePreampDb={handleChangePreampDb}
+            onChangeEqQFactor={handleChangeEqQFactor}
+            getAudioSpectrumData={getAudioSpectrumData}
             subscriptionPass={subscriptionPass}
             onChangeSubscriptionPass={setSubscriptionPass}
             networkOperator={networkOperator}

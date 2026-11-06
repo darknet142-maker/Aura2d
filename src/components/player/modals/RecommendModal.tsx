@@ -15,6 +15,8 @@ export interface RecommendModalProps {
   onOpenTrendStudio: () => void;
   onPublishRecommendation: (note: string) => void;
   onViewFeed: () => void;
+  onOpenTrackSheet?: () => void;
+  onOpenArtistProfile?: () => void;
 }
 
 export const RecommendModal: React.FC<RecommendModalProps> = ({
@@ -27,6 +29,8 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
   onOpenTrendStudio,
   onPublishRecommendation,
   onViewFeed,
+  onOpenTrackSheet,
+  onOpenArtistProfile,
 }) => {
   const [recommendNote, setRecommendNote] = useState('');
 
@@ -64,7 +68,11 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
         </div>
 
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-          <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0">
+          <div
+            onClick={onOpenTrackSheet}
+            title="Ouvrir la fiche du titre"
+            className="w-12 h-12 rounded-xl overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-amber-400 transition"
+          >
             <CoverArtwork
               artworkType={currentTrack.artworkType}
               coverUrl={currentTrack.cover}
@@ -73,9 +81,20 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white truncate">{currentTrack.title}</p>
+            <p
+              onClick={onOpenTrackSheet}
+              className="text-sm font-bold text-white hover:text-amber-300 truncate cursor-pointer transition"
+            >
+              {currentTrack.title}
+            </p>
             <p className="text-xs text-zinc-400 truncate">
-              {currentTrack.artist} • {currentRecsCount} recommandations
+              <span
+                onClick={onOpenArtistProfile}
+                className="hover:text-amber-300 hover:underline cursor-pointer transition"
+              >
+                {currentTrack.artist}
+              </span>{' '}
+              • {currentRecsCount} recommandations
             </p>
           </div>
           <CertificationBadgeSvg cert={currentTrackCert} compact />

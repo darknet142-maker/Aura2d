@@ -866,6 +866,8 @@ export interface SynchronizedMiniPlayerProps {
   onTogglePlay: () => void;
   onNavigateTrack: (dir: 1 | -1) => void;
   onExpandPlayer: () => void;
+  onOpenTrackSheet?: () => void;
+  onOpenArtistProfile?: () => void;
 }
 
 export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
@@ -877,6 +879,8 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
   onTogglePlay,
   onNavigateTrack,
   onExpandPlayer,
+  onOpenTrackSheet,
+  onOpenArtistProfile,
 }) => {
   const duration = Math.max(1, currentTrack.duration);
   const progressPct = Math.min(100, Math.max(0, (currentTime / duration) * 100));
@@ -919,7 +923,16 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
 
       <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
+          <div
+            onClick={(e) => {
+              if (onOpenTrackSheet) {
+                e.stopPropagation();
+                onOpenTrackSheet();
+              }
+            }}
+            title="Inspecter la fiche analytique et les paramètres du titre"
+            className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10 hover:ring-2 hover:ring-amber-400 transition"
+          >
             <CoverArtwork
               artworkType={currentTrack.artworkType}
               coverUrl={currentTrack.cover}
@@ -929,10 +942,20 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <AutoMarqueeText
-                text={currentTrack.title}
-                className="text-xs sm:text-sm font-bold text-white flex-1"
-              />
+              <div
+                onClick={(e) => {
+                  if (onOpenTrackSheet) {
+                    e.stopPropagation();
+                    onOpenTrackSheet();
+                  }
+                }}
+                className="min-w-0 flex-1 hover:text-amber-300 transition"
+              >
+                <AutoMarqueeText
+                  text={currentTrack.title}
+                  className="text-xs sm:text-sm font-bold text-white flex-1"
+                />
+              </div>
               {isDropMode && (
                 <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 shrink-0">
                   DROP
@@ -945,7 +968,17 @@ export const SynchronizedMiniPlayer: React.FC<SynchronizedMiniPlayerProps> = ({
               )}
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mt-0.5 min-w-0">
-              <AutoMarqueeText text={artistLine} className="flex-1" />
+              <div
+                onClick={(e) => {
+                  if (onOpenArtistProfile) {
+                    e.stopPropagation();
+                    onOpenArtistProfile();
+                  }
+                }}
+                className="min-w-0 flex-1 hover:text-amber-300 hover:underline transition"
+              >
+                <AutoMarqueeText text={artistLine} className="flex-1" />
+              </div>
               <span className="shrink-0">•</span>
               <span className="font-mono text-zinc-300 shrink-0">
                 {formatShortTime(currentTime)} /{' '}
@@ -1027,6 +1060,9 @@ export interface ReusableTrackDetailSheetProps {
   onRecommendTrack?: (trackId: string) => void;
   onToggleSubscribeArtist?: (artistName: string) => void;
   onOpenEntityProfile: (name: string, role: StudioEntityRole) => void;
+  onSelectTrackDetail?: (trackId: string) => void;
+  onOpenEqModal?: () => void;
+  onOpenTrendStudio?: () => void;
   onConfirmCreditHandshake?: (
     trackId: string,
     roleKey:
@@ -1063,6 +1099,9 @@ export const ReusableTrackDetailSheet: React.FC<
   onRecommendTrack,
   onToggleSubscribeArtist,
   onOpenEntityProfile,
+  onSelectTrackDetail,
+  onOpenEqModal,
+  onOpenTrendStudio,
   onConfirmCreditHandshake,
   onOpenCreditDispute,
   onResolveCreditDispute,
@@ -1857,31 +1896,99 @@ export const ReusableTrackDetailSheet: React.FC<
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-[#A3A9BA]">Format &amp; Volume Audio</span>
                 <span className="text-emerald-400 font-bold">
-                  Opus • Niveau Constant (-14 LUFS)
+                  {track.audioCodec || 'OPUS'} • Niveau Constant ({track.lufsMasterLevel ?? -14.0} LUFS)
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#A3A9BA]">Durée du titre</span>
+                <span className="text-[#A3A9BA]">Tempo &amp; Tonalité</span>
                 <span className="text-white font-bold">
-                  {formatShortTime(track.duration)}
+                  {track.bpm || 120} BPM {track.musicalKey ? `• ${track.musicalKey}` : ''}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#A3A9BA]">Extrait Drop</span>
+                <span className="text-[#A3A9BA]">Durée &amp; Extrait Drop</span>
                 <span className="text-amber-300 font-bold">
-                  {formatShortTime(track.dropStart)} (
-                  {track.dropDuration}s)
+                  {formatShortTime(track.duration)} • Drop {formatShortTime(track.dropStart)} ({track.dropDuration}s)
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[#A3A9BA]">Temps d&apos;écoute total</span>
+                <span className="text-[#A3A9BA]">Rétention &amp; Territoire</span>
                 <span className="text-emerald-400 font-bold">
-                  {formatLongListenDuration(track.totalListenSeconds)}
+                  {track.avgRetentionPct}% rétention • {gabonPct}% Gabon (+241)
                 </span>
               </div>
             </div>
+
+            {/* Raccourcis Paramètres Studio (Égaliseur DSP & Studio Vidéo 9:16) */}
+            {(onOpenEqModal || onOpenTrendStudio) && (
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.08]">
+                {onOpenEqModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenEqModal}
+                    className="py-2 px-2.5 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <span>Égaliseur DSP 5 Bandes</span>
+                  </button>
+                )}
+                {onOpenTrendStudio && (
+                  <button
+                    type="button"
+                    onClick={onOpenTrendStudio}
+                    className="py-2 px-2.5 rounded-xl bg-[#DE1B34]/20 hover:bg-[#DE1B34]/30 border border-[#DE1B34]/45 text-rose-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <span>Caméra Trend 9:16</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Pistes de l'Album & Navigation Croisée Intelligente */}
+        {album.tracks.length > 1 && (
+          <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A9BA]">
+                Projet / Album : {album.albumTitle} ({album.year})
+              </span>
+              <span className="text-[10px] font-mono text-amber-300">
+                {album.tracks.length} titres
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {album.tracks.map((albTrack, tIdx) => {
+                const isSelected = albTrack.id === track.id;
+                return (
+                  <div
+                    key={albTrack.id}
+                    onClick={() => {
+                      onPlayOrToggleTrack(albumIndex, tIdx);
+                      onSelectTrackDetail?.(albTrack.id);
+                    }}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-xl border cursor-pointer transition ${
+                      isSelected
+                        ? 'bg-amber-400/15 border-amber-400/45 text-white'
+                        : 'bg-[#0D1017] hover:bg-white/[0.06] border-white/[0.06] text-zinc-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono text-amber-300 shrink-0">
+                        #{tIdx + 1}
+                      </span>
+                      <span className="text-xs font-bold truncate">
+                        {albTrack.title}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-[#A3A9BA] shrink-0">
+                      {formatShortTime(albTrack.duration)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Répartition Certifiée des Royalties de l'Œuvre (48% Master Direct / 12% BUGADA) */}
         <TrackRoyaltySplitBadge

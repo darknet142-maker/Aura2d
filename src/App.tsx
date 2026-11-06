@@ -32,8 +32,8 @@ export function App() {
   return (
     <div className="relative h-[100dvh] w-full max-w-full bg-[#080A0F] text-[#F8FAFC] overflow-hidden select-none flex flex-col">
       {/* Persistent Background Audio Engines (Never Unmounted) */}
-      <audio ref={ctrl.htmlAudioRef} className="hidden" preload="auto" />
-      <audio ref={ctrl.uploadPreviewAudioRef} className="hidden" preload="auto" />
+      <audio ref={ctrl.htmlAudioRef} crossOrigin="anonymous" className="hidden" preload="auto" />
+      <audio ref={ctrl.uploadPreviewAudioRef} crossOrigin="anonymous" className="hidden" preload="auto" />
       <div
         id="hidden-external-audio-stream"
         className="fixed -top-[9999px] -left-[9999px] w-px h-px opacity-0 pointer-events-none"

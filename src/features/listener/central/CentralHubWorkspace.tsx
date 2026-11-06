@@ -74,6 +74,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
     onResolveCreditDispute,
     safeRankInfo,
     setActiveModal,
+    setShowTrendStudioModal,
     hubTab,
     setHubTab,
     setCentralFullPageView,
@@ -218,6 +219,9 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
               onToggleSubscribeArtist?.(artName);
             }}
             onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
+            onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
+            onOpenEqModal={() => setActiveModal('EQ')}
+            onOpenTrendStudio={() => setShowTrendStudioModal(true)}
             onConfirmCreditHandshake={onConfirmCreditHandshake}
             onOpenCreditDispute={onOpenCreditDispute}
             onResolveCreditDispute={onResolveCreditDispute}
@@ -298,6 +302,8 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
               closeAllAnalyticsSheets();
               setActiveModal('NONE');
             }}
+            onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
+            onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
           />
         )}
 

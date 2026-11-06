@@ -150,11 +150,21 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
                               className="p-3 rounded-2xl bg-[#07090E]/90 hover:bg-white/[0.08] border border-white/10 flex flex-col gap-2 cursor-pointer transition"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (rec.userId) {
+                                      openUserListenerSheet(rec.userId);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 hover:opacity-90 text-left group/user"
+                                  title={`Ouvrir le profil auditeur de ${rec.userName}`}
+                                >
+                                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center justify-center shrink-0">
                                     {rec.userAvatar}
                                   </span>
-                                  <span className="text-xs font-bold text-white">
+                                  <span className="text-xs font-bold text-white group-hover/user:text-amber-300 group-hover/user:underline transition-colors">
                                     {rec.userName}
                                   </span>
                                   <span className="text-[11px] text-[#A3A9BA]">
@@ -162,7 +172,7 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
                                       ? 'a partagé un extrait de paroles'
                                       : 'a recommandé ce titre'}
                                   </span>
-                                </div>
+                                </button>
                                 <span className="text-[10px] font-mono text-amber-300">
                                   {rec.createdAt} • +{rec.boostPoints} pt
                                 </span>
@@ -178,36 +188,80 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
                                 >
                                   {rec.commentOrLyricExcerpt}
                                   {rec.isLyricExcerpt && rec.lyricistName && (
-                                    <span className="block text-[10px] font-mono text-sky-300 mt-1 not-italic">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openUserEntitySheet(rec.lyricistName!, 'LYRICIST');
+                                      }}
+                                      className="block text-[10px] font-mono text-sky-300 hover:text-amber-300 hover:underline mt-1 not-italic text-left"
+                                    >
                                       — Plume : {rec.lyricistName}
-                                    </span>
+                                    </button>
                                   )}
                                 </p>
                               )}
 
                               <div className="flex items-center justify-between gap-2 pt-1">
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openUserTrackSheet(rec.trackId);
+                                    }}
+                                    className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-white/10 hover:border-amber-400 transition-colors"
+                                    title={`Voir la fiche de ${rec.trackTitle}`}
+                                  >
                                     <CoverArtwork
                                       artworkType={rec.artworkType}
                                       coverUrl={rec.cover}
                                       title={rec.trackTitle}
                                       artist={rec.trackArtist}
                                     />
-                                  </div>
+                                  </button>
                                   <div className="min-w-0">
-                                    <p className="text-xs font-bold text-white truncate">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openUserTrackSheet(rec.trackId);
+                                      }}
+                                      className="text-xs font-bold text-white hover:text-amber-300 truncate block max-w-full text-left transition-colors"
+                                    >
                                       {rec.trackTitle}
-                                    </p>
-                                    <p className="text-[11px] text-[#A3A9BA] truncate">
-                                      {rec.trackArtist} • {rec.trackCategory}
-                                    </p>
+                                    </button>
+                                    <div className="flex items-center gap-1 text-[11px] text-[#A3A9BA] truncate">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openUserEntitySheet(rec.trackArtist, 'ARTIST');
+                                        }}
+                                        className="hover:text-amber-300 hover:underline truncate text-left"
+                                      >
+                                        {rec.trackArtist}
+                                      </button>
+                                      <span>• {rec.trackCategory}</span>
+                                    </div>
                                   </div>
                                 </div>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#e11d38] text-white text-[11px] font-bold shrink-0">
-                                  <span>Écouter</span>
-                                  <Play className="w-3 h-3 fill-current ml-0.5" />
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openUserTrackSheet(rec.trackId);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-[#121622] hover:bg-amber-400 hover:text-[#080A0F] border border-white/10 text-[10px] font-bold text-[#F8FAFC] transition"
+                                  >
+                                    Fiche
+                                  </button>
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#e11d38] text-white text-[11px] font-bold shrink-0">
+                                    <span>Écouter</span>
+                                    <Play className="w-3 h-3 fill-current ml-0.5" />
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           );

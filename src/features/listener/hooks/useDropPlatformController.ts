@@ -276,6 +276,9 @@ export function useDropPlatformController() {
   const isRepeat = repeatMode > 0;
   const [masterVolume, setMasterVolume] = useState<number>(85);
   const [eqGains, setEqGains] = useState<number[]>([6, 3, -1, 2.5, 4.5]);
+  const [eqBypassed, setEqBypassed] = useState<boolean>(false);
+  const [preampDb, setPreampDb] = useState<number>(0);
+  const [eqQFactor, setEqQFactor] = useState<number>(1.1);
   const [userPlan, setUserPlan] = useState<'BASIC' | 'PRO'>('PRO');
 
   // --- Silent Real Play & Retention Session Tracking ---
@@ -532,14 +535,18 @@ export function useDropPlatformController() {
   const [sqlCopiedBanner, setSqlCopiedBanner] = useState<boolean>(false);
   const [showSqlEditorModal, setShowSqlEditorModal] = useState<boolean>(false);
 
-  // --- Refs (Web Audio -14.0 LUFS Uniform Loudness Engine) ---
+  // --- Refs (Web Audio -14.0 LUFS Uniform Loudness & Parametric 5-Band DSP Engine) ---
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const preampGainRef = useRef<GainNode | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const loudnessNormGainRef = useRef<GainNode | null>(null);
   const loudnessCompressorRef = useRef<DynamicsCompressorNode | null>(null);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
   const eqFiltersRef = useRef<BiquadFilterNode[]>([]);
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const previewMediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const fftBinsRef = useRef<Uint8Array | null>(null);
+  const timeDomainBinsRef = useRef<Uint8Array | null>(null);
   const isPlayingRef = useRef<boolean>(false);
   const stepCounterRef = useRef<number>(0);
   const synthIntervalRef = useRef<number | null>(null);
@@ -1337,18 +1344,27 @@ export function useDropPlatformController() {
       const ctx: AudioContext = new AudioCtx();
       audioCtxRef.current = ctx;
 
+      // 0. Analyseur Spectral Temps Réel (FFT 256 bins, 60 FPS) en sortie Master
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.78;
+      analyser.connect(ctx.destination);
+      analyserNodeRef.current = analyser;
+      fftBinsRef.current = new Uint8Array(analyser.frequencyBinCount);
+      timeDomainBinsRef.current = new Uint8Array(analyser.fftSize);
+
       // 1. Nœud Master Volume contrôlé par l'utilisateur (0% à 100%)
       const master = ctx.createGain();
-      master.gain.value = (masterVolume / 100) * 0.32;
-      master.connect(ctx.destination);
+      master.gain.value = masterVolume / 100;
+      master.connect(analyser);
       masterGainRef.current = master;
 
       // 2. Compresseur / Limiteur Broadcast (-14.0 LUFS Constant Leveler)
-      // Garantit que toutes les chansons (fichiers audio ou synthé) sortent au même volume perçu
+      // Garantit que toutes les chansons (fichiers audio ou synthé) sortent au même volume perçu sans écrêtage
       const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.value = -18;
+      compressor.threshold.value = -16;
       compressor.knee.value = 10;
-      compressor.ratio.value = 4.5;
+      compressor.ratio.value = 4.2;
       compressor.attack.value = 0.003;
       compressor.release.value = 0.16;
       compressor.connect(master);
@@ -1360,14 +1376,14 @@ export function useDropPlatformController() {
       loudnessNorm.connect(compressor);
       loudnessNormGainRef.current = loudnessNorm;
 
-      // 4. Égaliseur 5 bandes
+      // 4. Égaliseur Paramétrique Studio 5 bandes (60Hz, 250Hz, 1kHz, 4kHz, 12kHz)
       const freqs = [60, 250, 1000, 4000, 12000];
       const filters = freqs.map((f, i) => {
         const filter = ctx.createBiquadFilter();
         filter.type = i === 0 ? 'lowshelf' : i === freqs.length - 1 ? 'highshelf' : 'peaking';
         filter.frequency.value = f;
-        filter.Q.value = 1.1;
-        filter.gain.value = eqGains[i] ?? 0;
+        filter.Q.value = eqQFactor;
+        filter.gain.value = eqBypassed ? 0 : (eqGains[i] ?? 0);
         return filter;
       });
 
@@ -1376,11 +1392,56 @@ export function useDropPlatformController() {
       }
       filters[filters.length - 1].connect(loudnessNorm);
       eqFiltersRef.current = filters;
+
+      // 5. Pré-amplificateur d'entrée (Preamp -12 dB à +12 dB avec compensation anti-clipping)
+      const preamp = ctx.createGain();
+      preamp.gain.value = Math.pow(10, preampDb / 20);
+      preamp.connect(filters[0]);
+      preampGainRef.current = preamp;
     }
+
+    // 6. Routage universel des lecteurs HTML5 <audio> à travers la chaîne DSP 5 bandes
+    const ctx = audioCtxRef.current;
+    const entryNode =
+      preampGainRef.current ||
+      eqFiltersRef.current[0] ||
+      loudnessNormGainRef.current ||
+      masterGainRef.current;
+
+    if (ctx && entryNode && htmlAudioRef.current && !mediaSourceRef.current) {
+      try {
+        htmlAudioRef.current.crossOrigin = 'anonymous';
+        const srcNode = ctx.createMediaElementSource(htmlAudioRef.current);
+        srcNode.connect(entryNode);
+        mediaSourceRef.current = srcNode;
+      } catch {
+        // Ignore if already connected or restricted
+      }
+    }
+
+    if (ctx && entryNode && uploadPreviewAudioRef.current && !previewMediaSourceRef.current) {
+      try {
+        uploadPreviewAudioRef.current.crossOrigin = 'anonymous';
+        const prevNode = ctx.createMediaElementSource(uploadPreviewAudioRef.current);
+        prevNode.connect(entryNode);
+        previewMediaSourceRef.current = prevNode;
+      } catch {
+        // Ignore
+      }
+    }
+
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume().catch(() => {});
     }
-  }, [masterVolume, eqGains, computeTrackLoudnessGain, currentTrack.lufsMasterLevel]);
+  }, [
+    masterVolume,
+    eqGains,
+    eqBypassed,
+    preampDb,
+    eqQFactor,
+    computeTrackLoudnessGain,
+    currentTrack.lufsMasterLevel,
+  ]);
 
   // --- Ajustement automatique du gain de normalisation (-14.0 LUFS) à chaque changement de chanson ---
   useEffect(() => {
@@ -1391,11 +1452,15 @@ export function useDropPlatformController() {
       loudnessNormGainRef.current.gain.setTargetAtTime(targetNormGain, now, 0.015);
     }
     if (htmlAudioRef.current) {
-      const normScalar = Math.min(1.15, Math.max(0.45, targetNormGain));
-      htmlAudioRef.current.volume = Math.max(
-        0,
-        Math.min(1, (masterVolume / 100) * normScalar)
-      );
+      if (mediaSourceRef.current) {
+        htmlAudioRef.current.volume = 1;
+      } else {
+        const normScalar = Math.min(1.15, Math.max(0.45, targetNormGain));
+        htmlAudioRef.current.volume = Math.max(
+          0,
+          Math.min(1, (masterVolume / 100) * normScalar)
+        );
+      }
     }
   }, [currentTrack.id, currentTrack.lufsMasterLevel, masterVolume, computeTrackLoudnessGain]);
 
@@ -1407,7 +1472,7 @@ export function useDropPlatformController() {
         const now = audioCtxRef.current.currentTime;
         masterGainRef.current.gain.cancelScheduledValues(now);
         masterGainRef.current.gain.setTargetAtTime(
-          (clamped / 100) * 0.32,
+          clamped / 100,
           now,
           0.01
         );
@@ -1417,16 +1482,14 @@ export function useDropPlatformController() {
         Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
       );
       if (htmlAudioRef.current) {
-        htmlAudioRef.current.volume = Math.max(
-          0,
-          Math.min(1, (clamped / 100) * normScalar)
-        );
+        htmlAudioRef.current.volume = mediaSourceRef.current
+          ? 1
+          : Math.max(0, Math.min(1, (clamped / 100) * normScalar));
       }
       if (uploadPreviewAudioRef.current) {
-        uploadPreviewAudioRef.current.volume = Math.max(
-          0,
-          Math.min(1, (clamped / 100) * normScalar)
-        );
+        uploadPreviewAudioRef.current.volume = previewMediaSourceRef.current
+          ? 1
+          : Math.max(0, Math.min(1, (clamped / 100) * normScalar));
       }
       if (externalPlayerRef.current?.setVolume) {
         externalPlayerRef.current.setVolume(Math.round(clamped));
@@ -1435,45 +1498,138 @@ export function useDropPlatformController() {
     [computeTrackLoudnessGain, currentTrack.lufsMasterLevel]
   );
 
-  const handleChangeEqBand = useCallback((bandIdx: number, dbVal: number) => {
-    const clampedDb = Math.max(-12, Math.min(12, Math.round(dbVal * 2) / 2));
-    setEqGains((prev) => {
-      const next = [...prev];
-      next[bandIdx] = clampedDb;
-      return next;
-    });
-    const filter = eqFiltersRef.current[bandIdx];
-    if (filter && audioCtxRef.current) {
-      const now = audioCtxRef.current.currentTime;
-      filter.gain.cancelScheduledValues(now);
-      filter.gain.setTargetAtTime(clampedDb, now, 0.015);
-    }
-  }, []);
-
-  const handleApplyEqPreset = useCallback((gains: number[]) => {
-    const cleanGains = gains.map((g) => Math.max(-12, Math.min(12, Math.round(g * 2) / 2)));
-    setEqGains(cleanGains);
-    cleanGains.forEach((val, idx) => {
-      const filter = eqFiltersRef.current[idx];
+  const handleChangeEqBand = useCallback(
+    (bandIdx: number, dbVal: number) => {
+      initAudioContext();
+      const clampedDb = Math.max(-12, Math.min(12, Math.round(dbVal * 2) / 2));
+      setEqGains((prev) => {
+        const next = [...prev];
+        next[bandIdx] = clampedDb;
+        return next;
+      });
+      const filter = eqFiltersRef.current[bandIdx];
       if (filter && audioCtxRef.current) {
         const now = audioCtxRef.current.currentTime;
         filter.gain.cancelScheduledValues(now);
-        filter.gain.setTargetAtTime(val, now, 0.02);
+        filter.gain.setTargetAtTime(eqBypassed ? 0 : clampedDb, now, 0.015);
       }
-    });
-  }, []);
+    },
+    [eqBypassed, initAudioContext]
+  );
+
+  const handleApplyEqPreset = useCallback(
+    (gains: number[]) => {
+      initAudioContext();
+      const cleanGains = gains.map((g) => Math.max(-12, Math.min(12, Math.round(g * 2) / 2)));
+      setEqGains(cleanGains);
+      setEqBypassed(false);
+      cleanGains.forEach((val, idx) => {
+        const filter = eqFiltersRef.current[idx];
+        if (filter && audioCtxRef.current) {
+          const now = audioCtxRef.current.currentTime;
+          filter.gain.cancelScheduledValues(now);
+          filter.gain.setTargetAtTime(val, now, 0.02);
+        }
+      });
+    },
+    [initAudioContext]
+  );
 
   const handleResetEq = useCallback(() => {
+    initAudioContext();
     const flat = [0, 0, 0, 0, 0];
     setEqGains(flat);
+    setPreampDb(0);
+    setEqQFactor(1.1);
+    setEqBypassed(false);
     flat.forEach((val, idx) => {
       const filter = eqFiltersRef.current[idx];
       if (filter && audioCtxRef.current) {
         const now = audioCtxRef.current.currentTime;
         filter.gain.cancelScheduledValues(now);
         filter.gain.setTargetAtTime(val, now, 0.02);
+        filter.Q.setTargetAtTime(1.1, now, 0.02);
       }
     });
+    if (preampGainRef.current && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      preampGainRef.current.gain.cancelScheduledValues(now);
+      preampGainRef.current.gain.setTargetAtTime(1.0, now, 0.02);
+    }
+  }, [initAudioContext]);
+
+  const handleToggleEqBypass = useCallback(() => {
+    initAudioContext();
+    setEqBypassed((prev) => {
+      const nextBypass = !prev;
+      eqFiltersRef.current.forEach((filter, idx) => {
+        if (filter && audioCtxRef.current) {
+          const now = audioCtxRef.current.currentTime;
+          filter.gain.cancelScheduledValues(now);
+          filter.gain.setTargetAtTime(
+            nextBypass ? 0 : (eqGains[idx] ?? 0),
+            now,
+            0.015
+          );
+        }
+      });
+      return nextBypass;
+    });
+  }, [eqGains, initAudioContext]);
+
+  const handleChangePreampDb = useCallback(
+    (nextDb: number) => {
+      initAudioContext();
+      const clamped = Math.max(-12, Math.min(12, Math.round(nextDb * 2) / 2));
+      setPreampDb(clamped);
+      if (preampGainRef.current && audioCtxRef.current) {
+        const now = audioCtxRef.current.currentTime;
+        preampGainRef.current.gain.cancelScheduledValues(now);
+        preampGainRef.current.gain.setTargetAtTime(
+          Math.pow(10, clamped / 20),
+          now,
+          0.015
+        );
+      }
+    },
+    [initAudioContext]
+  );
+
+  const handleChangeEqQFactor = useCallback(
+    (nextQ: number) => {
+      initAudioContext();
+      const clampedQ = Math.max(0.5, Math.min(3.5, Math.round(nextQ * 10) / 10));
+      setEqQFactor(clampedQ);
+      eqFiltersRef.current.forEach((filter) => {
+        if (filter && audioCtxRef.current) {
+          const now = audioCtxRef.current.currentTime;
+          filter.Q.cancelScheduledValues(now);
+          filter.Q.setTargetAtTime(clampedQ, now, 0.015);
+        }
+      });
+    },
+    [initAudioContext]
+  );
+
+  const getAudioSpectrumData = useCallback(() => {
+    const analyser = analyserNodeRef.current;
+    const fftBins = fftBinsRef.current;
+    const timeBins = timeDomainBinsRef.current;
+    if (!analyser || !fftBins || !timeBins) return null;
+    analyser.getByteFrequencyData(fftBins as Uint8Array<ArrayBuffer>);
+    analyser.getByteTimeDomainData(timeBins as Uint8Array<ArrayBuffer>);
+    let sumSq = 0;
+    let peak = 0;
+    for (let i = 0; i < timeBins.length; i++) {
+      const centered = (timeBins[i] - 128) / 128;
+      const abs = Math.abs(centered);
+      if (abs > peak) peak = abs;
+      sumSq += centered * centered;
+    }
+    const rms = Math.sqrt(sumSq / timeBins.length);
+    const rmsDb = rms > 0.0001 ? Math.max(-60, 20 * Math.log10(rms)) : -60;
+    const peakDb = peak > 0.0001 ? Math.max(-60, 20 * Math.log10(peak)) : -60;
+    return { bins: fftBins, rmsDb, peakDb };
   }, []);
 
   // --- Synthétiseur Iso-Loudness (-14.0 LUFS constant entre tous les titres et modes Drop/Full) ---
@@ -1512,7 +1668,8 @@ export function useDropPlatformController() {
 
       // Compensation RMS exacte entre l'onde en dents de scie (Drop) et l'onde triangulaire (Full)
       // + Courbe Iso-Sonie (Fletcher-Munson) pour que les notes aiguës et graves aient le même volume perçu
-      const waveformRmsNorm = dropActive ? 0.165 : 0.215;
+      const synthHeadroomScalar = 0.32;
+      const waveformRmsNorm = (dropActive ? 0.165 : 0.215) * synthHeadroomScalar;
       const isoLoudnessFreqComp = Math.max(
         0.78,
         Math.min(1.22, Math.pow(240 / safeFreq, 0.22))
@@ -1528,13 +1685,14 @@ export function useDropPlatformController() {
 
       // Niveau de sub-basse constant et équilibré
       subGain.gain.setValueAtTime(0.001, now);
-      subGain.gain.linearRampToValueAtTime(0.11, now + 0.035);
+      subGain.gain.linearRampToValueAtTime(0.11 * synthHeadroomScalar, now + 0.035);
       subGain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec);
 
       osc.connect(noteGain);
       subOsc.connect(subGain);
 
       const destinationNode =
+        preampGainRef.current ||
         eqFiltersRef.current[0] ||
         loudnessNormGainRef.current ||
         loudnessCompressorRef.current ||
@@ -1552,7 +1710,7 @@ export function useDropPlatformController() {
     []
   );
 
-  // --- Synchronize Active Audio Engine (Strict -14.0 LUFS Level Matching) ---
+  // --- Synchronize Active Audio Engine (Strict -14.0 LUFS Level Matching & 5-Band EQ Routing) ---
   useEffect(() => {
     const hasAudioFile = Boolean(currentTrack.audioUrl);
     const hasExternalStream = Boolean(currentTrack.externalStreamId);
@@ -1575,15 +1733,21 @@ export function useDropPlatformController() {
           // Wait for metadata if needed
         }
       }
-      const normScalar = Math.min(
-        1.15,
-        Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
-      );
-      audio.volume = Math.max(
-        0,
-        Math.min(1, (masterVolume / 100) * normScalar)
-      );
       if (isPlaying && !isPreviewingUploadDropRef.current) {
+        initAudioContext();
+        audio.volume = mediaSourceRef.current
+          ? 1
+          : Math.max(
+              0,
+              Math.min(
+                1,
+                (masterVolume / 100) *
+                  Math.min(
+                    1.15,
+                    Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
+                  )
+              )
+            );
         audio.play().catch(async () => {
           // Si l'URL blob: d'une session précédente a expiré, on tente de la réhydrater depuis IndexedDB
           const freshUrl = await getPersistentAudioBlobUrl(currentTrack.id);
@@ -2565,7 +2729,7 @@ export function useDropPlatformController() {
     isPlaying, setIsPlaying, isDropMode, setIsDropMode, currentTime, setCurrentTime,
     likedTrackIds, recommendedTrackIds, subscribedArtists, artistSubscribers,
     communityRecommendations, isShuffle, setIsShuffle, repeatMode, setRepeatMode,
-    masterVolume, eqGains, userPlan, setUserPlan, manualSessionRef,
+    masterVolume, eqGains, eqBypassed, preampDb, eqQFactor, userPlan, setUserPlan, manualSessionRef,
     authMode, setAuthMode, authName, setAuthName, authEmail, setAuthEmail,
     adminMainTab, setAdminMainTab, catalogueSubTab, setCatalogueSubTab,
     royaltyLedgerState, updateRoyaltySettings, resetRoyaltySettings, setHolderTaxStatus,
@@ -2579,7 +2743,9 @@ export function useDropPlatformController() {
     htmlAudioRef, uploadPreviewAudioRef, safeAlbumIdx, currentAlbum, safeTrackIdx, currentTrack,
     isRealtimeConnected, handleSaveAndSyncAllAdmin, allTracksFlat, royaltyLedger,
     trackRankMap, finalizeListeningSessionOnZap, handleChangeMasterVolume,
-    handleChangeEqBand, handleApplyEqPreset, handleResetEq, seekAllEngines,
+    handleChangeEqBand, handleApplyEqPreset, handleResetEq,
+    handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor, getAudioSpectrumData,
+    seekAllEngines,
     handleSelectTrackIndex, handleSelectAlbumIndex, navigateTrack, navigateAlbum,
     handleCentralPlayToggle, toggleLike, handleToggleOfflineDownload,
     handleRecommendTrack, handleToggleSubscribeArtist, handleRecordLyricsOpen,

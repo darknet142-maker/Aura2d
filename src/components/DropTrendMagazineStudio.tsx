@@ -448,8 +448,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
         constraintAttempts.push({
           video: {
             deviceId: { exact: preferredDeviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1080 },
+            height: { ideal: 1920 },
+            aspectRatio: { ideal: 9 / 16 },
           },
           audio: false,
         });
@@ -459,23 +460,34 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
         });
       }
 
-      // Palier 1 : caméra avant/arrière idéale HD
+      // Palier 1 : caméra avant/arrière format vertical strict 1080×1920 (9:16 TikTok)
       constraintAttempts.push({
         video: {
           facingMode: { ideal: facing },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+          aspectRatio: { ideal: 9 / 16 },
         },
         audio: false,
       });
 
-      // Palier 2 : caméra avant/arrière simple
+      // Palier 2 : caméra avant/arrière HD (recadrée automatiquement en 1080×1920 vertical)
+      constraintAttempts.push({
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+        },
+        audio: false,
+      });
+
+      // Palier 3 : caméra avant/arrière simple (recadrée en 9:16 1080×1920)
       constraintAttempts.push({
         video: { facingMode: facing },
         audio: false,
       });
 
-      // Palier 3 : toute caméra disponible sur l'appareil (PC / Mac / Tablette / Mobile)
+      // Palier 4 : toute caméra disponible sur l'appareil (PC / Mac / Tablette / Mobile)
       constraintAttempts.push({
         video: true,
         audio: false,
@@ -1341,149 +1353,159 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
       />
 
       {/* ====================================================================
-          ÉTAPE 1 : CAMÉRA EN PLEIN ÉCRAN (FACECAM OU ARRIÈRE) AVEC LE SEUL BOUTON ROUGE
+          ÉTAPE 1 : CAMÉRA STRICTEMENT VERTICALE 9:16 (1080×1920 TIKTOK) SUR TOUT ÉCRAN
           ==================================================================== */}
       {step === 'CAMERA_CAPTURE' && (
-        <div className="relative w-full h-full bg-[#07090E] overflow-hidden">
-          {/* Flux vidéo caméra plein écran TOUJOURS monté dans le DOM */}
-          <video
-            ref={liveViewfinderVideoRef}
-            autoPlay
-            muted
-            playsInline
-            className={`absolute inset-0 w-full h-full object-cover ${
-              cameraFacing === 'user' ? '-scale-x-100' : ''
-            }`}
-          />
+        <div className="relative w-full h-full bg-[#07090E] flex items-center justify-center sm:p-3 overflow-hidden">
+          {/* Châssis Vertical Strict 9:16 (1080×1920 TikTok) sur Mobile, Tablette et PC */}
+          <div className="relative h-full max-h-[100dvh] aspect-[9/16] w-auto max-w-full mx-auto bg-[#080A0F] sm:rounded-[28px] sm:border sm:border-white/15 shadow-[0_24px_70px_rgba(6,8,14,0.95)] overflow-hidden">
+            {/* Flux vidéo caméra recadré plein cadre vertical 9:16 (1080×1920) */}
+            <video
+              ref={liveViewfinderVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className={`absolute inset-0 w-full h-full object-cover ${
+                cameraFacing === 'user' ? '-scale-x-100' : ''
+              }`}
+            />
 
-          {/* Si le navigateur demande une action manuelle pour autoriser la caméra web ou native */}
-          {cameraError && !cameraReady && (
-            <div className="absolute inset-x-4 top-20 bottom-36 z-20 flex flex-col items-center justify-center gap-3.5 bg-zinc-950/90 backdrop-blur-xl rounded-3xl border border-white/10 px-6 text-center max-w-sm mx-auto shadow-2xl">
-              <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                <Camera className="w-7 h-7" />
+            {/* Si le navigateur demande une action manuelle pour autoriser la caméra web ou native */}
+            {cameraError && !cameraReady && (
+              <div className="absolute inset-x-4 top-20 bottom-36 z-20 flex flex-col items-center justify-center gap-3.5 bg-[#080A0F]/95 backdrop-blur-xl rounded-3xl border border-white/10 px-6 text-center max-w-sm mx-auto shadow-2xl">
+                <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                  <Camera className="w-7 h-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Caméra 9:16 en direct non détectée</p>
+                  <p className="text-xs text-[#A3A9BA] mt-1">
+                    Activez la caméra ou enregistrez directement votre vidéo Trend verticale 1080×1920 avec le visuel officiel.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 w-full pt-1">
+                  <button
+                    type="button"
+                    onClick={() => startLiveCamera(cameraFacing)}
+                    className="w-full px-4 py-2.5 rounded-full bg-white text-[#080A0F] font-semibold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95 transition"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Activer la caméra 1080×1920</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nativeFileInputRef.current?.click()}
+                    className="w-full px-4 py-2 rounded-full bg-[#121622] border border-white/15 text-white/90 text-xs font-medium active:scale-95 transition"
+                  >
+                    Ouvrir l&apos;appareil photo natif
+                  </button>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-white">Caméra en direct non détectée</p>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Activez la caméra ou enregistrez directement votre vidéo Trend 30s avec le visuel Pop Star officiel.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 w-full pt-1">
-                <button
-                  type="button"
-                  onClick={() => startLiveCamera(cameraFacing)}
-                  className="w-full px-4 py-2.5 rounded-full bg-white text-black font-semibold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95 transition"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Activer la caméra en direct</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => nativeFileInputRef.current?.click()}
-                  className="w-full px-4 py-2 rounded-full bg-zinc-800/90 border border-white/15 text-white/90 text-xs font-medium active:scale-95 transition"
-                >
-                  Ouvrir l&apos;appareil photo natif
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Grille de cadrage 3×3 plein écran */}
-          <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 z-10">
-            <div className="border-r border-b border-white/20" />
-            <div className="border-r border-b border-white/20" />
-            <div className="border-b border-white/20" />
-            <div className="border-r border-b border-white/20" />
-            <div className="border-r border-b border-white/20" />
-            <div className="border-b border-white/20" />
-            <div className="border-r border-white/20" />
-            <div className="border-r border-white/20" />
-            <div />
-          </div>
-
-          {/* Barre de progression fine en haut de l'écran pendant l'enregistrement */}
-          {isRecording && (
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-white/15 z-30">
-              <div
-                className="h-full bg-[#ff3b30] transition-all duration-100"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-          )}
-
-          {/* En-tête épuré : uniquement le bouton Fermer et le chronomètre pendant l'enregistrement */}
-          <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 flex items-center justify-between z-30">
-            <button
-              type="button"
-              onClick={() => {
-                stopTrendRecording();
-                onClose();
-              }}
-              className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-[#07090E]/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition"
-              aria-label="Fermer"
-            >
-              <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
-            </button>
-
-            {isRecording ? (
-              <div className="px-3 py-1 sm:px-3.5 rounded-full bg-[#ff3b30] text-white font-mono text-[11px] sm:text-xs font-bold tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" />
-                <span>
-                  00:{Math.floor(recordedSeconds).toString().padStart(2, '0')}
-                </span>
-              </div>
-            ) : (
-              <DropOfficialLogo className="h-5 sm:h-6 w-auto max-w-[110px]" />
             )}
 
-            <div className="w-7 h-7 sm:w-10 sm:h-10" />
-          </div>
+            {/* Grille de cadrage 3×3 TikTok 9:16 */}
+            <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 z-10">
+              <div className="border-r border-b border-white/15" />
+              <div className="border-r border-b border-white/15" />
+              <div className="border-b border-white/15" />
+              <div className="border-r border-b border-white/15" />
+              <div className="border-r border-b border-white/15" />
+              <div className="border-b border-white/15" />
+              <div className="border-r border-white/15" />
+              <div className="border-r border-white/15" />
+              <div />
+            </div>
 
-          {/* Zone basse de la caméra plein écran : bouton rouge d'enregistrement et bascule caméra */}
-          <div className="absolute inset-x-0 bottom-0 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] flex items-center justify-center z-40 pointer-events-none">
-            <div className="w-full max-w-md px-8 flex items-center justify-between pointer-events-auto">
-              <div className="w-12 h-12" />
+            {/* Barre de progression fine en haut de l'écran 9:16 pendant l'enregistrement */}
+            {isRecording && (
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-white/15 z-30">
+                <div
+                  className="h-full bg-[#ff3b30] transition-all duration-100"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            )}
 
-              {/* BOUTON D'ENREGISTREMENT ROUGE UNIQUE (Clic 1 = Enregistrer, Clic 2 = Couper l'enregistrement) */}
+            {/* En-tête épuré du châssis vertical 9:16 : bouton Fermer, logo/chrono et badge 1080×1920 */}
+            <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 flex items-center justify-between z-30">
               <button
                 type="button"
                 onClick={() => {
-                  if (isRecording) {
-                    stopTrendRecording();
-                  } else {
-                    startTrendRecording();
-                  }
+                  stopTrendRecording();
+                  onClose();
                 }}
-                className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-full border-[5px] border-white/90 bg-[#07090E]/40 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_35px_rgba(255,59,48,0.75)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-400 cursor-pointer"
-                aria-label={
-                  isRecording
-                    ? "Couper l'enregistrement"
-                    : "Lancer l'enregistrement"
-                }
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition"
+                aria-label="Fermer"
               >
-                <span
-                  className={`bg-[#ff3b30] flex items-center justify-center transition-all duration-200 ${
-                    isRecording
-                      ? 'w-8 h-8 rounded-lg shadow-[0_0_24px_rgba(255,59,48,1)] ring-4 ring-white/60'
-                      : 'w-[64px] h-[64px] rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_0_22px_rgba(255,59,48,0.9)]'
-                  }`}
-                >
-                  {!isRecording && (
-                    <span className="w-3.5 h-3.5 rounded-full bg-white/40 shadow-sm" />
-                  )}
-                </span>
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              {/* Bascule Caméra Facecam (Avant) / Caméra Arrière */}
-              <button
-                type="button"
-                onClick={handleToggleCameraFacing}
-                disabled={isRecording}
-                className="w-12 h-12 rounded-full bg-zinc-900/85 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition disabled:opacity-30 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                aria-label="Basculer la caméra avant ou arrière"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
+              {isRecording ? (
+                <div className="px-3 py-1 sm:px-3.5 rounded-full bg-[#ff3b30] text-white font-mono text-[11px] sm:text-xs font-bold tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg">
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" />
+                  <span>
+                    00:{Math.floor(recordedSeconds).toString().padStart(2, '0')}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15">
+                  <DropOfficialLogo className="h-4 sm:h-5 w-auto max-w-[90px]" />
+                  <span className="text-[10px] font-mono font-bold text-amber-300">
+                    9:16 • 1080×1920
+                  </span>
+                </div>
+              )}
+
+              <span className="px-2 py-1 rounded-lg bg-[#07090E]/65 backdrop-blur-md border border-white/15 text-[9px] font-mono font-bold text-[#F8FAFC]">
+                TIKTOK HD
+              </span>
+            </div>
+
+            {/* Zone basse du châssis vertical 9:16 : bouton rouge d'enregistrement et bascule caméra */}
+            <div className="absolute inset-x-0 bottom-0 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-center z-40 pointer-events-none">
+              <div className="w-full px-6 flex items-center justify-between pointer-events-auto">
+                <div className="w-12 h-12" />
+
+                {/* BOUTON D'ENREGISTREMENT ROUGE UNIQUE (Clic 1 = Enregistrer, Clic 2 = Couper l'enregistrement) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRecording) {
+                      stopTrendRecording();
+                    } else {
+                      startTrendRecording();
+                    }
+                  }}
+                  className="relative w-20 h-20 rounded-full border-[5px] border-white/90 bg-[#07090E]/40 flex items-center justify-center active:scale-95 transition-transform shadow-[0_0_35px_rgba(255,59,48,0.75)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-400 cursor-pointer"
+                  aria-label={
+                    isRecording
+                      ? "Couper l'enregistrement"
+                      : "Lancer l'enregistrement"
+                  }
+                >
+                  <span
+                    className={`bg-[#ff3b30] flex items-center justify-center transition-all duration-200 ${
+                      isRecording
+                        ? 'w-8 h-8 rounded-lg shadow-[0_0_24px_rgba(255,59,48,1)] ring-4 ring-white/60'
+                        : 'w-[64px] h-[64px] rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_0_22px_rgba(255,59,48,0.9)]'
+                    }`}
+                  >
+                    {!isRecording && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-white/40 shadow-sm" />
+                    )}
+                  </span>
+                </button>
+
+                {/* Bascule Caméra Facecam (Avant) / Caméra Arrière */}
+                <button
+                  type="button"
+                  onClick={handleToggleCameraFacing}
+                  disabled={isRecording}
+                  className="w-12 h-12 rounded-full bg-[#121622]/90 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition disabled:opacity-30 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  aria-label="Basculer la caméra avant ou arrière"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

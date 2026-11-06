@@ -77,6 +77,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
     onChangeEqBand,
     onApplyEqPreset,
     onResetEq,
+    eqBypassed,
+    preampDb,
+    eqQFactor,
+    onToggleEqBypass,
+    onChangePreampDb,
+    onChangeEqQFactor,
+    getAudioSpectrumData,
     onOpenAdminStudio,
     subscriptionPass,
     onChangeSubscriptionPass,
@@ -232,6 +239,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onSelectAlbumIndex={onSelectAlbumIndex}
             onNavigateTrack={onNavigateTrack}
             onSelectTrackIndex={onSelectTrackIndex}
+            onOpenActiveTrackSheet={() => openUserTrackSheet(currentTrack.id)}
             onToast={showToast}
           >
             <PlayerLyricsPanel
@@ -270,6 +278,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onToggleLike={(e) => onToggleLike(currentTrack.id, e)}
             onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
             onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
+            onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
             safeRankInfo={safeRankInfo}
             isDropMode={isDropMode}
             currentTime={currentTime}
@@ -339,6 +348,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               if (!desktopSplitMode) setActiveModal('MINI');
               setHubTab('RECOS');
             }}
+            onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
+            onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
           />
 
           <PlaylistModal
@@ -353,13 +364,21 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
           <EqualizerModal
             isOpen={activeModal === 'EQ'}
             isPro={isPro}
+            isPlaying={isPlaying}
             eqGains={eqGains}
+            eqBypassed={eqBypassed}
+            preampDb={preampDb}
+            eqQFactor={eqQFactor}
             masterVolume={masterVolume}
             onClose={() => setActiveModal('NONE')}
             onResetEq={onResetEq}
             onApplyEqPreset={onApplyEqPreset}
             onChangeEqBand={onChangeEqBand}
+            onToggleEqBypass={onToggleEqBypass}
+            onChangePreampDb={onChangePreampDb}
+            onChangeEqQFactor={onChangeEqQFactor}
             onChangeMasterVolume={onChangeMasterVolume}
+            getAudioSpectrumData={getAudioSpectrumData}
             onToast={showToast}
           />
 
@@ -371,6 +390,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             isPlaying={isPlaying}
             onClose={() => setActiveModal('NONE')}
             onSelectTrack={handlePlayOrToggleSpecificTrack}
+            onOpenTrackSheet={openUserTrackSheet}
+            onOpenArtistProfile={(art) => openUserEntitySheet(art, 'ARTIST')}
             formatCompactPlays={formatCompactPlays}
             formatTime={formatTime}
           />
@@ -437,6 +458,15 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                     }}
                     onToggleSubscribeArtist={(artName) => onToggleSubscribeArtist?.(artName)}
                     onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
+                    onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
+                    onOpenEqModal={() => {
+                      closeAllAnalyticsSheets();
+                      setActiveModal('EQ');
+                    }}
+                    onOpenTrendStudio={() => {
+                      closeAllAnalyticsSheets();
+                      setShowTrendStudioModal(true);
+                    }}
                     onConfirmCreditHandshake={onConfirmCreditHandshake}
                     onOpenCreditDispute={onOpenCreditDispute}
                     onResolveCreditDispute={onResolveCreditDispute}
@@ -502,6 +532,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                   onTogglePlay={onTogglePlay}
                   onNavigateTrack={onNavigateTrack}
                   onExpandPlayer={closeAllAnalyticsSheets}
+                  onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
+                  onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
                 />
               </div>
             </div>

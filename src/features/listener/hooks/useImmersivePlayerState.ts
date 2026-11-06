@@ -76,6 +76,13 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     onChangeEqBand,
     onApplyEqPreset,
     onResetEq,
+    eqBypassed = false,
+    preampDb = 0,
+    eqQFactor = 1.1,
+    onToggleEqBypass,
+    onChangePreampDb,
+    onChangeEqQFactor,
+    getAudioSpectrumData,
     onOpenAdminStudio,
     subscriptionPass = 'PASS_MENSUEL_HEBDO',
     onChangeSubscriptionPass,
@@ -184,33 +191,29 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     showToast(`${featureName} réservé aux comptes DROP Pro`, 'bg-amber-400');
   };
 
-  // Open Track Detail directly inside User View (never redirects to Admin)
+  // Open Track Detail & Studio Parameters directly inside User View (never blocks, never redirects to Admin)
   const openUserTrackSheet = (trackId: string) => {
-    if (!isPro) {
-      notifyProRequired('Fiche détaillée du titre');
-      return;
-    }
+    setActiveModal((prev) => (prev === 'MINI' ? 'MINI' : 'NONE'));
     setInPlayerEntity(null);
     setInPlayerUserId(null);
     setInPlayerTrackId(trackId);
   };
 
-  // Open Artist or Studio Collaborator Profile directly inside User View (never redirects to Admin)
+  // Open Artist or Studio Collaborator Profile directly inside User View (never blocks, never redirects to Admin)
   const openUserEntitySheet = (
     name: string,
     role: StudioEntityRole = 'ARTIST'
   ) => {
-    if (!isPro) {
-      notifyProRequired('Profil Artiste & Équipe Studio');
-      return;
-    }
+    if (!name || !name.trim()) return;
+    setActiveModal((prev) => (prev === 'MINI' ? 'MINI' : 'NONE'));
     setInPlayerTrackId(null);
     setInPlayerUserId(null);
-    setInPlayerEntity({ name, role });
+    setInPlayerEntity({ name: name.trim(), role });
   };
 
   // Open Listener Profile directly inside User View (100% safe, never crashes)
   const openUserListenerSheet = (userId: string) => {
+    setActiveModal((prev) => (prev === 'MINI' ? 'MINI' : 'NONE'));
     setInPlayerTrackId(null);
     setInPlayerEntity(null);
     setInPlayerUserId(userId || 'usr-fallback');
@@ -1058,6 +1061,9 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
 
   return {
     ...props,
+    eqBypassed,
+    preampDb,
+    eqQFactor,
     adBanners,
     adBannerSettings,
     enableAwardsCeremony,

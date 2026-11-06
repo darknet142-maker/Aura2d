@@ -141,14 +141,32 @@ export const EQ_PRESETS: EqPreset[] = [
     description: 'Ouverture spatiale et brillance à 12kHz',
     gains: [0, 0, 1.5, 4.5, 6.5],
   },
+  {
+    id: 'afro-ntcham-241',
+    name: 'Afro-Ntcham +241',
+    description: 'Kick percutant 60Hz, présence rythmique 4kHz & air 12kHz',
+    gains: [6.5, 2.5, -1.5, 3.5, 5.0],
+  },
+  {
+    id: 'amapiano-logdrum',
+    name: 'Log Drum & Sub',
+    description: 'Focus sub-basse 60Hz/250Hz sans baver sur les voix',
+    gains: [8.0, 5.0, -2.0, 2.0, 3.5],
+  },
+  {
+    id: 'late-night-lounge',
+    name: 'Écoute Nocturne',
+    description: 'Dynamique douce, médiums reposants et sub contrôlé',
+    gains: [3.0, 1.5, -2.5, 1.0, 2.5],
+  },
 ];
 
 export const EQ_BANDS_META = [
-  { freq: '60Hz', label: 'Sub-Bass' },
-  { freq: '250Hz', label: 'Graves' },
-  { freq: '1kHz', label: 'Médiums' },
-  { freq: '4kHz', label: 'Présence' },
-  { freq: '12kHz', label: 'Air / Aigus' },
+  { freq: '60Hz', hz: 60, filterType: 'Low-Shelf', label: 'Sub-Bass' },
+  { freq: '250Hz', hz: 250, filterType: 'Peaking Bell', label: 'Graves / Corps' },
+  { freq: '1kHz', hz: 1000, filterType: 'Peaking Bell', label: 'Médiums / Voix' },
+  { freq: '4kHz', hz: 4000, filterType: 'Peaking Bell', label: 'Présence / Attaque' },
+  { freq: '12kHz', hz: 12000, filterType: 'High-Shelf', label: 'Air / Brillance' },
 ];
 
 export type ActivePlayerModal =
@@ -213,6 +231,13 @@ export interface Immersive3DPlayerProps {
   onChangeEqBand: (bandIdx: number, gainDb: number) => void;
   onApplyEqPreset: (gains: number[]) => void;
   onResetEq: () => void;
+  eqBypassed?: boolean;
+  preampDb?: number;
+  eqQFactor?: number;
+  onToggleEqBypass?: () => void;
+  onChangePreampDb?: (db: number) => void;
+  onChangeEqQFactor?: (q: number) => void;
+  getAudioSpectrumData?: () => { bins: Uint8Array; rmsDb: number; peakDb: number } | null;
   onOpenArtistProfile?: (artistName: string) => void;
   onOpenTrackDetail?: (trackId: string) => void;
   onOpenAdminStudio: () => void;

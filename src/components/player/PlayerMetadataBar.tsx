@@ -12,6 +12,7 @@ import { motion } from 'motion/react';
 import {
   AutoMarqueeText,
   CertificationBadgeSvg,
+  StudioEntityRole,
 } from '../ReusableAnalyticsSheets';
 import { RankMedalSvg } from '../CoverArtwork';
 import { CertificationInfo } from '../../utils/rankingEngine';
@@ -33,6 +34,7 @@ export interface PlayerMetadataBarProps {
   onToggleLike: (e: React.MouseEvent) => void;
   onOpenTrackSheet: () => void;
   onOpenArtistProfile: () => void;
+  onOpenEntityProfile?: (name: string, role: StudioEntityRole) => void;
   safeRankInfo: { rank: number; delta: number };
   isDropMode: boolean;
   currentTime: number;
@@ -56,6 +58,7 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
   onToggleLike,
   onOpenTrackSheet,
   onOpenArtistProfile,
+  onOpenEntityProfile,
   safeRankInfo,
   isDropMode,
   currentTime,
@@ -119,19 +122,14 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
         <div className="min-w-0 flex-1">
           {/* Titre du morceau + Badge Certification */}
           <div className="flex items-center gap-2 min-w-0">
-            <div
+            <button
+              type="button"
               onClick={onOpenTrackSheet}
-              title={
-                isPro
-                  ? 'Ouvrir la fiche analytique du titre'
-                  : 'Fiche détaillée réservée aux comptes DROP Pro'
-              }
-              className={`min-w-0 flex-1 text-[19px] sm:text-[22px] leading-tight font-extrabold text-[#F8FAFC] tracking-tight transition-colors ${
-                isPro ? 'cursor-pointer hover:text-amber-300' : 'cursor-default opacity-95'
-              }`}
+              title="Inspecter la fiche analytique, les crédits studio et les paramètres du titre"
+              className="min-w-0 flex-1 text-left text-[19px] sm:text-[22px] leading-tight font-extrabold text-[#F8FAFC] hover:text-amber-300 tracking-tight transition-colors cursor-pointer"
             >
               <AutoMarqueeText text={currentTrack.title} />
-            </div>
+            </button>
             <CertificationBadgeSvg
               cert={currentTrackCert}
               compact
@@ -142,27 +140,39 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
             />
           </div>
 
-          {/* Ligne Artiste Principal + Featurings + Icône S'abonner */}
-          <div className="flex items-center gap-2 mt-0.5 min-w-0">
-            <div
-              onClick={onOpenArtistProfile}
-              title={
-                isPro
-                  ? 'Ouvrir le profil artiste'
-                  : 'Profil artiste réservé aux comptes DROP Pro'
-              }
-              className={`min-w-0 flex-1 text-[13px] sm:text-[14.5px] leading-snug font-semibold text-[#A3A9BA] transition-colors ${
-                isPro ? 'cursor-pointer hover:text-[#F8FAFC]' : 'cursor-default'
-              }`}
-            >
-              <AutoMarqueeText
-                text={
-                  currentTrack.featuringArtists &&
-                  currentTrack.featuringArtists.length > 0
-                    ? `${currentTrack.artist} feat. ${currentTrack.featuringArtists.join(', ')}`
-                    : currentTrack.artist
-                }
-              />
+          {/* Ligne Artiste Principal + Featurings cliquables + Icône S'abonner */}
+          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+            <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button
+                type="button"
+                onClick={onOpenArtistProfile}
+                title={`Ouvrir le profil artiste de ${currentTrack.artist}`}
+                className="text-[13px] sm:text-[14.5px] leading-snug font-bold text-[#F8FAFC] hover:text-amber-300 transition-colors cursor-pointer truncate max-w-[180px] sm:max-w-[220px]"
+              >
+                {currentTrack.artist}
+              </button>
+
+              {currentTrack.featuringArtists &&
+                currentTrack.featuringArtists.length > 0 && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[11px] font-mono text-[#A3A9BA]">feat.</span>
+                    {currentTrack.featuringArtists.map((feat) => (
+                      <button
+                        key={feat}
+                        type="button"
+                        onClick={() =>
+                          onOpenEntityProfile
+                            ? onOpenEntityProfile(feat, 'ARTIST')
+                            : onOpenArtistProfile()
+                        }
+                        title={`Ouvrir le profil de ${feat}`}
+                        className="px-1.5 py-0.5 rounded-md bg-white/[0.06] hover:bg-amber-400/20 border border-white/10 text-[11px] font-semibold text-amber-300 transition cursor-pointer whitespace-nowrap"
+                      >
+                        {feat}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </div>
 
             {/* Bouton d'Abonnement Mobile */}
@@ -202,6 +212,42 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                 <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
               )}
             </motion.button>
+          </div>
+
+          {/* Barre d'accès rapide aux Crédits & Paramètres Studio (Beatmaker, Label, Album, Fiche) */}
+          <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
+            {currentTrack.beatmakerName && (
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenEntityProfile?.(currentTrack.beatmakerName!, 'BEATMAKER')
+                }
+                title={`Ouvrir le profil Beatmaker de ${currentTrack.beatmakerName}`}
+                className="px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-[10px] font-mono font-semibold text-emerald-300 shrink-0 transition cursor-pointer"
+              >
+                Prod. {currentTrack.beatmakerName}
+              </button>
+            )}
+            {currentTrack.labelName && (
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenEntityProfile?.(currentTrack.labelName, 'LABEL')
+                }
+                title={`Ouvrir le profil Label de ${currentTrack.labelName}`}
+                className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-mono text-[#A3A9BA] hover:text-[#F8FAFC] shrink-0 transition cursor-pointer truncate max-w-[140px]"
+              >
+                {currentTrack.labelName}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenTrackSheet}
+              title="Ouvrir tous les paramètres, crédits et royalties du titre"
+              className="px-2 py-0.5 rounded-md bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-[10px] font-mono font-bold text-amber-300 shrink-0 transition cursor-pointer"
+            >
+              Crédits &amp; Split →
+            </button>
           </div>
         </div>
 

@@ -181,6 +181,9 @@ export interface Immersive3DPlayerProps {
   categories?: string[];
   masterVolume: number;
   eqGains: number[];
+  eqBypassed?: boolean;
+  preampDb?: number;
+  eqQFactor?: number;
   userPlan: 'BASIC' | 'PRO';
   syncSnapshot: SyncStatusSnapshot;
   onToggleUserPlan: () => void;
@@ -210,6 +213,14 @@ export interface Immersive3DPlayerProps {
   onChangeEqBand: (bandIdx: number, gainDb: number) => void;
   onApplyEqPreset: (gains: number[]) => void;
   onResetEq: () => void;
+  onToggleEqBypass?: () => void;
+  onChangePreampDb?: (db: number) => void;
+  onChangeEqQFactor?: (q: number) => void;
+  getAudioSpectrumData?: () => {
+    bins: Uint8Array;
+    rmsDb: number;
+    peakDb: number;
+  } | null;
   onOpenArtistProfile?: (artistName: string) => void;
   onOpenTrackDetail?: (trackId: string) => void;
   onOpenAdminStudio: () => void;
