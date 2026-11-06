@@ -107,6 +107,10 @@ import {
   saveAwardsCeremonyEnabledToStorage,
   triggerBeatAudioDownload,
   SupabaseTrackRow,
+  deleteStudioEntityFromCloud,
+  loadAdminGlobalConfigFromStorage,
+  getAdminGlobalConfigFromCloud,
+  syncAdminGlobalConfigToCloud,
 } from './services/musicService';
 import {
   subscribeToLiveSync,
@@ -1442,10 +1446,20 @@ export function App() {
       }),
     }));
   });
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [enableAwardsCeremony, setEnableAwardsCeremony] = useState<boolean>(() =>
-    loadAwardsCeremonyEnabledFromStorage()
-  );
+  const [categories, setCategories] = useState<string[]>(() => {
+    const savedCfg = loadAdminGlobalConfigFromStorage();
+    if (savedCfg?.categories && Array.isArray(savedCfg.categories) && savedCfg.categories.length > 0) {
+      return Array.from(new Set([...DEFAULT_CATEGORIES, ...savedCfg.categories]));
+    }
+    return DEFAULT_CATEGORIES;
+  });
+  const [enableAwardsCeremony, setEnableAwardsCeremony] = useState<boolean>(() => {
+    const savedCfg = loadAdminGlobalConfigFromStorage();
+    if (typeof savedCfg?.enableAwardsCeremony === 'boolean') {
+      return savedCfg.enableAwardsCeremony;
+    }
+    return loadAwardsCeremonyEnabledFromStorage();
+  });
   useEffect(() => {
     saveAwardsCeremonyEnabledToStorage(enableAwardsCeremony);
   }, [enableAwardsCeremony]);
@@ -1653,7 +1667,10 @@ export function App() {
     resetSettings: resetRoyaltySettings,
     setTaxStatus: setHolderTaxStatus,
     closePeriod: closeRoyaltyPeriod,
+    hydrateFromCloudSettings: hydrateRoyaltyFromCloud,
   } = useRoyaltyLedgerState();
+  const [lastAdminSavedAt, setLastAdminSavedAt] = useState<string | null>(null);
+  const [isSavingAdmin, setIsSavingAdmin] = useState<boolean>(false);
 
   // --- Bannières Publicitaires Slideshow (Haut & Bas de Central) ---
   const [adBanners, setAdBanners] = useState<AdBannerSlide[]>(() =>
@@ -1889,6 +1906,7 @@ export function App() {
       ...prev,
       [role]: prev[role].filter((item) => item !== nameToRemove),
     }));
+    deleteStudioEntityFromCloud(role, nameToRemove).catch(() => {});
   }, []);
 
   // Synchronisation automatique du Répertoire des Métiers avec Supabase + Cache Local
@@ -2215,15 +2233,58 @@ export function App() {
     []
   );
 
-  // --- Rafraîchissement global de toutes les données Supabase (Pistes, Bannières, Réglages, Entités) ---
+  // --- Application d'une configuration globale Admin reçue du Cloud Supabase ou WebSocket ---
+  const applyRemoteAdminConfig = useCallback(
+    (cfg: {
+      enableAwardsCeremony?: boolean;
+      categories?: string[];
+      albumOrderIds?: string[];
+      royaltySettings?: Record<string, unknown>;
+      taxStatusOverrides?: Record<string, string>;
+    }) => {
+      isRemoteSyncInProgressRef.current = true;
+      if (typeof cfg.enableAwardsCeremony === 'boolean') {
+        setEnableAwardsCeremony(cfg.enableAwardsCeremony);
+        saveAwardsCeremonyEnabledToStorage(cfg.enableAwardsCeremony);
+      }
+      if (cfg.categories && Array.isArray(cfg.categories) && cfg.categories.length > 0) {
+        setCategories(Array.from(new Set([...DEFAULT_CATEGORIES, ...cfg.categories])));
+      }
+      if (cfg.albumOrderIds && Array.isArray(cfg.albumOrderIds) && cfg.albumOrderIds.length > 0) {
+        const orderIds = cfg.albumOrderIds;
+        setCatalogue((prev) => {
+          const orderMap = new Map<string, number>();
+          orderIds.forEach((id, i) => orderMap.set(id, i));
+          return [...prev].sort((a, b) => {
+            const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999;
+            const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999;
+            return idxA - idxB;
+          });
+        });
+      }
+      if (cfg.royaltySettings || cfg.taxStatusOverrides) {
+        hydrateRoyaltyFromCloud({
+          settings: cfg.royaltySettings as Partial<typeof royaltyLedgerState.settings>,
+          taxStatusOverrides: cfg.taxStatusOverrides as typeof royaltyLedgerState.taxStatusOverrides,
+        });
+      }
+      window.setTimeout(() => {
+        isRemoteSyncInProgressRef.current = false;
+      }, 180);
+    },
+    [hydrateRoyaltyFromCloud, royaltyLedgerState]
+  );
+
+  // --- Rafraîchissement global de toutes les données Supabase (Pistes, Bannières, Réglages, Entités, Config Admin) ---
   const refreshAllCloudData = useCallback(async () => {
     try {
-      const [savedRows, cloudBanners, cloudSettings, cloudEntities] =
+      const [savedRows, cloudBanners, cloudSettings, cloudEntities, cloudAdminCfg] =
         await Promise.all([
           getAllTracks(),
           getAdBannersFromCloud(),
           getAdBannerSettingsFromCloud(),
           getStudioEntitiesFromCloud(entityDb),
+          getAdminGlobalConfigFromCloud(),
         ]);
 
       if (savedRows && savedRows.length > 0) {
@@ -2249,10 +2310,93 @@ export function App() {
       if (cloudEntities) {
         setEntityDb(cloudEntities);
       }
+
+      if (cloudAdminCfg) {
+        applyRemoteAdminConfig(cloudAdminCfg);
+      }
     } catch (err) {
       console.warn('[RealtimeSync] Erreur rafraîchissement global:', err);
     }
-  }, [reconcileCatalogueWithCloudTracks, entityDb]);
+  }, [reconcileCatalogueWithCloudTracks, entityDb, applyRemoteAdminConfig]);
+
+  // --- Sauvegarde & Synchronisation Globale Explicite (Tous Appareils : Mobile, Tablette, PC) ---
+  const handleSaveAndSyncAllAdmin = useCallback(
+    async (sectionLabel?: string) => {
+      setIsSavingAdmin(true);
+      try {
+        // 1. Sauvegarder le snapshot complet du catalogue
+        saveFullCatalogueSnapshot(catalogue);
+
+        // 2. Synchroniser les bannières publicitaires (et supprimer celles retirées)
+        await syncAdBannersToCloud(adBanners, adBannerSettings);
+
+        // 3. Synchroniser la base de données des entités studio
+        await syncStudioEntities(entityDb);
+
+        // 4. Synchroniser la configuration globale Admin (Awards, Genres, Ordre 2D, Royalties BUGADA & Fiscalité DGI)
+        await syncAdminGlobalConfigToCloud(
+          {
+            enableAwardsCeremony,
+            categories,
+            albumOrderIds: catalogue.map((a) => a.id),
+            royaltySettings: royaltyLedgerState.settings as unknown as Record<string, unknown>,
+            taxStatusOverrides: royaltyLedgerState.taxStatusOverrides as Record<string, string>,
+            updatedAt: new Date().toISOString(),
+          },
+          sectionLabel
+            ? `Paramètres « ${sectionLabel} » sauvegardés et synchronisés sur tous les appareils.`
+            : 'Tous les paramètres Admin, Catalogue, Bannières et Royalties sont synchronisés.'
+        );
+
+        const timeStr = new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        setLastAdminSavedAt(timeStr);
+        pushNotification(
+          'Sauvegarde & Sync Cloud validées ✓',
+          sectionLabel
+            ? `« ${sectionLabel} » enregistré à ${timeStr} et diffusé sur mobile, tablette et PC.`
+            : `Toutes vos modifications Admin sont persistées à ${timeStr} sur tous les appareils.`,
+          'DATABASE'
+        );
+      } catch (err) {
+        console.warn('[AdminSave] Erreur synchronisation:', err);
+      } finally {
+        setIsSavingAdmin(false);
+      }
+    },
+    [
+      catalogue,
+      adBanners,
+      adBannerSettings,
+      entityDb,
+      enableAwardsCeremony,
+      categories,
+      royaltyLedgerState.settings,
+      royaltyLedgerState.taxStatusOverrides,
+      pushNotification,
+    ]
+  );
+
+  // Synchronisation automatique en tâche de fond des paramètres Admin globaux lorsqu'ils changent
+  useEffect(() => {
+    if (isRemoteSyncInProgressRef.current) return;
+    syncAdminGlobalConfigToCloud({
+      enableAwardsCeremony,
+      categories,
+      albumOrderIds: catalogue.map((a) => a.id),
+      royaltySettings: royaltyLedgerState.settings as unknown as Record<string, unknown>,
+      taxStatusOverrides: royaltyLedgerState.taxStatusOverrides as Record<string, string>,
+      updatedAt: new Date().toISOString(),
+    }).catch(() => {});
+  }, [
+    enableAwardsCeremony,
+    categories,
+    royaltyLedgerState.settings,
+    royaltyLedgerState.taxStatusOverrides,
+  ]);
 
   // --- Synchronisation temps réel continue (WebSocket Supabase + CDC + Inter-onglets) ---
   useEffect(() => {
@@ -2335,6 +2479,14 @@ export function App() {
       },
       onAdminAnnouncement: (payload) => {
         pushNotification(payload.title, payload.message, 'DATABASE');
+      },
+      onAdminSettingsUpdated: (payload) => {
+        applyRemoteAdminConfig(payload);
+        pushNotification(
+          'Paramètres Admin synchronisés',
+          payload.message || 'Configuration globale mise à jour en direct.',
+          'DATABASE'
+        );
       },
       onConnectionChange: (status) => {
         if (mounted) {
@@ -5398,12 +5550,12 @@ export function App() {
       )}
 
       {/* ===================================================================== */}
-      {/* VIEW 3: STUDIO ADMIN — STRICT SAFE ZONE + CLICKABLE FULL-PAGE SHEETS  */}
+      {/* VIEW 3: STUDIO ADMIN — SYMMETRICAL MULTI-AXIS RESPONSIVE ARCHITECTURE */}
       {/* ===================================================================== */}
       {appView === 'ADMIN' && (
-        <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-3 sm:px-5 py-3 flex flex-col overflow-hidden gap-3">
+        <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 overflow-y-auto overflow-x-hidden flex flex-col gap-3.5">
           {selectedTrackDetail ? (
-            <div className="flex-1 w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-hidden gap-4">
+            <div className="w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 gap-4">
               <div className="w-full flex items-center justify-between gap-2 pb-3 border-b border-white/[0.07] shrink-0">
                 <button
                   onClick={() => setSelectedTrackId(null)}
@@ -6001,174 +6153,272 @@ export function App() {
             </div>
           ) : (
             <>
-              <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-[#0E1118] p-1 rounded-xl border border-white/[0.07] shrink-0">
-                <button
-                  onClick={() => setAdminMainTab('CATALOGUE')}
-                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'CATALOGUE'
-                      ? 'bg-[#DE1B34] text-white font-bold'
-                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-                  }`}
-                >
-                  <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-                  <span>Catalogue</span>
-                </button>
-                <button
-                  onClick={() => setAdminMainTab('UPLOAD')}
-                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'UPLOAD'
-                      ? 'bg-[#DE1B34] text-white font-bold'
-                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5 shrink-0" />
-                  <span>Ajout Studio</span>
-                </button>
-                <button
-                  onClick={() => setAdminMainTab('BANNERS')}
-                  className={`flex-1 min-w-[105px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'BANNERS'
-                      ? 'bg-[#DE1B34] text-white font-bold'
-                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 shrink-0" />
-                  <span>Bannières Pub ({adBanners.length})</span>
-                </button>
-                <button
-                  onClick={() => setAdminMainTab('DATABASE')}
-                  className={`flex-1 min-w-[105px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'DATABASE'
-                      ? 'bg-[#DE1B34] text-white font-bold'
-                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-                  }`}
-                >
-                  <Database className="w-3.5 h-3.5 shrink-0" />
-                  <span>Base de données</span>
-                </button>
-                <button
-                  onClick={() => setAdminMainTab('USERS')}
-                  className={`flex-1 min-w-[95px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'USERS'
-                      ? 'bg-[#DE1B34] text-white font-bold'
-                      : 'text-[#8E93A4] hover:text-[#F5F2EB]'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span>Auditeurs</span>
-                </button>
-                <button
-                  onClick={() => setAdminMainTab('ROYALTIES_BUGADA')}
-                  className={`flex-1 min-w-[135px] py-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 shrink-0 ${
-                    adminMainTab === 'ROYALTIES_BUGADA'
-                      ? 'bg-emerald-500 text-[#07080C] font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                      : 'text-emerald-300 hover:text-white border border-emerald-500/30 bg-emerald-500/10'
-                  }`}
-                >
-                  <Shield className="w-3.5 h-3.5 shrink-0" />
-                  <span>Royalties &amp; BUGADA</span>
-                </button>
-              </div>
-
-              {/* BARRE DE CONTRÔLE PÉRIODIQUE DE LA CÉRÉMONIE AWARDS (EXCLUSIF ADMIN) */}
-              <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#13101C] via-[#0E1118] to-[#14110C] border border-amber-400/25 shrink-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      enableAwardsCeremony
-                        ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-pulse'
-                        : 'bg-zinc-600'
-                    }`}
-                  />
+              {/* BARRE DE COMMANDE GLOBALE ADMIN : SAUVEGARDE PERSISTANTE MULTI-APPAREILS & CÉRÉMONIE AWARDS */}
+              <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-[#0B1512] via-[#0E1118] to-[#14110C] border border-emerald-500/35 items-center">
+                <div className="lg:col-span-5 flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
+                    <Shield className="w-4 h-4" />
+                  </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] font-bold text-amber-200 block truncate">
-                      Cérémonie Officielle DROP Awards (Menu Central)
-                    </span>
-                    <span className="text-[10px] text-[#8E93A4] block truncate">
-                      {enableAwardsCeremony
-                        ? 'ACTIF : L’onglet "Awards" est visible pour tous les utilisateurs dans Central.'
-                        : 'MASQUÉ : L’onglet "Awards" est retiré de Central (activé uniquement lors des cérémonies).'}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs font-extrabold text-[#F5F2EB]">
+                        Studio Admin &amp; Cloud Sync
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          isRealtimeConnected
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        }`}
+                      >
+                        {isRealtimeConnected ? '● Temps Réel Actif' : '● Sync Hybride'}
+                      </span>
+                    </div>
+                    <span className="text-[10.5px] font-mono text-zinc-400 block truncate mt-0.5">
+                      {lastAdminSavedAt
+                        ? `✓ Dernière sauvegarde multi-appareils : ${lastAdminSavedAt}`
+                        : 'Modifications synchronisées sur Mobile, Tablette et PC'}
                     </span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextState = !enableAwardsCeremony;
-                    setEnableAwardsCeremony(nextState);
-                    pushNotification(
-                      nextState
-                        ? 'Cérémonie DROP Awards activée !'
-                        : 'Menu Awards masqué dans Central',
-                      nextState
-                        ? 'L’onglet Awards est désormais ouvert au public dans Central.'
-                        : 'L’onglet Awards a été retiré de la navigation publique de Central.',
-                      'CERTIFICATION'
-                    );
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold border transition flex items-center gap-2 shrink-0 ${
-                    enableAwardsCeremony
-                      ? 'bg-amber-400 text-[#07080C] border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
-                      : 'bg-white/[0.05] hover:bg-white/[0.1] text-[#8E93A4] border-white/[0.12]'
-                  }`}
-                >
-                  <span>
-                    {enableAwardsCeremony
-                      ? '★ Cérémonie Awards : ACTIVE'
-                      : 'Activer la cérémonie Awards'}
-                  </span>
-                </button>
+                <div className="lg:col-span-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextState = !enableAwardsCeremony;
+                      setEnableAwardsCeremony(nextState);
+                      pushNotification(
+                        nextState
+                          ? 'Cérémonie DROP Awards activée !'
+                          : 'Menu Awards masqué dans Central',
+                        nextState
+                          ? 'L’onglet Awards est désormais ouvert au public dans Central.'
+                          : 'L’onglet Awards a été retiré de la navigation publique de Central.',
+                        'CERTIFICATION'
+                      );
+                    }}
+                    className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                      enableAwardsCeremony
+                        ? 'bg-amber-400 text-[#07080C] border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]'
+                        : 'bg-[#07080C] hover:bg-white/[0.08] text-amber-200 border-amber-400/30'
+                    }`}
+                  >
+                    <span>
+                      {enableAwardsCeremony
+                        ? '★ Cérémonie Awards : ACTIVE (Public)'
+                        : '☆ Activer Cérémonie DROP Awards'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="lg:col-span-3">
+                  <button
+                    type="button"
+                    disabled={isSavingAdmin}
+                    onClick={() => handleSaveAndSyncAllAdmin()}
+                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isSavingAdmin
+                        ? 'Synchronisation...'
+                        : 'Sauvegarder & Synchroniser Tout'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
+              {/* NAVIGATION PRINCIPALE ADMIN : GRILLE SYMÉTRIQUE MULTI-AXES 100% VISIBLE (2×3 MOBILE, 3×2 TABLETTE, 6×1 PC) */}
+              <nav
+                aria-label="Sections principales de l'administration"
+                className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0E1118] p-2 rounded-2xl border border-white/[0.08]"
+              >
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('CATALOGUE')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'CATALOGUE'
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                      : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">1. Catalogue</span>
+                    <FolderOpen className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'CATALOGUE' ? 'text-white/90' : 'text-zinc-500'
+                    }`}
+                  >
+                    {allTracksFlat.length} pistes • Rangs &amp; DRM
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('UPLOAD')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'UPLOAD'
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                      : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">2. Ajout Studio</span>
+                    <Upload className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'UPLOAD' ? 'text-white/90' : 'text-zinc-500'
+                    }`}
+                  >
+                    Opus -14 LUFS &amp; CID
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('BANNERS')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'BANNERS'
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                      : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">3. Bannières Pub</span>
+                    <Layers className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'BANNERS' ? 'text-white/90' : 'text-zinc-500'
+                    }`}
+                  >
+                    {adBanners.length} slide(s) Central
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('DATABASE')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'DATABASE'
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                      : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">4. Base de données</span>
+                    <Database className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'DATABASE' ? 'text-white/90' : 'text-zinc-500'
+                    }`}
+                  >
+                    Métiers &amp; SQL Cloud
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('USERS')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'USERS'
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                      : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">5. Auditeurs</span>
+                    <Users className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'USERS' ? 'text-white/90' : 'text-zinc-500'
+                    }`}
+                  >
+                    {users.length} comptes actifs
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminMainTab('ROYALTIES_BUGADA')}
+                  className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between gap-1 cursor-pointer ${
+                    adminMainTab === 'ROYALTIES_BUGADA'
+                      ? 'bg-emerald-500 border-emerald-400 text-[#07080C] shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                      : 'bg-emerald-500/10 border-emerald-500/35 text-emerald-300 hover:bg-emerald-500/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-extrabold leading-tight">6. Royalties &amp; BUGADA</span>
+                    <Shield className="w-3.5 h-3.5 shrink-0" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono block ${
+                      adminMainTab === 'ROYALTIES_BUGADA' ? 'text-[#07080C]/80 font-bold' : 'text-emerald-300/80'
+                    }`}
+                  >
+                    60/40 • B2B • Modèle 36M
+                  </span>
+                </button>
+              </nav>
+
               {adminMainTab === 'CATALOGUE' && (
-                <div className="flex-1 w-full flex flex-col overflow-hidden gap-2.5">
-                  <div className="w-full flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#0D1017] p-1 rounded-xl border border-white/[0.07] shrink-0">
+                <div className="w-full flex flex-col gap-3">
+                  {/* SOUS-ONGLETS DU CATALOGUE EN GRILLE SYMÉTRIQUE 3 COLONNES */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]">
                     <button
+                      type="button"
                       onClick={() => setCatalogueSubTab('REPERTOIRE')}
-                      className={`flex-1 min-w-[95px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 border cursor-pointer ${
                         catalogueSubTab === 'REPERTOIRE'
-                          ? 'bg-white/15 text-[#F5F2EB] font-semibold'
-                          : 'text-[#8E93A4]'
+                          ? 'bg-white/15 border-white/25 text-[#F5F2EB]'
+                          : 'bg-[#07080C] border-white/[0.05] text-[#8E93A4] hover:text-white'
                       }`}
                     >
-                      <Disc className="w-3 h-3 text-[#DE1B34] shrink-0" />
-                      <span>Pistes, Beats &amp; Certifs</span>
+                      <Disc className="w-3.5 h-3.5 text-[#DE1B34] shrink-0" />
+                      <span>Pistes, Beats &amp; Certifs ({allTracksFlat.length})</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => setCatalogueSubTab('ALGO')}
-                      className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 border cursor-pointer ${
                         catalogueSubTab === 'ALGO'
-                          ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
-                          : 'text-[#8E93A4]'
+                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                          : 'bg-[#07080C] border-white/[0.05] text-[#8E93A4] hover:text-white'
                       }`}
                     >
-                      <Flame className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <Flame className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>Rangs Anti-Halo &amp; Awards</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => setCatalogueSubTab('RULES')}
-                      className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 border cursor-pointer ${
                         catalogueSubTab === 'RULES'
-                          ? 'bg-amber-500/20 text-amber-300 font-semibold'
-                          : 'text-[#8E93A4]'
+                          ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                          : 'bg-[#07080C] border-white/[0.05] text-[#8E93A4] hover:text-white'
                       }`}
                     >
-                      <Shield className="w-3 h-3 text-amber-400 shrink-0" />
+                      <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span>DRM &amp; Offline ({syncSnapshot.queue.length})</span>
                     </button>
                   </div>
 
                   {catalogueSubTab === 'REPERTOIRE' && (
-                    <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
-                      <div className="w-full flex items-center gap-2">
-                        <div className="relative flex-1 min-w-0">
+                    <div className="w-full flex flex-col gap-2.5">
+                      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-2 items-center">
+                        <div className="relative lg:col-span-7 min-w-0">
                           <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Recherche instantanée dès la 1re lettre (Titre, Artiste, Beatmaker, Ingé, Parolier, Genre, DROP-CID)..."
-                            className="w-full bg-[#0D1017] border border-white/[0.12] rounded-xl pl-3 pr-8 py-2 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
+                            className="w-full bg-[#0D1017] border border-white/[0.12] rounded-xl pl-3 pr-8 py-2.5 text-xs text-[#F5F2EB] focus:outline-none focus:border-[#DE1B34]"
                           />
                           {searchQuery && (
                             <button
@@ -6181,12 +6431,22 @@ export function App() {
                             </button>
                           )}
                         </div>
-                        <button
-                          onClick={handleAutoReorderByAlgo}
-                          className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-semibold shrink-0"
-                        >
-                          Trier 2D
-                        </button>
+                        <div className="lg:col-span-5 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleAutoReorderByAlgo}
+                            className="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-200 text-xs font-bold transition cursor-pointer"
+                          >
+                            Trier 2D (Score Algo)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveAndSyncAllAdmin('Ordre 2D & Catalogue des Pistes')}
+                            className="px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] text-xs font-extrabold transition cursor-pointer"
+                          >
+                            Sauvegarder Catalogue
+                          </button>
+                        </div>
                       </div>
 
                       {catalogue.map((alb, aIdx) => {
@@ -6343,9 +6603,26 @@ export function App() {
 
                   {catalogueSubTab === 'ALGO' && (
                     <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
-                      <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-2.5 flex flex-col gap-2">
-                        {/* Sliding tabs to avoid any cropped/cut words on mobile */}
-                        <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      <div className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-3 flex flex-col gap-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/[0.06]">
+                          <span className="text-xs font-extrabold text-[#F5F2EB] flex items-center gap-1.5">
+                            <Flame className="w-4 h-4 text-[#DE1B34]" />
+                            Dimensions Algorithmiques &amp; Trophées DROP Awards (8 Axes)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSaveAndSyncAllAdmin('Paramètres Algo, Classements & Cérémonie Awards')
+                            }
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-[11px] flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>Sauvegarder Paramètres Algo &amp; Awards</span>
+                          </button>
+                        </div>
+
+                        {/* Grille symétrique multi-axes (2 colonnes mobile, 4 colonnes tablette/PC) sans débordement */}
+                        <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {(
                             [
                               { id: 'GENERAL', label: 'Chansons (Explosion)' },
@@ -6364,10 +6641,10 @@ export function App() {
                                 setAlgoDimension(dim.id);
                                 setAlgoFilterValue('ALL');
                               }}
-                              className={`py-1.5 px-3 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
+                              className={`min-h-[40px] py-2 px-2.5 rounded-xl text-[11px] font-semibold text-center leading-tight transition-all flex items-center justify-center border cursor-pointer ${
                                 algoDimension === dim.id
-                                  ? 'bg-[#DE1B34] text-white font-bold'
-                                  : 'bg-[#07080C] text-[#8E93A4] hover:text-white'
+                                  ? 'bg-[#DE1B34] border-[#DE1B34] text-white font-extrabold shadow-md shadow-[#DE1B34]/20'
+                                  : 'bg-[#07080C] border-white/[0.06] text-[#8E93A4] hover:text-white hover:border-white/20'
                               }`}
                             >
                               {dim.label}
@@ -6778,8 +7055,8 @@ export function App() {
               )}
 
               {adminMainTab === 'UPLOAD' && (
-                <div className="flex-1 w-full overflow-y-auto flex flex-col gap-2.5 pr-0.5">
-                  <div className="w-full flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#0D1017] border border-white/[0.08] rounded-xl p-1.5 shrink-0">
+                <div className="flex-1 w-full overflow-y-auto flex flex-col gap-3 pr-0.5">
+                  <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-2 bg-[#0D1017] border border-white/[0.08] rounded-2xl p-2 shrink-0">
                     {(
                       [
                         { step: 1, title: '1. Audio Opus & Cover', valid: isWizardStep1Valid },
@@ -6797,18 +7074,18 @@ export function App() {
                           onClick={() => {
                             if (unlocked) setWizardStep(s.step);
                           }}
-                          className={`flex-1 min-w-[105px] py-1.5 px-2 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors flex items-center justify-center gap-1 shrink-0 ${
+                          className={`min-h-[42px] py-2 px-3 rounded-xl text-xs font-semibold text-center leading-tight transition-all flex items-center justify-center gap-1.5 border ${
                             wizardStep === s.step
-                              ? 'bg-[#DE1B34] text-white font-bold'
+                              ? 'bg-[#DE1B34] border-[#DE1B34] text-white font-extrabold shadow-md shadow-[#DE1B34]/20'
                               : unlocked && s.valid && s.step < 4
-                                ? 'bg-emerald-500/15 text-emerald-400'
+                                ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
                                 : unlocked
-                                  ? 'bg-white/[0.05] text-[#F5F2EB]'
-                                  : 'bg-white/[0.02] text-[#8E93A4]/40 cursor-not-allowed'
+                                  ? 'bg-[#07080C] border-white/[0.08] text-[#F5F2EB] hover:border-white/20'
+                                  : 'bg-white/[0.02] border-white/[0.04] text-[#8E93A4]/40 cursor-not-allowed'
                           }`}
                         >
                           {unlocked && s.valid && s.step < 4 && (
-                            <Check className="w-3 h-3 shrink-0" />
+                            <Check className="w-3.5 h-3.5 shrink-0" />
                           )}
                           <span>{s.title}</span>
                         </button>
@@ -8278,7 +8555,7 @@ export function App() {
               {/* ===================================================================== */}
               {adminMainTab === 'BANNERS' && (
                 <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto flex flex-col gap-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
                     <div>
                       <h3 className="text-sm font-extrabold text-[#F5F2EB] flex items-center gap-2">
                         <Layers className="w-4 h-4 text-amber-400" />
@@ -8290,6 +8567,16 @@ export function App() {
                         Importez vos visuels manuellement depuis votre appareil (sans texte superposé), réglez la vitesse de défilement et choisissez la redirection au clic.
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSaveAndSyncAllAdmin('Bannières Publicitaires & Timing Slideshow')
+                      }
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition cursor-pointer shrink-0"
+                    >
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Sauvegarder &amp; Synchroniser Bannières</span>
+                    </button>
                   </div>
 
                   {/* 1. RÉGLAGES GLOBAUX DE TIMING, VITESSE DE TRANSITION ET ACTIVATION */}
@@ -8976,6 +9263,16 @@ export function App() {
                         Enregistrez les noms d'artistes, labels, beatmakers, ingénieurs et auteurs une seule fois pour les sélectionner partout.
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSaveAndSyncAllAdmin('Base de Données Entités (Artistes, Labels, Équipe)')
+                      }
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition cursor-pointer shrink-0"
+                    >
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Sauvegarder &amp; Synchroniser BDD</span>
+                    </button>
                   </div>
 
                   {/* Formulaire d'ajout rapide à la base de données */}
@@ -9060,35 +9357,57 @@ export function App() {
               )}
 
               {adminMainTab === 'USERS' && (
-                <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-3 overflow-y-auto flex flex-col gap-2">
-                  {[...users]
-                    .sort((a, b) => b.totalListenSeconds - a.totalListenSeconds)
-                    .map((u, idx) => (
-                      <div
-                        key={u.id}
-                        onClick={() => setSelectedConsumerUserId(u.id)}
-                        className="w-full flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/50 cursor-pointer transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center font-bold text-xs text-[#F5F2EB] shrink-0">
-                            {u.avatar}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-[#F5F2EB] truncate">
-                              {u.name}
-                            </div>
-                            <div className="text-[11px] font-mono text-[#8E93A4] truncate">
-                              {formatLongDuration(u.totalListenSeconds)} d'écoute
-                            </div>
-                          </div>
-                        </div>
+                <div className="flex-1 w-full bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#F5F2EB] flex items-center gap-2">
+                        <Users className="w-4 h-4 text-[#DE1B34]" />
+                        <span>Classement &amp; Télémétrie des Auditeurs ({users.length})</span>
+                      </h3>
+                      <p className="text-xs text-[#8E93A4]">
+                        Sélectionnez un auditeur pour inspecter ses écoutes par morceau et sa répartition User-Centric.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveAndSyncAllAdmin('Profils & Statistiques Auditeurs')}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition cursor-pointer shrink-0"
+                    >
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Sauvegarder &amp; Synchroniser Auditeurs</span>
+                    </button>
+                  </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <RankBadge rank={idx + 1} delta={0} />
-                          <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {[...users]
+                      .sort((a, b) => b.totalListenSeconds - a.totalListenSeconds)
+                      .map((u, idx) => (
+                        <div
+                          key={u.id}
+                          onClick={() => setSelectedConsumerUserId(u.id)}
+                          className="w-full flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07080C] border border-white/[0.06] hover:border-[#DE1B34]/50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center font-bold text-xs text-[#F5F2EB] shrink-0">
+                              {u.avatar}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-[#F5F2EB] truncate">
+                                {u.name}
+                              </div>
+                              <div className="text-[11px] font-mono text-[#8E93A4] truncate">
+                                {formatLongDuration(u.totalListenSeconds)} d'écoute
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <RankBadge rank={idx + 1} delta={0} />
+                            <ChevronRight className="w-4 h-4 text-[#8E93A4]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
                 </div>
               )}
 
@@ -9100,6 +9419,7 @@ export function App() {
                   onUpdateSettings={updateRoyaltySettings}
                   onResetSettings={resetRoyaltySettings}
                   onChangeHolderTaxStatus={setHolderTaxStatus}
+                  onSaveAndSyncAll={handleSaveAndSyncAllAdmin}
                   onCloseAccountingPeriod={(period) => {
                     const currentStats: StatsBaseline = {};
                     users.forEach((u) => {

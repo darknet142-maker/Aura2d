@@ -10,7 +10,19 @@ export type LiveSyncEventType =
   | 'BANNERS_UPDATED'
   | 'ENTITIES_UPDATED'
   | 'PLAYLISTS_UPDATED'
+  | 'ADMIN_SETTINGS_UPDATED'
   | 'ADMIN_ANNOUNCEMENT';
+
+export interface AdminSettingsUpdatedPayload {
+  enableAwardsCeremony?: boolean;
+  categories?: string[];
+  albumOrderIds?: string[];
+  royaltySettings?: Record<string, unknown>;
+  taxStatusOverrides?: Record<string, string>;
+  b2bSettings?: Record<string, unknown>;
+  message?: string;
+  timestamp: string;
+}
 
 export interface TracksUpdatedPayload {
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'FULL_SYNC';
@@ -55,6 +67,7 @@ export type LiveSyncPayload =
   | { type: 'BANNERS_UPDATED'; payload: BannersUpdatedPayload }
   | { type: 'ENTITIES_UPDATED'; payload: EntitiesUpdatedPayload }
   | { type: 'PLAYLISTS_UPDATED'; payload: PlaylistsUpdatedPayload }
+  | { type: 'ADMIN_SETTINGS_UPDATED'; payload: AdminSettingsUpdatedPayload }
   | { type: 'ADMIN_ANNOUNCEMENT'; payload: AdminAnnouncementPayload };
 
 export interface LiveSyncCallbacks {
@@ -62,6 +75,7 @@ export interface LiveSyncCallbacks {
   onBannersUpdated?: (payload: BannersUpdatedPayload) => void;
   onEntitiesUpdated?: (payload: EntitiesUpdatedPayload) => void;
   onPlaylistsUpdated?: (payload: PlaylistsUpdatedPayload) => void;
+  onAdminSettingsUpdated?: (payload: AdminSettingsUpdatedPayload) => void;
   onAdminAnnouncement?: (payload: AdminAnnouncementPayload) => void;
   onConnectionChange?: (status: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED') => void;
 }
@@ -100,6 +114,8 @@ function dispatchToSubscribers(event: LiveSyncPayload) {
         cb.onEntitiesUpdated(event.payload);
       } else if (event.type === 'PLAYLISTS_UPDATED' && cb.onPlaylistsUpdated) {
         cb.onPlaylistsUpdated(event.payload);
+      } else if (event.type === 'ADMIN_SETTINGS_UPDATED' && cb.onAdminSettingsUpdated) {
+        cb.onAdminSettingsUpdated(event.payload);
       } else if (event.type === 'ADMIN_ANNOUNCEMENT' && cb.onAdminAnnouncement) {
         cb.onAdminAnnouncement(event.payload);
       }
@@ -143,6 +159,9 @@ export function initRealtimeSync(): void {
     })
     .on('broadcast', { event: 'PLAYLISTS_UPDATED' }, (payload: { payload: PlaylistsUpdatedPayload }) => {
       dispatchToSubscribers({ type: 'PLAYLISTS_UPDATED', payload: payload.payload });
+    })
+    .on('broadcast', { event: 'ADMIN_SETTINGS_UPDATED' }, (payload: { payload: AdminSettingsUpdatedPayload }) => {
+      dispatchToSubscribers({ type: 'ADMIN_SETTINGS_UPDATED', payload: payload.payload });
     })
     .on('broadcast', { event: 'ADMIN_ANNOUNCEMENT' }, (payload: { payload: AdminAnnouncementPayload }) => {
       dispatchToSubscribers({ type: 'ADMIN_ANNOUNCEMENT', payload: payload.payload });

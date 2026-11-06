@@ -841,13 +841,20 @@ export async function updateTrackMetadataInStorage(
 ): Promise<void> {
   if (supabase) {
     try {
+      const upsertRow = {
+        app_track_id: appTrackId,
+        title: updates.title || 'Titre DROP',
+        artist: updates.artist || 'Artiste Gabon',
+        stream_url: updates.stream_url || 'synth://drop-gabon',
+        source_type: updates.source_type || 'file',
+        audio_codec: 'OPUS',
+        lufs_master_level: -14.0,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
       await supabase
         .from('tracks')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('app_track_id', appTrackId);
+        .upsert([upsertRow], { onConflict: 'app_track_id' });
     } catch {
       // Ignore
     }
@@ -855,11 +862,40 @@ export async function updateTrackMetadataInStorage(
 
   try {
     const existing = await getAllTracks();
-    const updated = existing.map((row) =>
-      row.app_track_id === appTrackId || row.id === appTrackId
-        ? { ...row, ...updates }
-        : row
+    const hasExisting = existing.some(
+      (row) => row.app_track_id === appTrackId || row.id === appTrackId
     );
+    const updated = hasExisting
+      ? existing.map((row) =>
+          row.app_track_id === appTrackId || row.id === appTrackId
+            ? { ...row, ...updates }
+            : row
+        )
+      : [
+          {
+            id: `uuid-edit-${Date.now()}`,
+            app_track_id: appTrackId,
+            title: updates.title || 'Titre DROP',
+            artist: updates.artist || 'Artiste Gabon',
+            source_type: 'file' as const,
+            stream_url: updates.stream_url || 'synth://drop-gabon',
+            audio_codec: 'OPUS' as const,
+            lufs_master_level: -14.0,
+            duration: updates.duration || 180,
+            drop_start: updates.drop_start ?? 30,
+            drop_duration: updates.drop_duration ?? 22,
+            bpm: updates.bpm ?? 120,
+            real_plays: 100000,
+            loop_plays_count: 820,
+            likes_count: 3400,
+            total_listen_seconds: 180000,
+            listen_sessions: 1200,
+            avg_retention_pct: 90,
+            created_at: new Date().toISOString(),
+            ...updates,
+          } as SupabaseTrackRow,
+          ...existing,
+        ];
     localStorage.setItem(LOCAL_STORAGE_TRACKS_KEY, JSON.stringify(updated));
   } catch {
     // Ignore
@@ -872,7 +908,7 @@ export async function updateTrackMetadataInStorage(
       trackId: appTrackId,
       trackTitle: updates.title,
       artist: updates.artist,
-      message: `Piste « ${updates.title || appTrackId} » mise à jour en direct`,
+      message: `Piste « ${updates.title || appTrackId} » sauvegardée et synchronisée sur tous les appareils`,
       timestamp: new Date().toISOString(),
     },
   }).catch(() => {});
@@ -1058,6 +1094,125 @@ export async function syncStudioEntities(entities: {
   } catch {
     // Ignore
   }
+}
+
+export async function deleteStudioEntityFromCloud(
+  roleKey: 'artists' | 'labels' | 'beatmakers' | 'engineers' | 'lyricists',
+  name: string
+): Promise<void> {
+  if (!supabase) return;
+  const roleMap: Record<typeof roleKey, 'ARTIST' | 'LABEL' | 'BEATMAKER' | 'ENGINEER' | 'LYRICIST'> = {
+    artists: 'ARTIST',
+    labels: 'LABEL',
+    beatmakers: 'BEATMAKER',
+    engineers: 'ENGINEER',
+    lyricists: 'LYRICIST',
+  };
+  try {
+    await supabase
+      .from('studio_entities')
+      .delete()
+      .eq('entity_type', roleMap[roleKey])
+      .eq('name', name);
+    broadcastLiveSync({
+      type: 'ENTITIES_UPDATED',
+      payload: {
+        entityType: roleMap[roleKey],
+        name,
+        message: `« ${name} » retiré de la base de données`,
+        timestamp: new Date().toISOString(),
+      },
+    }).catch(() => {});
+  } catch {
+    // Ignore
+  }
+}
+
+export interface AdminGlobalConfigSnapshot {
+  enableAwardsCeremony: boolean;
+  categories: string[];
+  albumOrderIds: string[];
+  royaltySettings?: Record<string, unknown>;
+  taxStatusOverrides?: Record<string, string>;
+  updatedAt: string;
+}
+
+const LOCAL_ADMIN_GLOBAL_CONFIG_KEY = 'drop_admin_global_config_v1';
+
+export function loadAdminGlobalConfigFromStorage(): AdminGlobalConfigSnapshot | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_ADMIN_GLOBAL_CONFIG_KEY);
+    return raw ? (JSON.parse(raw) as AdminGlobalConfigSnapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminGlobalConfigFromCloud(): Promise<AdminGlobalConfigSnapshot | null> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_library_state')
+        .select('liked_track_ids, updated_at')
+        .eq('user_id', 'GLOBAL_ADMIN_CONFIG_V1')
+        .maybeSingle();
+      if (!error && data && data.liked_track_ids && typeof data.liked_track_ids === 'object') {
+        const snapshot = data.liked_track_ids as AdminGlobalConfigSnapshot;
+        try {
+          localStorage.setItem(LOCAL_ADMIN_GLOBAL_CONFIG_KEY, JSON.stringify(snapshot));
+        } catch {}
+        return snapshot;
+      }
+    } catch {
+      // Fallback local
+    }
+  }
+  return loadAdminGlobalConfigFromStorage();
+}
+
+export async function syncAdminGlobalConfigToCloud(
+  snapshot: AdminGlobalConfigSnapshot,
+  customMessage?: string
+): Promise<void> {
+  try {
+    localStorage.setItem(LOCAL_ADMIN_GLOBAL_CONFIG_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Ignore
+  }
+
+  if (supabase) {
+    try {
+      await supabase.from('user_library_state').upsert(
+        [
+          {
+            user_id: 'GLOBAL_ADMIN_CONFIG_V1',
+            liked_track_ids: snapshot,
+            subscribed_artists: {},
+            recommended_track_ids: {},
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: 'user_id' }
+      );
+    } catch {
+      // Ignore
+    }
+  }
+
+  broadcastLiveSync({
+    type: 'ADMIN_SETTINGS_UPDATED',
+    payload: {
+      enableAwardsCeremony: snapshot.enableAwardsCeremony,
+      categories: snapshot.categories,
+      albumOrderIds: snapshot.albumOrderIds,
+      royaltySettings: snapshot.royaltySettings,
+      taxStatusOverrides: snapshot.taxStatusOverrides,
+      message:
+        customMessage ||
+        'Paramètres et configuration Admin sauvegardés et synchronisés sur tous les appareils.',
+      timestamp: snapshot.updatedAt,
+    },
+  }).catch(() => {});
 }
 
 export async function getUserPlaylistsFromCloud(userId = 'usr-1') {
@@ -1395,6 +1550,20 @@ export async function syncAdBannersToCloud(
 
     if (rows.length > 0) {
       await supabase.from('ad_banners').upsert(rows, { onConflict: 'id' });
+      const { data: existingBanners } = await supabase
+        .from('ad_banners')
+        .select('id');
+      if (existingBanners && existingBanners.length > 0) {
+        const activeIds = new Set(rows.map((r) => r.id));
+        const idsToDelete = existingBanners
+          .map((eb: { id: string }) => eb.id)
+          .filter((id: string) => !activeIds.has(id));
+        if (idsToDelete.length > 0) {
+          await supabase.from('ad_banners').delete().in('id', idsToDelete);
+        }
+      }
+    } else {
+      await supabase.from('ad_banners').delete().neq('id', '');
     }
 
     await supabase.from('ad_banner_settings').upsert(

@@ -30,6 +30,7 @@ export interface BugadaRoyaltiesAdminPanelProps {
   onResetSettings: () => void;
   onChangeHolderTaxStatus: (holderName: string, status: RightsHolderTaxStatus) => void;
   onCloseAccountingPeriod: (period: string) => void;
+  onSaveAndSyncAll?: (sectionLabel?: string) => void;
 }
 
 type RoyaltySubTab =
@@ -48,10 +49,18 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
   onResetSettings,
   onChangeHolderTaxStatus,
   onCloseAccountingPeriod,
+  onSaveAndSyncAll,
 }) => {
   const [subTab, setSubTab] = useState<RoyaltySubTab>('REPARTITION');
   const [period] = useState<string>(() => currentAccountingPeriod());
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
+
+  const handleSaveRoyaltiesSection = (label: string) => {
+    if (onSaveAndSyncAll) {
+      onSaveAndSyncAll(label);
+    }
+    setStatusBanner(`✓ ${label} sauvegardé et synchronisé sur tous vos appareils.`);
+  };
 
   const payableStatements = ledger.statements.filter((s) => s.status === 'PAYABLE');
   const carriedStatements = ledger.statements.filter((s) => s.status === 'CARRIED_OVER');
@@ -78,9 +87,9 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
   };
 
   return (
-    <div className="flex-1 w-full flex flex-col overflow-hidden gap-3">
+    <div className="w-full flex flex-col gap-3.5">
       {/* BANDEAU INSTITUTIONNEL OFFICIEL : BUGADA × MINISTÈRE DE LA CULTURE */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-[#0B1914] via-[#0E1118] to-[#1A140B] border border-emerald-500/35 shrink-0">
+      <div className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#0B1914] via-[#0E1118] to-[#1A140B] border border-emerald-500/35">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold">
@@ -95,7 +104,7 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
           <button
             type="button"
             onClick={() =>
@@ -103,7 +112,7 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
                 vatRegime: settings.vatRegime === 'FRANCHISE' ? 'ASSUJETTI' : 'FRANCHISE',
               })
             }
-            className={`px-2.5 py-1.5 rounded-xl font-mono text-[10.5px] font-bold border transition ${
+            className={`px-3 py-2 rounded-xl font-mono text-[10.5px] font-bold border text-center transition ${
               settings.vatRegime === 'ASSUJETTI'
                 ? 'bg-amber-400/20 border-amber-400 text-amber-200'
                 : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
@@ -117,36 +126,56 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
           <button
             type="button"
             onClick={onResetSettings}
-            className="px-2.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[10.5px] text-zinc-300 font-mono"
+            className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[10.5px] text-zinc-300 font-mono text-center transition"
           >
             Réinitialiser taux
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSaveRoyaltiesSection('Paramètres Royalties & Fiscalité BUGADA/DGI')}
+            className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-[11px] text-center shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+          >
+            Sauvegarder &amp; Sync Cloud
           </button>
         </div>
       </div>
 
-      {/* SOUS-ONGLETS DE NAVIGATION */}
-      <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-[#0D1017] p-1 rounded-xl border border-white/[0.07] shrink-0">
+      {/* SOUS-ONGLETS DE NAVIGATION EN GRILLE SYMÉTRIQUE MULTI-AXES (2×3 MOBILE, 3×2 TABLETTE, 6×1 PC) */}
+      <div
+        role="tablist"
+        aria-label="Sections Royalties et Modèle Financier"
+        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
+      >
         {(
           [
-            { id: 'REPARTITION', label: '1. Répartition User-Centric (60/40)' },
-            { id: 'PAIE_DGI', label: `2. Paie Master 48% & DGI (${ledger.statements.length})` },
-            { id: 'BUGADA_CRD', label: `3. Bordereau BUGADA 12% (${ledger.bugada.beneficiaries.length})` },
-            { id: 'B2B_HORECA', label: '4. Offre Pro B2B Bars/Maquis × BUGADA' },
-            { id: 'SIMULATEUR_36M', label: '5. Modèle Financier 36 Mois' },
-            { id: 'CONFORMITE_TELECOM', label: '6. Push STK, CEMAC & Feuille de Route' },
-          ] as { id: RoyaltySubTab; label: string }[]
+            { id: 'REPARTITION', short: '1. Répartition 60/40', sub: 'User-Centric & Séquestre' },
+            { id: 'PAIE_DGI', short: '2. Paie Master 48%', sub: `DGI & BNC (${ledger.statements.length})` },
+            { id: 'BUGADA_CRD', short: '3. Bordereau BUGADA', sub: `Auteur 12% (${ledger.bugada.beneficiaries.length})` },
+            { id: 'B2B_HORECA', short: '4. Offre Pro B2B', sub: 'Bars/Maquis × BUGADA' },
+            { id: 'SIMULATEUR_36M', short: '5. Simulateur 36M', sub: 'Trésorerie & Point Mort' },
+            { id: 'CONFORMITE_TELECOM', short: '6. Push STK & CEMAC', sub: 'Conformité & Roadmap' },
+          ] as { id: RoyaltySubTab; short: string; sub: string }[]
         ).map((tab) => (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={subTab === tab.id}
             onClick={() => setSubTab(tab.id)}
-            className={`flex-1 min-w-[140px] py-1.5 px-3 rounded-lg text-[11px] font-medium whitespace-nowrap transition ${
+            className={`p-2.5 rounded-xl text-left transition border flex flex-col justify-between ${
               subTab === tab.id
-                ? 'bg-[#DE1B34] text-white font-bold'
-                : 'text-[#8E93A4] hover:text-white'
+                ? 'bg-[#DE1B34] border-[#DE1B34] text-white shadow-md shadow-[#DE1B34]/25'
+                : 'bg-[#07080C] border-white/[0.06] text-zinc-300 hover:text-white hover:border-white/20'
             }`}
           >
-            {tab.label}
+            <span className="text-[11px] font-extrabold leading-tight block">{tab.short}</span>
+            <span
+              className={`text-[9.5px] font-mono mt-0.5 block ${
+                subTab === tab.id ? 'text-white/90' : 'text-zinc-500'
+              }`}
+            >
+              {tab.sub}
+            </span>
           </button>
         ))}
       </div>
@@ -167,8 +196,8 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
         </div>
       )}
 
-      {/* CONTENU DÉFILANT */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pr-0.5">
+      {/* CONTENU DES SOUS-ONGLETS */}
+      <div className="w-full space-y-3.5">
         {subTab === 'REPARTITION' && (
           <>
             {/* SYNTHÈSE DU CIRCUIT DE CANTONNEMENT EN 5 ÉTAPES */}
@@ -274,18 +303,25 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
                   Paie Directe Mobile Money &amp; Précompte BNC DGI ({formatFcfaPrecise(ledger.withholdingDue)} retenus)
                 </h3>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSaveRoyaltiesSection('Statuts fiscaux DGI (BNC / NIF / IS)')}
+                  className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#07080C] text-xs font-extrabold transition cursor-pointer"
+                >
+                  Sauvegarder Statuts Fiscaux DGI
+                </button>
                 <button
                   type="button"
                   onClick={handleExportPayoutCsv}
-                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/15 text-xs font-bold text-white transition"
+                  className="px-3 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/15 text-xs font-bold text-white transition"
                 >
                   Exporter Journal Paie &amp; DGI (.CSV)
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseMonth}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] text-xs font-extrabold transition"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] text-xs font-extrabold transition"
                 >
                   Clôturer {period} &amp; Payer ({formatFcfaPrecise(totalDirectNetPayable)})
                 </button>
@@ -403,10 +439,16 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
           </div>
         )}
 
-        {subTab === 'B2B_HORECA' && <B2bHorecaBugadaPanel />}
+        {subTab === 'B2B_HORECA' && (
+          <B2bHorecaBugadaPanel onSaveAndSyncAll={onSaveAndSyncAll} />
+        )}
 
         {subTab === 'SIMULATEUR_36M' && (
-          <FinancialSimulator36M settings={settings} onUpdateSettings={onUpdateSettings} />
+          <FinancialSimulator36M
+            settings={settings}
+            onUpdateSettings={onUpdateSettings}
+            onSaveAndSyncAll={onSaveAndSyncAll}
+          />
         )}
 
         {subTab === 'CONFORMITE_TELECOM' && <TelecomCemacCompliancePanel />}

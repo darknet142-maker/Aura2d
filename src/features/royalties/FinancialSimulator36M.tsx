@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   CENTRAL_SCENARIO,
   FUNDING_NEED,
@@ -14,7 +14,10 @@ import { formatFcfa, formatFcfaPrecise, formatInteger } from '../economics/forma
 export interface FinancialSimulator36MProps {
   settings: RoyaltySettings;
   onUpdateSettings: (patch: Partial<RoyaltySettings>) => void;
+  onSaveAndSyncAll?: (sectionLabel?: string) => void;
 }
+
+const SIM_STORAGE_KEY = 'drop_sim36m_settings_v1';
 
 type ScenarioPresetKey = 'PRUDENT' | 'CENTRAL' | 'AMBITIEUX';
 
@@ -95,13 +98,80 @@ const SCENARIO_PRESETS: Record<ScenarioPresetKey, Record<ProjectionYear, Scenari
 export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
   settings,
   onUpdateSettings,
+  onSaveAndSyncAll,
 }) => {
-  const [preset, setPreset] = useState<ScenarioPresetKey>('CENTRAL');
-  const [year, setYear] = useState<ProjectionYear>(3);
-  const [neutralizeVatCliff, setNeutralizeVatCliff] = useState<boolean>(false);
-  const [enableB2bHoreca, setEnableB2bHoreca] = useState<boolean>(true);
-  const [enableB2bSocialJukebox, setEnableB2bSocialJukebox] = useState<boolean>(false);
+  const initialSim = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(SIM_STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // ignore
+    }
+    return {};
+  }, []);
+
+  const [preset, setPreset] = useState<ScenarioPresetKey>(
+    initialSim.preset === 'PRUDENT' || initialSim.preset === 'CENTRAL' || initialSim.preset === 'AMBITIEUX'
+      ? initialSim.preset
+      : 'CENTRAL'
+  );
+  const [year, setYear] = useState<ProjectionYear>(
+    initialSim.year === 1 || initialSim.year === 2 || initialSim.year === 3
+      ? initialSim.year
+      : 3
+  );
+  const [neutralizeVatCliff, setNeutralizeVatCliff] = useState<boolean>(
+    typeof initialSim.neutralizeVatCliff === 'boolean' ? initialSim.neutralizeVatCliff : false
+  );
+  const [enableB2bHoreca, setEnableB2bHoreca] = useState<boolean>(
+    typeof initialSim.enableB2bHoreca === 'boolean' ? initialSim.enableB2bHoreca : true
+  );
+  const [enableB2bSocialJukebox, setEnableB2bSocialJukebox] = useState<boolean>(
+    typeof initialSim.enableB2bSocialJukebox === 'boolean' ? initialSim.enableB2bSocialJukebox : false
+  );
   const [showAll36Months, setShowAll36Months] = useState<boolean>(false);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        SIM_STORAGE_KEY,
+        JSON.stringify({
+          preset,
+          year,
+          neutralizeVatCliff,
+          enableB2bHoreca,
+          enableB2bSocialJukebox,
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [preset, year, neutralizeVatCliff, enableB2bHoreca, enableB2bSocialJukebox]);
+
+  const handleSaveSimSettings = () => {
+    try {
+      localStorage.setItem(
+        SIM_STORAGE_KEY,
+        JSON.stringify({
+          preset,
+          year,
+          neutralizeVatCliff,
+          enableB2bHoreca,
+          enableB2bSocialJukebox,
+        })
+      );
+    } catch {
+      // ignore
+    }
+    if (onSaveAndSyncAll) {
+      onSaveAndSyncAll(`Simulateur 36M (${preset} • An ${year} • Cap ${settings.capPerStream} FCFA)`);
+    }
+    setSaveFeedback(
+      `Hypothèses sauvegardées (${preset} • Année ${year} • Cap ${settings.capPerStream} FCFA/stream)`
+    );
+    window.setTimeout(() => setSaveFeedback(null), 4000);
+  };
 
   const schedule36M = useMemo(
     () =>
@@ -164,9 +234,9 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
 
   return (
     <div className="space-y-3.5">
-      {/* BARRE DE SÉLECTION SCÉNARIO + ANNÉE + CONTRÔLES FISCAUX */}
+      {/* BARRE DE SÉLECTION SCÉNARIO + ANNÉE + CONTRÔLES FISCAUX (GRILLE SYMÉTRIQUE MULTI-AXES) */}
       <div className="bg-[#07080C] border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">
               Stress-Test Financier sur 36 Mois • Audit DGI Gabon &amp; CEMAC
@@ -176,101 +246,135 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
             </h3>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(['PRUDENT', 'CENTRAL', 'AMBITIEUX'] as ScenarioPresetKey[]).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setPreset(key)}
-                className={`px-3 py-1 rounded-xl font-mono text-[11px] font-bold border transition ${
-                  preset === key
-                    ? 'bg-[#DE1B34] border-[#DE1B34] text-white'
-                    : 'bg-[#0D1017] border-white/10 text-zinc-400 hover:text-white'
-                }`}
-              >
-                {key}
-              </button>
-            ))}
-            <span className="text-zinc-600 mx-1">|</span>
-            {([1, 2, 3] as ProjectionYear[]).map((y) => (
-              <button
-                key={y}
-                type="button"
-                onClick={() => setYear(y)}
-                className={`px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold border transition ${
-                  year === y
-                    ? 'bg-amber-400 text-[#07080C] border-amber-300'
-                    : 'bg-[#0D1017] border-white/10 text-zinc-400 hover:text-white'
-                }`}
-              >
-                Année {y}
-              </button>
-            ))}
+          <button
+            type="button"
+            onClick={handleSaveSimSettings}
+            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition cursor-pointer shrink-0"
+          >
+            Sauvegarder Hypothèses &amp; Paramètres Fiscaux
+          </button>
+        </div>
+
+        {saveFeedback && (
+          <div
+            role="status"
+            className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs font-mono"
+          >
+            ✓ {saveFeedback}
+          </div>
+        )}
+
+        {/* GRILLE SYMÉTRIQUE 2 COLONNES : SCÉNARIOS (3) × ANNÉES (3) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] space-y-1.5">
+            <span className="text-[10px] font-mono uppercase text-zinc-400 block">
+              Trajectoire d&apos;Acquisition (Scénario)
+            </span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['PRUDENT', 'CENTRAL', 'AMBITIEUX'] as ScenarioPresetKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPreset(key)}
+                  className={`py-2 px-2 rounded-xl font-mono text-[11px] font-bold border text-center transition ${
+                    preset === key
+                      ? 'bg-[#DE1B34] border-[#DE1B34] text-white'
+                      : 'bg-[#07080C] border-white/10 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] space-y-1.5">
+            <span className="text-[10px] font-mono uppercase text-zinc-400 block">
+              Horizon Temporel d&apos;Exploitation
+            </span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([1, 2, 3] as ProjectionYear[]).map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => setYear(y)}
+                  className={`py-2 px-2 rounded-xl font-mono text-[11px] font-bold border text-center transition ${
+                    year === y
+                      ? 'bg-amber-400 text-[#07080C] border-amber-300'
+                      : 'bg-[#07080C] border-white/10 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Année {y}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Options fiscales DGI Gabon */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[0.07] text-xs">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-1.5 cursor-pointer text-zinc-300">
-              <input
-                type="checkbox"
-                checked={settings.applyCssWithVat}
-                onChange={(e) => onUpdateSettings({ applyCssWithVat: e.target.checked })}
-                className="accent-amber-400 rounded"
-              />
-              <span>Inclure la CSS 1 % (en sus de la TVA 18 % = 19 %)</span>
-            </label>
+        {/* Options fiscales DGI Gabon en grille 2 colonnes symétrique */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2 border-t border-white/[0.07] text-xs">
+          <label className="flex items-start gap-2 p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.05] cursor-pointer text-zinc-300">
+            <input
+              type="checkbox"
+              checked={settings.applyCssWithVat}
+              onChange={(e) => onUpdateSettings({ applyCssWithVat: e.target.checked })}
+              className="accent-amber-400 rounded mt-0.5 shrink-0"
+            />
+            <span>Inclure la CSS 1 % (en sus de la TVA 18 % = 19 % en Année 3)</span>
+          </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer text-zinc-300">
-              <input
-                type="checkbox"
-                checked={neutralizeVatCliff}
-                onChange={(e) => setNeutralizeVatCliff(e.target.checked)}
-                className="accent-emerald-400 rounded"
-              />
-              <span>
-                Neutraliser l&apos;effet de falaise TVA en Année 3 (Palier 1 750 FCFA TTC / cible HT :{' '}
-                {formatFcfa(targetPriceFor1500Ht)})
-              </span>
-            </label>
+          <label className="flex items-start gap-2 p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.05] cursor-pointer text-zinc-300">
+            <input
+              type="checkbox"
+              checked={neutralizeVatCliff}
+              onChange={(e) => setNeutralizeVatCliff(e.target.checked)}
+              className="accent-emerald-400 rounded mt-0.5 shrink-0"
+            />
+            <span>
+              Neutraliser l&apos;effet de falaise TVA en Année 3 (Palier 1 750 FCFA TTC / cible HT :{' '}
+              {formatFcfa(targetPriceFor1500Ht)})
+            </span>
+          </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer text-amber-300 font-semibold">
-              <input
-                type="checkbox"
-                checked={enableB2bHoreca}
-                onChange={(e) => setEnableB2bHoreca(e.target.checked)}
-                className="accent-amber-400 rounded"
-              />
-              <span>
-                Activer Verticale B2B HORECA × BUGADA (30 → 100 → 250 Bars/Hôtels à 15k FCFA)
-              </span>
-            </label>
+          <label className="flex items-start gap-2 p-2.5 rounded-xl bg-[#0D1017] border border-amber-400/20 cursor-pointer text-amber-300 font-semibold">
+            <input
+              type="checkbox"
+              checked={enableB2bHoreca}
+              onChange={(e) => setEnableB2bHoreca(e.target.checked)}
+              className="accent-amber-400 rounded mt-0.5 shrink-0"
+            />
+            <span>
+              Activer Verticale B2B HORECA × BUGADA (30 → 100 → 250 Bars/Hôtels à 15k FCFA)
+            </span>
+          </label>
 
-            {enableB2bHoreca && (
-              <label className="flex items-center gap-1.5 cursor-pointer text-emerald-300 font-semibold">
+          <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.05] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {enableB2bHoreca ? (
+              <label className="flex items-start gap-2 cursor-pointer text-emerald-300 font-semibold">
                 <input
                   type="checkbox"
                   checked={enableB2bSocialJukebox}
                   onChange={(e) => setEnableB2bSocialJukebox(e.target.checked)}
-                  className="accent-emerald-400 rounded"
+                  className="accent-emerald-400 rounded mt-0.5 shrink-0"
                 />
-                <span>+ Jukebox Social QR (15k/bar/mois) &amp; Sponsoring B2B2C An 1 (250k/mois)</span>
+                <span>+ Jukebox Social QR &amp; Sponsoring B2B2C An 1</span>
               </label>
+            ) : (
+              <span className="text-[11px] text-zinc-500">Jukebox QR rattaché au mode B2B</span>
             )}
-          </div>
 
-          <div className="flex items-center gap-2 font-mono text-[11px]">
-            <span className="text-zinc-400">Plafond / écoute :</span>
-            <select
-              value={settings.capPerStream}
-              onChange={(e) => onUpdateSettings({ capPerStream: Number(e.target.value) })}
-              className="bg-[#0D1017] border border-white/15 rounded-lg px-2 py-1 text-amber-300 font-bold"
-            >
-              <option value={10}>10 FCFA / stream</option>
-              <option value={15}>15 FCFA / stream (Recommandé)</option>
-              <option value={20}>20 FCFA / stream</option>
-            </select>
+            <div className="flex items-center gap-1.5 font-mono text-[11px] shrink-0">
+              <span className="text-zinc-400">Cap :</span>
+              <select
+                value={settings.capPerStream}
+                onChange={(e) => onUpdateSettings({ capPerStream: Number(e.target.value) })}
+                className="bg-[#07080C] border border-white/15 rounded-lg px-2 py-1 text-amber-300 font-bold"
+              >
+                <option value={10}>10 FCFA / stream</option>
+                <option value={15}>15 FCFA / stream</option>
+                <option value={20}>20 FCFA / stream</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -441,7 +545,68 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* VUE CARTES SYMÉTRIQUES SUR MOBILE & TABLETTE (ZÉRO DÉBORDEMENT HORIZONTAL) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 xl:hidden">
+          {displayedMonths.map((row) => (
+            <div
+              key={row.month}
+              className="p-3 rounded-xl bg-[#0D1017] border border-white/[0.07] space-y-2 text-[11px] font-mono"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1.5">
+                <div>
+                  <span className="font-bold text-white text-xs">Mois {row.month}</span>{' '}
+                  <span className="text-zinc-400">(Année {row.year})</span>
+                </div>
+                {row.milestoneTag && (
+                  <span className="px-2 py-0.5 rounded bg-amber-400/15 text-amber-300 font-sans text-[10px] font-bold">
+                    {row.milestoneTag}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">Audience</span>
+                  <span className="text-zinc-200">
+                    {formatInteger(Math.round(row.payingSubscribers))} B2C
+                    {enableB2bHoreca ? ` + ${formatInteger(Math.round(row.b2bEstablishments))} Bars` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">Base Nette</span>
+                  <span className="text-white font-bold">{formatFcfa(row.streamingNetBase)}</span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">Royalties (60%)</span>
+                  <span className="text-emerald-300 font-bold">{formatFcfa(row.royaltiesPayable)}</span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">EBITDA</span>
+                  <span className={row.ebitda >= 0 ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}>
+                    {row.ebitda >= 0 ? '+' : ''}
+                    {formatFcfa(row.ebitda)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">Tréso (+50 M)</span>
+                  <span
+                    className={
+                      row.cumulativeCashWithTranches >= 0 ? 'text-sky-300 font-bold' : 'text-amber-300 font-bold'
+                    }
+                  >
+                    {formatFcfa(row.cumulativeCashWithTranches)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] text-zinc-500 block">Float Séquestre</span>
+                  <span className="text-amber-200">{formatFcfa(row.escrowRoyaltyFloatEstimate)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* VUE TABLEAU COMPLET SUR GRAND ÉCRAN PC (XL+) */}
+        <div className="hidden xl:block">
           <table className="w-full text-left border-collapse text-[11px] font-mono">
             <thead>
               <tr className="border-b border-white/10 text-zinc-400">

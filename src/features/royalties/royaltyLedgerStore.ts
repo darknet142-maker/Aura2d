@@ -94,6 +94,24 @@ export function useRoyaltyLedgerState() {
     }));
   }, []);
 
+  const hydrateFromCloudSettings = useCallback(
+    (patch: {
+      settings?: Partial<RoyaltySettings>;
+      taxStatusOverrides?: Record<string, RightsHolderTaxStatus>;
+    }) => {
+      setState((prev) => ({
+        ...prev,
+        settings: patch.settings
+          ? { ...prev.settings, ...patch.settings }
+          : prev.settings,
+        taxStatusOverrides: patch.taxStatusOverrides
+          ? { ...prev.taxStatusOverrides, ...patch.taxStatusOverrides }
+          : prev.taxStatusOverrides,
+      }));
+    },
+    []
+  );
+
   /**
    * Clôture comptable : fige les écoutes de la période (nouvel instantané), solde les relevés
    * payables et reporte sans annulation les soldes inférieurs au seuil de paiement.
@@ -128,6 +146,6 @@ export function useRoyaltyLedgerState() {
     []
   );
 
-  return { state, updateSettings, resetSettings, setTaxStatus, closePeriod };
+  return { state, updateSettings, resetSettings, setTaxStatus, closePeriod, hydrateFromCloudSettings };
 }
 
