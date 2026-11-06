@@ -19,6 +19,8 @@ import {
 import type { RoyaltyLedger } from './royaltyLedger';
 import type { ClosedPeriodRecord } from './royaltyLedgerStore';
 import { FinancialSimulator36M } from './FinancialSimulator36M';
+import { B2bHorecaBugadaPanel } from './B2bHorecaBugadaPanel';
+import { TelecomCemacCompliancePanel } from './TelecomCemacCompliancePanel';
 
 export interface BugadaRoyaltiesAdminPanelProps {
   ledger: RoyaltyLedger;
@@ -30,7 +32,13 @@ export interface BugadaRoyaltiesAdminPanelProps {
   onCloseAccountingPeriod: (period: string) => void;
 }
 
-type RoyaltySubTab = 'REPARTITION' | 'PAIE_DGI' | 'BUGADA_CRD' | 'SIMULATEUR_36M';
+type RoyaltySubTab =
+  | 'REPARTITION'
+  | 'PAIE_DGI'
+  | 'BUGADA_CRD'
+  | 'B2B_HORECA'
+  | 'SIMULATEUR_36M'
+  | 'CONFORMITE_TELECOM';
 
 export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps> = ({
   ledger,
@@ -123,7 +131,9 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
             { id: 'REPARTITION', label: '1. Répartition User-Centric (60/40)' },
             { id: 'PAIE_DGI', label: `2. Paie Master 48% & DGI (${ledger.statements.length})` },
             { id: 'BUGADA_CRD', label: `3. Bordereau BUGADA 12% (${ledger.bugada.beneficiaries.length})` },
-            { id: 'SIMULATEUR_36M', label: '4. Modèle Financier 36 Mois' },
+            { id: 'B2B_HORECA', label: '4. Offre Pro B2B Bars/Maquis × BUGADA' },
+            { id: 'SIMULATEUR_36M', label: '5. Modèle Financier 36 Mois' },
+            { id: 'CONFORMITE_TELECOM', label: '6. Push STK, CEMAC & Feuille de Route' },
           ] as { id: RoyaltySubTab; label: string }[]
         ).map((tab) => (
           <button
@@ -393,10 +403,15 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
           </div>
         )}
 
+        {subTab === 'B2B_HORECA' && <B2bHorecaBugadaPanel />}
+
         {subTab === 'SIMULATEUR_36M' && (
           <FinancialSimulator36M settings={settings} onUpdateSettings={onUpdateSettings} />
         )}
+
+        {subTab === 'CONFORMITE_TELECOM' && <TelecomCemacCompliancePanel />}
       </div>
     </div>
   );
 };
+

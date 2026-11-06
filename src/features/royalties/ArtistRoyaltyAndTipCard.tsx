@@ -288,3 +288,4 @@ export const ArtistRoyaltyAndTipCard: React.FC<ArtistRoyaltyAndTipCardProps> = (
     </div>
   );
 };
+

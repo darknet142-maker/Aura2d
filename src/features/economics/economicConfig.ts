@@ -82,6 +82,8 @@ export interface RoyaltySettings {
   masterShareOfRights: number;
   /** Part de l'interprète dans le master quand un label/producteur tiers détient l'enregistrement. */
   performerShareOfMaster: number;
+  /** Points royalties d'ingénierie studio sur le master (20 % prise / 50 % mix / 30 % mastering). */
+  engineerShareOfMaster?: number;
   /** Part de l'auteur des paroles dans les droits d'auteur (le reste au compositeur). */
   lyricistShareOfAuthorship: number;
   capPerStream: number;
@@ -119,6 +121,7 @@ export const DEFAULT_ROYALTY_SETTINGS: RoyaltySettings = {
   rightsHoldersShare: 0.6,
   masterShareOfRights: 0.8,
   performerShareOfMaster: 0.5,
+  engineerShareOfMaster: 0.05,
   lyricistShareOfAuthorship: 0.5,
   capPerStream: 15,
   maxCountedSecondsPerStream: 300,

@@ -5,6 +5,7 @@ export type RightsRole =
   | 'MAIN_PERFORMER'
   | 'FEATURED_PERFORMER'
   | 'MASTER_OWNER'
+  | 'SOUND_ENGINEER'
   | 'LYRICIST'
   | 'COMPOSER';
 
@@ -20,6 +21,10 @@ export interface TrackRightsMeta {
   featuringSplitMode?: '70_30' | '50_50';
   labelName: string;
   beatmakerName: string;
+  soundEngineerName?: string;
+  recordingEngineerName?: string;
+  mixingEngineerName?: string;
+  masteringEngineerName?: string;
   lyricistName: string;
   isInstrumental?: boolean;
 }
@@ -38,6 +43,7 @@ export const RIGHTS_ROLE_LABELS: Record<RightsRole, string> = {
   MAIN_PERFORMER: 'Artiste principal',
   FEATURED_PERFORMER: 'Artiste en featuring',
   MASTER_OWNER: 'Producteur / Label (master)',
+  SOUND_ENGINEER: 'Ingénieur du son (Prise / Mix / Master)',
   LYRICIST: 'Auteur (paroles)',
   COMPOSER: 'Compositeur',
 };
@@ -73,6 +79,24 @@ function authorshipShares(
   ];
 }
 
+function engineerShares(meta: TrackRightsMeta): { name: string; share: number }[] {
+  const defaultEng = (meta.soundEngineerName ?? '').trim();
+  const rec = (meta.recordingEngineerName ?? defaultEng).trim();
+  const mix = (meta.mixingEngineerName ?? defaultEng).trim();
+  const mast = (meta.masteringEngineerName ?? defaultEng).trim();
+  const byName = new Map<string, number>();
+  const add = (name: string, weight: number) => {
+    if (!name) return;
+    byName.set(name, (byName.get(name) ?? 0) + weight);
+  };
+  add(rec, 0.2);
+  add(mix, 0.5);
+  add(mast, 0.3);
+  const total = Array.from(byName.values()).reduce((s, v) => s + v, 0);
+  if (total <= 0) return [];
+  return Array.from(byName.entries()).map(([name, w]) => ({ name, share: w / total }));
+}
+
 const round2 = (v: number): number => Math.round(v * 100) / 100;
 
 /** Ventile le montant d'une piste entre master (48 %) et droits d'auteur BUGADA (12 %). */
@@ -84,6 +108,9 @@ export function splitTrackRights(
   const base = { trackId: meta.trackId, trackTitle: meta.title, isrc: meta.isrc };
   const masterAmount = allocation.total * settings.masterShareOfRights;
   const authorshipAmount = allocation.total - masterAmount;
+  const engList = engineerShares(meta);
+  const engRate = engList.length > 0 ? Math.max(0, Math.min(0.2, settings.engineerShareOfMaster ?? 0.05)) : 0;
+  const netMasterAfterEng = masterAmount * (1 - engRate);
   const performerPart = isSelfProduced(meta) ? 1 : settings.performerShareOfMaster;
   const lines: RightsLine[] = [];
 
@@ -93,7 +120,7 @@ export function splitTrackRights(
       holderName: meta.labelName,
       role: 'MASTER_OWNER',
       stratum: 'MASTER_DIRECT',
-      amount: round2(masterAmount * (1 - performerPart)),
+      amount: round2(netMasterAfterEng * (1 - performerPart)),
     });
   }
   performerShares(meta).forEach((p) =>
@@ -102,7 +129,16 @@ export function splitTrackRights(
       holderName: p.name,
       role: p.role,
       stratum: 'MASTER_DIRECT',
-      amount: round2(masterAmount * performerPart * p.share),
+      amount: round2(netMasterAfterEng * performerPart * p.share),
+    })
+  );
+  engList.forEach((e) =>
+    lines.push({
+      ...base,
+      holderName: e.name,
+      role: 'SOUND_ENGINEER',
+      stratum: 'MASTER_DIRECT',
+      amount: round2(masterAmount * engRate * e.share),
     })
   );
   authorshipShares(meta, settings).forEach((a) =>

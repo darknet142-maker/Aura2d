@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
   CENTRAL_SCENARIO,
-  CAPEX_INITIAL,
   FUNDING_NEED,
   simulateScenario,
   type ProjectionYear,
   type ScenarioInput,
 } from '../economics/breakEvenEngine';
 import { priceTtcForTargetHt, computeNetBase } from '../economics/fiscalEngine';
+import { buildCentral36MonthSchedule } from '../economics/monthlyTreasury36M';
 import type { RoyaltySettings } from '../economics/economicConfig';
 import { formatFcfa, formatFcfaPrecise, formatInteger } from '../economics/formatters';
 
@@ -99,6 +99,45 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
   const [preset, setPreset] = useState<ScenarioPresetKey>('CENTRAL');
   const [year, setYear] = useState<ProjectionYear>(3);
   const [neutralizeVatCliff, setNeutralizeVatCliff] = useState<boolean>(false);
+  const [enableB2bHoreca, setEnableB2bHoreca] = useState<boolean>(true);
+  const [enableB2bSocialJukebox, setEnableB2bSocialJukebox] = useState<boolean>(false);
+  const [showAll36Months, setShowAll36Months] = useState<boolean>(false);
+
+  const schedule36M = useMemo(
+    () =>
+      buildCentral36MonthSchedule({
+        settings,
+        neutralizeVatCliffYear3: neutralizeVatCliff,
+        includeCssInSchedule: settings.applyCssWithVat,
+        enableB2bHoreca,
+        enableB2bSocialJukeboxAndSponsorY1: enableB2bSocialJukebox,
+      }),
+    [settings, neutralizeVatCliff, enableB2bHoreca, enableB2bSocialJukebox]
+  );
+
+  const scheduleSummary = useMemo(() => {
+    const minCash = Math.min(...schedule36M.map((r) => r.cumulativeCashBeforeFunding));
+    const minCashRow = schedule36M.find((r) => r.cumulativeCashBeforeFunding === minCash);
+    const firstPositiveEbitdaRow = schedule36M.find((r) => r.ebitda > 0);
+    const total36MRoyalties = schedule36M.reduce((acc, r) => acc + r.royaltiesPayable, 0);
+    const total36MEbitda = schedule36M.reduce((acc, r) => acc + r.ebitda, 0);
+    return {
+      peakDeficit: Math.abs(minCash),
+      peakDeficitMonth: minCashRow?.month ?? 28,
+      fundingWithReserve: Math.round(Math.abs(minCash) * 1.1),
+      breakEvenMonth: firstPositiveEbitdaRow?.month ?? 29,
+      total36MRoyalties,
+      total36MEbitda,
+    };
+  }, [schedule36M]);
+
+  const displayedMonths = useMemo(
+    () =>
+      showAll36Months
+        ? schedule36M
+        : schedule36M.filter((r) => Boolean(r.milestoneTag)),
+    [schedule36M, showAll36Months]
+  );
 
   const baseInput = SCENARIO_PRESETS[preset][year];
   const effectivePriceTtc =
@@ -195,6 +234,30 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
                 {formatFcfa(targetPriceFor1500Ht)})
               </span>
             </label>
+
+            <label className="flex items-center gap-1.5 cursor-pointer text-amber-300 font-semibold">
+              <input
+                type="checkbox"
+                checked={enableB2bHoreca}
+                onChange={(e) => setEnableB2bHoreca(e.target.checked)}
+                className="accent-amber-400 rounded"
+              />
+              <span>
+                Activer Verticale B2B HORECA × BUGADA (30 → 100 → 250 Bars/Hôtels à 15k FCFA)
+              </span>
+            </label>
+
+            {enableB2bHoreca && (
+              <label className="flex items-center gap-1.5 cursor-pointer text-emerald-300 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={enableB2bSocialJukebox}
+                  onChange={(e) => setEnableB2bSocialJukebox(e.target.checked)}
+                  className="accent-emerald-400 rounded"
+                />
+                <span>+ Jukebox Social QR (15k/bar/mois) &amp; Sponsoring B2B2C An 1 (250k/mois)</span>
+              </label>
+            )}
           </div>
 
           <div className="flex items-center gap-2 font-mono text-[11px]">
@@ -337,17 +400,117 @@ export const FinancialSimulator36M: React.FC<FinancialSimulator36MProps> = ({
           </div>
           <div className="p-2.5 rounded-xl bg-[#0D1017] border border-white/[0.06] text-[11px] text-zinc-300 flex flex-wrap items-center justify-between gap-2">
             <span>
-              CAPEX Initial : <strong className="text-white">{formatFcfa(CAPEX_INITIAL.mvpDevelopment + CAPEX_INITIAL.legalAndLaunch)}</strong>
+              Point Mort : <strong className="text-emerald-300">Mois {scheduleSummary.breakEvenMonth}</strong>
             </span>
             <span>
-              Creux Max (Mois 28) : <strong className="text-rose-300">-{formatFcfa(FUNDING_NEED.peakCashDeficit)}</strong>
+              Creux Max (M{scheduleSummary.peakDeficitMonth}) :{' '}
+              <strong className="text-rose-300">-{formatFcfa(scheduleSummary.peakDeficit)}</strong>
             </span>
             <span>
-              Financement (+10%) : <strong className="text-amber-300">{formatFcfa(FUNDING_NEED.withReserve)}</strong>
+              Financement (+10%) :{' '}
+              <strong className="text-amber-300">{formatFcfa(scheduleSummary.fundingWithReserve)}</strong>
+            </span>
+            <span>
+              Royalties 36M :{' '}
+              <strong className="text-emerald-300">{formatFcfa(scheduleSummary.total36MRoyalties)}</strong>
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* TABLEAU DE TRÉSORERIE MENSUELLE SUR 36 MOIS (JALONS CRITIQUES & VALLÉE DE LA MORT) */}
+      <div className="bg-[#07080C] border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
+              Trésorerie Mensuelle Dynamique (Scénario Central • M1 → M36) &amp; Float Séquestre
+            </span>
+            <h4 className="text-xs sm:text-sm font-bold text-[#F5F2EB]">
+              Levée en 2 Tranches (25 M M1 + 25 M M13) •{' '}
+              {enableB2bHoreca
+                ? `Avec B2B HORECA : Point Mort avancé au Mois ${scheduleSummary.breakEvenMonth} & Besoin réduit à ${formatFcfa(scheduleSummary.fundingWithReserve)}`
+                : `Sans B2B HORECA : Point Mort au Mois ${scheduleSummary.breakEvenMonth} & Besoin ${formatFcfa(FUNDING_NEED.withReserve)}`}
+            </h4>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAll36Months((v) => !v)}
+            className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/15 text-xs font-mono font-bold text-amber-300 transition"
+          >
+            {showAll36Months ? 'Afficher les jalons clés' : 'Afficher les 36 mois complets'}
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-[11px] font-mono">
+            <thead>
+              <tr className="border-b border-white/10 text-zinc-400">
+                <th className="py-2 pr-2">Mois</th>
+                <th className="py-2 px-2">B2C / Bars B2B / Gratuits</th>
+                <th className="py-2 px-2">Base Nette</th>
+                <th className="py-2 px-2">Royalties (60%)</th>
+                <th className="py-2 px-2">EBITDA</th>
+                <th className="py-2 px-2">Tréso Hors Fin.</th>
+                <th className="py-2 px-2">Tréso (+50 M)</th>
+                <th className="py-2 pl-2">Float Séquestre</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.05]">
+              {displayedMonths.map((row) => (
+                <tr key={row.month} className="hover:bg-white/[0.03]">
+                  <td className="py-2 pr-2 whitespace-nowrap">
+                    <span className="font-bold text-white">M{row.month}</span>{' '}
+                    <span className="text-zinc-500">(A{row.year})</span>
+                    {row.milestoneTag && (
+                      <span className="block text-[9.5px] text-amber-300 font-sans">
+                        {row.milestoneTag}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-zinc-200">
+                    {formatInteger(Math.round(row.payingSubscribers))}
+                    {enableB2bHoreca && (
+                      <span className="text-amber-300 font-bold">
+                        {' '}
+                        + {formatInteger(Math.round(row.b2bEstablishments))} Bars
+                      </span>
+                    )}{' '}
+                    / <span className="text-zinc-400">{formatInteger(Math.round(row.freeActiveUsers))}</span>
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-white">
+                    {formatFcfa(row.streamingNetBase)}
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-emerald-300 font-bold">
+                    {formatFcfa(row.royaltiesPayable)}
+                  </td>
+                  <td
+                    className={`py-2 px-2 whitespace-nowrap font-bold ${
+                      row.ebitda >= 0 ? 'text-emerald-300' : 'text-rose-400'
+                    }`}
+                  >
+                    {row.ebitda >= 0 ? '+' : ''}
+                    {formatFcfa(row.ebitda)}
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-rose-300">
+                    {formatFcfa(row.cumulativeCashBeforeFunding)}
+                  </td>
+                  <td
+                    className={`py-2 px-2 whitespace-nowrap font-bold ${
+                      row.cumulativeCashWithTranches >= 0 ? 'text-sky-300' : 'text-amber-300'
+                    }`}
+                  >
+                    {formatFcfa(row.cumulativeCashWithTranches)}
+                  </td>
+                  <td className="py-2 pl-2 whitespace-nowrap text-amber-200">
+                    {formatFcfa(row.escrowRoyaltyFloatEstimate)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 };
+

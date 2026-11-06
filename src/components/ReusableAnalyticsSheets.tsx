@@ -52,6 +52,7 @@ import type { RightsLine } from '../features/economics/rightsSplitEngine';
 import type { PayoutStatement } from '../features/economics/payoutEngine';
 import { ArtistRoyaltyAndTipCard } from '../features/royalties/ArtistRoyaltyAndTipCard';
 import { ListenerPassAndDataSaverCard } from '../features/royalties/ListenerPassAndDataSaverCard';
+import { TrackRoyaltySplitBadge } from '../features/royalties/TrackRoyaltySplitBadge';
 
 export type StudioEntityRole =
   | 'ARTIST'
@@ -1881,6 +1882,31 @@ export const ReusableTrackDetailSheet: React.FC<
             </div>
           </div>
         </div>
+
+        {/* Répartition Certifiée des Royalties de l'Œuvre (48% Master Direct / 12% BUGADA) */}
+        <TrackRoyaltySplitBadge
+          trackMeta={{
+            trackId: track.id,
+            title: track.title,
+            isrc:
+              track.dropContentId ||
+              `GA-DRP-26-${track.id.replace(/[^0-9A-Za-z]/g, '').slice(-5).padStart(5, '0')}`,
+            artist: track.artist,
+            featuringArtists: track.featuringArtists,
+            featuringSplitMode: track.featuringSplitMode,
+            labelName: track.labelName,
+            beatmakerName: track.beatmakerName,
+            lyricistName: track.lyricistName || track.artist,
+            soundEngineerName: track.soundEngineerName,
+            recordingEngineerName: track.recordingEngineerName,
+            mixingEngineerName: track.mixingEngineerName,
+            masteringEngineerName: track.masteringEngineerName,
+            isInstrumental: track.isInstrumental,
+            realPlays: track.realPlays,
+          }}
+          settings={DEFAULT_ROYALTY_SETTINGS}
+          onOpenEntityProfile={onOpenEntityProfile}
+        />
       </div>
     </div>
   );
