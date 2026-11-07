@@ -18,6 +18,8 @@ import { PlaylistModal } from './player/modals/PlaylistModal';
 import { QueueModal } from './player/modals/QueueModal';
 import { OptionsMenuModal } from './player/modals/OptionsMenuModal';
 import { RecommendModal } from './player/modals/RecommendModal';
+import { FullscreenLyricsModal } from './player/modals/FullscreenLyricsModal';
+import { ProFeatureGateModal } from '../features/listener/components/ProFeatureGateModal';
 import {
   formatTime,
   formatCompactPlays,
@@ -145,6 +147,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
     isCurrentRecommended,
     currentLyricist,
   } = state;
+
+  const [proGateFeature, setProGateFeature] = React.useState<{ title: string; reason?: string } | null>(null);
 
   return (
     <div className="relative h-[100dvh] w-screen bg-[#080A0F] flex items-center justify-center overflow-hidden">
@@ -324,6 +328,13 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             isPro={isPro}
             lyricsOpen={lyricsOpen}
             onToggleLyrics={() => {
+              if (!isPro) {
+                setProGateFeature({
+                  title: 'Paroles Plein Écran',
+                  reason: 'Profitez de l\'affichage immersif synchronisé en plein écran avec le compte DROP PRO (Airtel & Moov Money).',
+                });
+                return;
+              }
               const nextOpen = !lyricsOpen;
               setLyricsOpen(nextOpen);
               if (nextOpen) {
@@ -336,8 +347,22 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onOpenEqModal={() => setActiveModal('EQ')}
             isEqCustomOrActive={isEqCustomOrActive}
             isDownloadedOffline={Boolean(currentTrack.downloadedOffline)}
-            onToggleDownload={() => onToggleDownload(currentTrack.id)}
-            onNotifyProRequired={notifyProRequired}
+            onToggleDownload={() => {
+              if (!isPro) {
+                setProGateFeature({
+                  title: 'Téléchargement Hors-Ligne',
+                  reason: 'Écoutez sans connexion data grâce au chiffrement audio local réservé aux membres DROP PRO (Airtel Money & Moov Money).',
+                });
+                return;
+              }
+              onToggleDownload(currentTrack.id);
+            }}
+            onNotifyProRequired={(feat) => {
+              setProGateFeature({
+                title: feat,
+                reason: `${feat} est une fonctionnalité avancée réservée aux membres DROP PRO (Airtel & Moov Money).`,
+              });
+            }}
           />
 
           {/* 5. PIED DE PAGE STUDIO */}
@@ -733,6 +758,54 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
         onDeleteStatus={socialFeedCtrl.handleDeleteStatus}
         onDeletePost={socialFeedCtrl.handleDeletePost}
         onClose={() => socialFeedCtrl.setIsQuotaCleanupOpen(false)}
+      />
+
+      {/* Modal Paroles Plein Écran synchronisées avec audio en continu */}
+      <FullscreenLyricsModal
+        isOpen={lyricsOpen && isPro}
+        currentTrack={currentTrack}
+        currentTime={currentTime}
+        isPlaying={isPlaying}
+        activeLyricIdx={activeLyricIdx}
+        currentLyricist={currentLyricist}
+        onClose={() => setLyricsOpen(false)}
+        onTogglePlay={onTogglePlay}
+        onSeek={onSeek}
+        onOpenLyricistProfile={(lyricist) => openUserEntitySheet(lyricist, 'LYRICIST')}
+        onShareExcerpt={(cleanExcerpt) => {
+          onRecommendTrack?.(currentTrack.id, cleanExcerpt, true);
+          socialFeedCtrl.handleCreateFeedPost(
+            'LYRIC_EXCERPT',
+            {
+              kind: 'TRACK',
+              trackId: currentTrack.id,
+              entityName: currentTrack.artist,
+              title: currentTrack.title,
+              subtitle: currentTrack.artist,
+              genre: currentTrack.category,
+              cover: currentTrack.cover,
+              artworkType: currentTrack.artworkType,
+              bpm: currentTrack.bpm,
+              lyricistName: currentLyricist,
+            },
+            `« ${cleanExcerpt} » — Extrait de ${currentTrack.artist}`
+          );
+          setLyricsOpen(false);
+          setHubTab('RECOS');
+          showToast('Extrait partagé dans le fil des recommandations !', 'bg-emerald-400');
+        }}
+      />
+
+      {/* Modal de conversion DROP PRO & frustration positive */}
+      <ProFeatureGateModal
+        isOpen={Boolean(proGateFeature)}
+        featureTitle={proGateFeature?.title || 'Compte DROP PRO'}
+        featureReason={proGateFeature?.reason}
+        onClose={() => setProGateFeature(null)}
+        onUpgradeSuccess={() => {
+          onToggleUserPlan();
+          showToast('Bienvenue sur DROP PRO ! Toutes les fonctionnalités sont débloquées.', 'bg-amber-400');
+        }}
       />
     </div>
   );

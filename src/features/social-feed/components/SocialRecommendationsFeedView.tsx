@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Flame, Video, Shuffle, Plus, Compass, Trophy } from 'lucide-react';
 import type { AnalyticsAlbumNode, AnalyticsTrackItem, StudioEntityRole } from '../../../components/ReusableAnalyticsSheets';
 import type { FeedLensId, SocialFeedPost, SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { buildComposerOptionsFromCatalogue } from '../services/social-target-options.service';
+import { resolveTargetTrackMatch } from '../services/targetMatchResolver.service';
 import { useInlineDropPreviewAudio } from '../hooks/useInlineDropPreviewAudio';
 import type { useSocialFeedController } from '../hooks/useSocialFeedController';
 import { WhatsAppStyleStatusRail } from './WhatsAppStyleStatusRail';
 import { RecoTrackVinylCard } from './RecoTrackVinylCard';
 import { RecoSpotlightVisualCard } from './RecoSpotlightVisualCard';
+import { RecoReactionsDetailModal, type ReactionDetailTab } from './RecoReactionsDetailModal';
 import { RecoCommentsDrawer } from './RecoCommentsDrawer';
 import { StatusFullscreenViewerModal } from './StatusFullscreenViewerModal';
 import { PublishRecoAndStatusModal } from './PublishRecoAndStatusModal';
@@ -41,6 +43,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
   onOpenUserProfile, onOpenScoutsRankings, onOpenCameraStudio,
 }) => {
   const inlineAudio = useInlineDropPreviewAudio(onPauseMainPlayer);
+  const [reactionsModal, setReactionsModal] = useState<{ post: SocialFeedPost; initialTab: ReactionDetailTab } | null>(null);
   const defaultTarget: SocialTargetSubject = useMemo(() => ({
     kind: 'TRACK', trackId: currentTrack.id, entityName: currentTrack.artist,
     title: currentTrack.title, subtitle: currentTrack.artist, genre: currentTrack.category,
@@ -60,7 +63,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
   const playPostTarget = (post: SocialFeedPost) => {
     inlineAudio.stopInlinePreview();
     feedCtrl.handleRecordDiscovery(post.id);
-    const match = allTracksFlat.find((m) => m.track.id === post.target.trackId || m.track.artist === post.target.entityName);
+    const match = resolveTargetTrackMatch(allTracksFlat, post.target);
     if (match) onPlaySpecificTrack(match.albumIndex, match.trackIndex);
   };
 
@@ -110,7 +113,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
       ) : (
         <div className="space-y-3.5">
           {feedCtrl.rankedPosts.map((post) => {
-            const t = allTracksFlat.find((m) => m.track.id === post.target.trackId)?.track;
+            const t = resolveTargetTrackMatch(allTracksFlat, post.target)?.track;
             const common = {
               post, currentUserId: currentUser.id, trackPlays: t?.realPlays,
               onOpenAuthorProfile: onOpenUserProfile,
@@ -119,6 +122,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
               onOpenComments: () => feedCtrl.setActiveCommentsPostId(post.id),
               onToggleReDrop: (q?: string) => feedCtrl.handleTogglePostReDrop(post.id, q),
               onOpenStudioReaction: (mode: StudioAudioCaptureMode) => { inlineAudio.stopInlinePreview(); onOpenCameraStudio(mode, post.target); },
+              onOpenReactionsDetail: (tab: ReactionDetailTab) => setReactionsModal({ post, initialTab: tab }),
               onDeletePost: post.authorId === currentUser.id ? () => feedCtrl.handleDeletePost(post.id) : undefined,
               onReportPost: (pId: string) => feedCtrl.setReportingPost(feedCtrl.posts.find((p) => p.id === pId) || null),
             };
@@ -140,6 +144,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
         </div>
       )}
 
+      <RecoReactionsDetailModal isOpen={Boolean(reactionsModal)} initialTab={reactionsModal?.initialTab} post={reactionsModal?.post ?? null} onClose={() => setReactionsModal(null)} onOpenUserProfile={onOpenUserProfile} />
       <RecoCommentsDrawer post={activeCommentsPost} onClose={() => feedCtrl.setActiveCommentsPostId(null)} onSubmitComment={feedCtrl.handleAddComment} onOpenUserProfile={onOpenUserProfile} />
       <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onDeleteStatus={feedCtrl.handleDeleteStatus} onOpenUserProfile={onOpenUserProfile} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
       <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />

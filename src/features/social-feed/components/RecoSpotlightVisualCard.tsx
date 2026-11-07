@@ -23,6 +23,7 @@ export interface RecoSpotlightVisualCardProps {
   onOpenComments: () => void;
   onToggleReDrop: (quote?: string) => void;
   onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
+  onOpenReactionsDetail?: (type: 'TROPHY' | 'FLAME' | 'HEART' | 'REDROP' | 'VIEWS') => void;
   onDeletePost?: () => void;
   onReportPost?: (postId: string) => void;
 }
@@ -30,7 +31,7 @@ export interface RecoSpotlightVisualCardProps {
 export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = ({
   post, currentUserId, trackPlays = 104_500, onPlayTarget, onPauseMainPlayer,
   onOpenAuthorProfile, onOpenTargetSheet, onOpenArtistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost, onReportPost,
+  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onOpenReactionsDetail, onDeletePost, onReportPost,
 }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -101,7 +102,8 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
               post={post}
               trackPlays={trackPlays}
               onReact={(type) => {
-                if (type === 'HEART') onToggleLike();
+                if (onOpenReactionsDetail) onOpenReactionsDetail(type);
+                else if (type === 'HEART') onToggleLike();
                 else if (type === 'REDROP') onToggleReDrop();
               }}
             />

@@ -53,6 +53,7 @@ import {
   CertificationBadgeSvg,
   OfficialQrCodeSvg,
 } from '../../../components/ReusableAnalyticsSheets';
+import { PublicCertificationDossierModal } from '../components/PublicCertificationDossierModal';
 import {
   ChartTimeframe,
   computeTrackExplosionScore,
@@ -95,6 +96,7 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
     newPlaylistInput, setNewPlaylistInput, handleCreatePlaylist, handleDeletePlaylist,
     handleToggleTrackInPlaylist, hasOpenAnalyticsSheet,
   } = state;
+  const [dossierCert, setDossierCert] = React.useState<{ cert: any; title: string; artist: string; coverUrl?: string; artworkType?: any } | null>(null);
   return (
     <>
                   {hubTab === 'AWARDS' && (
@@ -577,8 +579,8 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                                   return (
                                     <div
                                       key={t.id}
-                                      onClick={() => openUserTrackSheet(t.id)}
-                                      className="p-3 rounded-xl bg-[#07090E]/65 hover:bg-[#07090E]/80 border border-white/15 flex items-center justify-between gap-3 cursor-pointer transition"
+                                      onClick={() => setDossierCert({ cert, title: t.title, artist: t.artist, coverUrl: t.cover, artworkType: t.artworkType })}
+                                      className="p-3 rounded-xl bg-[#07090E]/65 hover:bg-[#07090E]/80 border border-white/15 flex items-center justify-between gap-3 cursor-pointer transition hover:border-amber-400/40"
                                     >
                                       <div className="min-w-0 flex-1 space-y-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -616,7 +618,15 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                     </div>
                   )}
 
-
+      <PublicCertificationDossierModal
+        isOpen={Boolean(dossierCert)}
+        cert={dossierCert?.cert ?? null}
+        entityTitle={dossierCert?.title}
+        entityArtist={dossierCert?.artist}
+        coverUrl={dossierCert?.coverUrl}
+        artworkType={dossierCert?.artworkType}
+        onClose={() => setDossierCert(null)}
+      />
     </>
   );
 };

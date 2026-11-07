@@ -37,6 +37,7 @@ import {
   GabonSubscriptionPass,
   GabonNetworkOperator,
 } from '../services/offlineStreamTracker';
+import { PublicCertificationDossierModal } from '../features/listener/components/PublicCertificationDossierModal';
 import {
   triggerBeatAudioDownload,
   generateDropContentId,
@@ -580,6 +581,8 @@ export const CertificationBadgeSvg: React.FC<{
   compact?: boolean;
   entityTitle?: string;
   entityArtist?: string;
+  coverUrl?: string;
+  artworkType?: ArtworkType;
   playsCount?: number;
   certifiedSince?: string;
   isPro?: boolean;
@@ -588,11 +591,14 @@ export const CertificationBadgeSvg: React.FC<{
   compact = false,
   entityTitle,
   entityArtist,
+  coverUrl,
+  artworkType,
   playsCount,
   certifiedSince,
   isPro = true,
 }) => {
   const [openPopup, setOpenPopup] = useState(false);
+  const [openDossier, setOpenDossier] = useState(false);
 
   if (!cert || cert.level === 'NONE') return null;
 
@@ -749,17 +755,21 @@ export const CertificationBadgeSvg: React.FC<{
                 </div>
               </div>
 
-              {/* Section QR Code & Certificat */}
-              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between gap-3">
+              {/* Section QR Code & Certificat cliquable pour ouvrir la fiche officielle */}
+              <div
+                onClick={() => setOpenDossier(true)}
+                className="p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-amber-400/30 flex items-center justify-between gap-3 cursor-pointer group transition"
+              >
                 <div className="space-y-1 min-w-0">
-                  <span className="text-xs font-bold text-white block">
-                    Registre Public des Certifications
+                  <span className="text-xs font-bold text-white group-hover:text-amber-300 transition flex items-center gap-1.5">
+                    <span>Registre Public des Certifications</span>
+                    <span className="text-[10px] text-amber-300">→</span>
                   </span>
                   <span className="text-[11px] font-mono text-amber-300 block truncate">
                     N° {cert.certificateHash || 'DROP-GA-CERT-2025'}
                   </span>
                   <span className="text-[10px] text-zinc-400 block">
-                    Scannez le QR Code pour vérifier l&apos;authenticité publique du certificat.
+                    Cliquer ou scanner le QR Code pour ouvrir la fiche officielle.
                   </span>
                 </div>
                 <OfficialQrCodeSvg
@@ -813,6 +823,16 @@ export const CertificationBadgeSvg: React.FC<{
           </div>,
           document.body
         )}
+
+      <PublicCertificationDossierModal
+        isOpen={openDossier}
+        cert={cert}
+        entityTitle={entityTitle}
+        entityArtist={entityArtist}
+        coverUrl={coverUrl}
+        artworkType={artworkType}
+        onClose={() => setOpenDossier(false)}
+      />
     </>
   );
 };

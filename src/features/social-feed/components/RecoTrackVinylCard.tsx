@@ -31,6 +31,7 @@ export interface RecoTrackVinylCardProps {
   onOpenComments: () => void;
   onToggleReDrop: (quote?: string) => void;
   onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
+  onOpenReactionsDetail?: (type: 'TROPHY' | 'FLAME' | 'HEART' | 'REDROP' | 'VIEWS') => void;
   onDeletePost?: () => void;
   onReportPost?: (postId: string) => void;
 }
@@ -39,7 +40,7 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
   post, currentUserId, trackPlays = 48_500, trackRank, waveformPeaks,
   isInlinePlaying, inlineElapsedSec, inlineMaxSec, onToggleInlinePreview, onSeekInlinePreview,
   onPlayFullTrack, onOpenAuthorProfile, onOpenTrackSheet, onOpenArtistProfile, onOpenLyricistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost, onReportPost,
+  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onOpenReactionsDetail, onDeletePost, onReportPost,
 }) => {
   const bars = useMemo(() => (
     waveformPeaks && waveformPeaks.length >= 24 ? waveformPeaks.slice(0, 32) : computeDeterministicWaveformPeaks(post.target.title + post.target.entityName, 32)
@@ -68,7 +69,8 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
           post={post}
           trackPlays={trackPlays}
           onReact={(type) => {
-            if (type === 'HEART') onToggleLike();
+            if (onOpenReactionsDetail) onOpenReactionsDetail(type);
+            else if (type === 'HEART') onToggleLike();
             else if (type === 'REDROP') onToggleReDrop();
           }}
         />

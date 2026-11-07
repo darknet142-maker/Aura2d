@@ -3,10 +3,12 @@ import { Trophy, Flame, Heart, Repeat, Eye } from 'lucide-react';
 import { formatCompactPlays } from '../../../components/player/playerEngineHelpers';
 import type { SocialFeedPost } from '../types/social-feed.types';
 
+export type ReactionClusterType = 'TROPHY' | 'FLAME' | 'HEART' | 'REDROP' | 'VIEWS';
+
 export interface RecoCardReactionsClusterProps {
   post: SocialFeedPost;
   trackPlays?: number;
-  onReact?: (reactionType: 'TROPHY' | 'FLAME' | 'HEART' | 'REDROP') => void;
+  onReact?: (reactionType: ReactionClusterType) => void;
   className?: string;
 }
 
@@ -27,29 +29,25 @@ export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> =
       role="group"
       aria-label="Réactions et portée de la recommandation"
     >
-      {/* Bulles circulaires superposées fidèles à la capture officielle */}
       <div className="flex items-center -space-x-1.5">
-        {/* 1. Trophée Éclaireur Or / Récompense */}
         <button
           type="button"
           onClick={() => onReact?.('TROPHY')}
-          title="Validation Éclaireur Officiel"
+          title="Validation Éclaireur Officiel & Points"
           className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr from-[#F59E0B] to-[#F97316] border border-white/60 shadow-md flex items-center justify-center text-[#080A0F] active:scale-95 transition-transform cursor-pointer"
         >
           <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white drop-shadow stroke-[2.2]" />
         </button>
 
-        {/* 2. Flamme Hype / Tendance */}
         <button
           type="button"
           onClick={() => onReact?.('FLAME')}
-          title="Titre en tendance virale"
+          title="Vélocité et tendance virale"
           className="relative z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0D1017] border border-white/40 shadow-md flex items-center justify-center text-amber-400 active:scale-95 transition-transform cursor-pointer"
         >
           <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#ff4b2b] fill-[#ff4b2b] stroke-[1.8]" />
         </button>
 
-        {/* 3. Cœur / Coup de cœur mélomane */}
         <button
           type="button"
           onClick={() => onReact?.('HEART')}
@@ -59,7 +57,6 @@ export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> =
           <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white fill-white stroke-[1.8]" />
         </button>
 
-        {/* 4. Boucle / Relais Re-Drop Vert Émeraude */}
         <button
           type="button"
           onClick={() => onReact?.('REDROP')}
@@ -70,17 +67,17 @@ export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> =
         </button>
       </div>
 
-      {/* 5. Pilule oblongue : Nombre de vues et portée unique (ex: 100.5k) */}
-      <div
-        className="px-2.5 py-0.5 sm:py-1 rounded-full bg-[#080A0F]/85 backdrop-blur-md border border-white/20 shadow-md flex items-center gap-1"
-        title={`${uniqueViewsCount.toLocaleString('fr-FR')} vues par comptes uniques`}
+      <button
+        type="button"
+        onClick={() => onReact?.('VIEWS')}
+        className="px-2.5 py-0.5 sm:py-1 rounded-full bg-[#080A0F]/85 hover:bg-[#131722] backdrop-blur-md border border-white/20 shadow-md flex items-center gap-1 active:scale-95 transition cursor-pointer"
+        title={`${uniqueViewsCount.toLocaleString('fr-FR')} vues par comptes uniques (cliquer pour voir la portée)`}
       >
         <Eye className="w-3 h-3 text-[#A3A9BA] hidden xs:inline shrink-0" />
         <span className="font-mono text-[11px] sm:text-xs font-bold text-[#F8FAFC] tracking-tight tabular-nums">
           {formatCompactPlays(uniqueViewsCount)}
         </span>
-      </div>
+      </button>
     </div>
   );
 };
-
