@@ -9,6 +9,7 @@ import { SUBTLE_ENTRANCE_VARIANTS } from '../../../shared/ui/springMotion';
 import type { SocialFeedPost, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { RecoCardHeaderAndRelay } from './RecoCardHeaderAndRelay';
 import { RecoCardActionBar } from './RecoCardActionBar';
+import { RecoCardReactionsCluster } from './RecoCardReactionsCluster';
 
 export interface RecoTrackVinylCardProps {
   post: SocialFeedPost;
@@ -31,20 +32,18 @@ export interface RecoTrackVinylCardProps {
   onToggleReDrop: (quote?: string) => void;
   onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
   onDeletePost?: () => void;
+  onReportPost?: (postId: string) => void;
 }
 
 export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
   post, currentUserId, trackPlays = 48_500, trackRank, waveformPeaks,
   isInlinePlaying, inlineElapsedSec, inlineMaxSec, onToggleInlinePreview, onSeekInlinePreview,
   onPlayFullTrack, onOpenAuthorProfile, onOpenTrackSheet, onOpenArtistProfile, onOpenLyricistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost,
+  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost, onReportPost,
 }) => {
-  const bars = useMemo(
-    () => (waveformPeaks && waveformPeaks.length >= 24
-      ? waveformPeaks.slice(0, 32)
-      : computeDeterministicWaveformPeaks(post.target.title + post.target.entityName, 32)),
-    [waveformPeaks, post.target.title, post.target.entityName]
-  );
+  const bars = useMemo(() => (
+    waveformPeaks && waveformPeaks.length >= 24 ? waveformPeaks.slice(0, 32) : computeDeterministicWaveformPeaks(post.target.title + post.target.entityName, 32)
+  ), [waveformPeaks, post.target.title, post.target.entityName]);
   const progressRatio = isInlinePlaying && inlineMaxSec > 0 ? Math.min(1, inlineElapsedSec / inlineMaxSec) : 0;
 
   return (
@@ -56,13 +55,24 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
         post={post} isOwnPost={post.authorId === currentUserId}
         onOpenAuthorProfile={onOpenAuthorProfile} onOpenTargetSheet={onOpenTrackSheet}
         onOpenArtistProfile={onOpenArtistProfile} onDeletePost={onDeletePost}
+        onReportPost={onReportPost}
       />
 
-      {post.archetype === 'LYRIC_EXCERPT' && post.target.lyricistName && (
-        <button type="button" onClick={() => onOpenLyricistProfile?.(post.target.lyricistName!)} className="text-[11px] font-mono text-amber-300 hover:underline text-left block truncate cursor-pointer">
-          Plume créditée : {post.target.lyricistName}
-        </button>
-      )}
+      <div className="flex items-center justify-between gap-2 -mt-1 -mb-1">
+        {post.archetype === 'LYRIC_EXCERPT' && post.target.lyricistName ? (
+          <button type="button" onClick={() => onOpenLyricistProfile?.(post.target.lyricistName!)} className="text-[11px] font-mono text-amber-300 hover:underline text-left block truncate cursor-pointer">
+            Plume : {post.target.lyricistName}
+          </button>
+        ) : <div />}
+        <RecoCardReactionsCluster
+          post={post}
+          trackPlays={trackPlays}
+          onReact={(type) => {
+            if (type === 'HEART') onToggleLike();
+            else if (type === 'REDROP') onToggleReDrop();
+          }}
+        />
+      </div>
 
       <div className="relative rounded-2xl bg-[#131722] border border-white/10 p-3 flex items-center gap-3.5 group/vinyl">
         <div className="relative w-[76px] sm:w-[84px] h-[76px] sm:h-[84px] shrink-0 mr-3">

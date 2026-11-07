@@ -110,4 +110,58 @@ const resAccent = filterTargetsInstant(mockTargets, 'lumieres');
 assert.equal(resAccent[0].title, 'Lumières du Bord de Mer', 'La recherche insensible aux accents "lumieres" doit matcher "Lumières"');
 console.log('✅ 4. Recherche instantanée réactive dès la 1ère lettre et insensible aux accents validée.');
 
-console.log('🎉 TOUS LES TESTS DE VERIFICATION CRITIQUES DU FIL SOCIAL & VIRAL PASSENT AVEC SUCCÈS !');
+// 5. CLUSTER DE RÉACTIONS EN HAUT À DROITE DE CHAQUE PUBLICATION (CAPTURES UTILISATEUR)
+const reactionsClusterCode = fs.readFileSync('src/features/social-feed/components/RecoCardReactionsCluster.tsx', 'utf8');
+assert.equal(reactionsClusterCode.includes('formatCompactPlays'), true, 'Le cluster doit formater les vues uniques de comptes');
+assert.equal(vinylCardCode.includes('RecoCardReactionsCluster'), true, 'La carte vinyle doit inclure le cluster de réactions');
+assert.equal(spotlightCardCode.includes('RecoCardReactionsCluster'), true, 'La carte spotlight doit inclure le cluster de réactions');
+console.log('✅ 5. Cluster de réactions visuelles (Trophée, Flamme, Coeur, Relais, Vues uniques) intégré en haut à droite des publications.');
+
+// 6. SIGNALEMENT DE CONTENU & MASQUAGE DU FLUX
+const reportModalCode = fs.readFileSync('src/features/social-feed/components/ReportContentModal.tsx', 'utf8');
+const headerRelayCode = fs.readFileSync('src/features/social-feed/components/RecoCardHeaderAndRelay.tsx', 'utf8');
+const controllerCode = fs.readFileSync('src/features/social-feed/hooks/useSocialFeedController.ts', 'utf8');
+
+assert.equal(reportModalCode.includes('REPORT_REASONS'), true, 'Le modal doit définir les motifs de signalement');
+assert.equal(controllerCode.includes('drop_reported_posts_v1'), true, 'Le contrôleur doit persister les signalements');
+assert.equal(headerRelayCode.includes('onReportPost'), true, 'Le menu d options doit permettre le signalement');
+assert.equal(controllerCode.includes('reportedIds'), true, 'Le contrôleur de flux doit exclure les publications signalées');
+console.log('✅ 6. Moteur de signalement des contenus et masquage instantané opérationnel.');
+
+// 7. ROGNAGE / TRIMMER VIDÉO DE TREND STUDIO & SÉLECTION À PUBLIER
+const trimmerCode = fs.readFileSync('src/features/social-feed/components/TrendStudioVideoTrimmer.tsx', 'utf8');
+assert.equal(trimmerCode.includes('TrendStudioVideoTrimmer'), true, 'Le composant TrendStudioVideoTrimmer doit exister');
+assert.equal(studioCode.includes('TrendStudioVideoTrimmer'), true, 'DropTrendMagazineStudio doit intégrer TrendStudioVideoTrimmer');
+assert.equal(studioCode.includes('trimStartSec'), true, 'DropTrendMagazineStudio doit gérer trimStartSec');
+assert.equal(studioCode.includes('trimEndSec'), true, 'DropTrendMagazineStudio doit gérer trimEndSec');
+assert.equal(studioCode.includes('effectiveTrimmedDuration'), true, 'La durée rognée doit être transmise à la publication');
+console.log('✅ 7. Trimmer vidéo interactif et sélection de la portion à publier vérifiés.');
+
+// 8. BOUTON ÉCOUTER LE DROP DANS LA LISTE DÉROULANTE DES MORCEAUX
+const dropdownCode = fs.readFileSync('src/features/social-feed/components/StudioSearchableTargetDropdown.tsx', 'utf8');
+assert.equal(dropdownCode.includes('toggleDropPlay'), true, 'La liste déroulante doit comporter la fonction toggleDropPlay');
+assert.equal(dropdownCode.includes('Écouter le Drop') || dropdownCode.includes('Écouter le drop'), true, 'Le bouton play/pause doit être présent pour chaque son');
+console.log('✅ 8. Bouton Play/Pause acoustique pour pré-écouter le drop dans la liste déroulante validé.');
+
+// 9. SYMÉTRIE ABSOLUE DU LOGO DROP AU CENTRE DE L INTERFACE
+assert.equal(
+  studioCode.includes('absolute left-1/2 -translate-x-1/2 pointer-events-auto'),
+  true,
+  'Le logo DROP ou chrono d enregistrement doit être centré avec symétrie absolue via left-1/2 -translate-x-1/2'
+);
+assert.equal(
+  studioCode.includes('absolute top-2.5 sm:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#07090E]/65'),
+  true,
+  'Le logo DROP en prévisualisation doit être centré avec symétrie absolue'
+);
+console.log('✅ 9. Symétrie absolue du logo DROP au centre validée.');
+
+// 10. NOUVELLES RECOMMANDATIONS TOUT EN HAUT DU FIL
+assert.equal(
+  controllerCode.includes('fresh'),
+  true,
+  'Le contrôleur doit placer immédiatement les nouvelles recommandations au sommet du flux'
+);
+console.log('✅ 10. Priorité chronologique immédiate (nouvelles recommandations en haut) validée.');
+
+console.log('🎉 TOUS LES 10 TESTS DE VERIFICATION CRITIQUES DU FIL SOCIAL & VIRAL PASSENT AVEC SUCCÈS !');

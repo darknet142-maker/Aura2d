@@ -17,6 +17,7 @@ import { getPersistentAudioBlobUrl } from '../services/musicService';
 import {
   TrendStudioCaptureModeSelector,
   TrendStudioInAppPublishPanel,
+  TrendStudioVideoTrimmer,
   buildDynamicTargetQrUrl,
   startVoiceOpinionMicrophone,
   type SocialTargetSubject,
@@ -356,6 +357,8 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(false);
   const [previewCurrentTime, setPreviewCurrentTime] = useState<number>(0);
   const [previewDuration, setPreviewDuration] = useState<number>(0);
+  const [trimStartSec, setTrimStartSec] = useState<number>(0);
+  const [trimEndSec, setTrimEndSec] = useState<number>(0);
 
   // URL de la vidéo brute (pour l'aperçu avec le filigrane superposé sans double incrustation)
   const [rawPreviewVideoUrl, setRawPreviewVideoUrl] = useState<string | null>(null);
@@ -1128,6 +1131,8 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
         setFinalRecordedDuration(elapsed);
         setPreviewCurrentTime(0);
         setPreviewDuration(elapsed);
+        setTrimStartSec(0);
+        setTrimEndSec(elapsed);
         const wmBlob = new Blob(watermarkedChunksRef.current, {
           type: chosenMime,
         });
@@ -1490,7 +1495,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
               </div>
             )}
 
-            {/* En-tête épuré du châssis vertical 9:16 : bouton Fermer, logo/chrono et badge 1080×1920 */}
+            {/* En-tête épuré du châssis vertical 9:16 : bouton Fermer, logo/chrono centré et badge durée */}
             <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 flex items-center justify-between z-30">
               <button
                 type="button"
@@ -1504,18 +1509,21 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              {isRecording ? (
-                <div className="px-3 py-1 sm:px-3.5 rounded-full bg-[#ff3b30] text-white font-mono text-[11px] sm:text-xs font-bold tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg">
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" />
-                  <span>
-                    00:{Math.floor(recordedSeconds).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center px-3.5 py-1.5 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15">
-                  <DropOfficialLogo className="h-4 sm:h-5 w-auto max-w-[90px]" />
-                </div>
-              )}
+              {/* Symétrie absolue au centre : le logo DROP ou le chrono est verrouillé au milieu parfait */}
+              <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                {isRecording ? (
+                  <div className="px-3 py-1 sm:px-3.5 rounded-full bg-[#ff3b30] text-white font-mono text-[11px] sm:text-xs font-bold tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" />
+                    <span>
+                      00:{Math.floor(recordedSeconds).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center px-3.5 py-1.5 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15">
+                    <DropOfficialLogo className="h-4 sm:h-5 w-auto max-w-[90px]" />
+                  </div>
+                )}
+              </div>
 
               <span className="px-2.5 py-1 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15 text-[10px] font-semibold text-[#F8FAFC]">
                 30s max
@@ -1599,6 +1607,10 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             ? finalRecordedDuration
             : Math.max(1, Math.round(recordedSeconds) || 15);
 
+        const activeTrimEnd = trimEndSec > 0 ? Math.min(effectivePreviewDuration, trimEndSec) : effectivePreviewDuration;
+        const activeTrimStart = Math.max(0, Math.min(trimStartSec, activeTrimEnd - 2));
+        const effectiveTrimmedDuration = Math.max(2, Math.round((activeTrimEnd - activeTrimStart) * 10) / 10);
+
         const activeVideoSrc = rawPreviewVideoUrl || watermarkedVideoUrl || undefined;
 
         return (
@@ -1618,13 +1630,13 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
             {/* ZONE 1 (PRIORITAIRE) : ESPACE DÉDIÉ À LA VIDÉO EN GRAND SANS BORDURE NOIRE */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden z-10">
-              {/* Logo DROP discret en haut à gauche */}
-              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#07090E]/45 backdrop-blur-xl border border-white/20">
+              {/* Logo DROP parfaitement centré au sommet avec symétrie absolue */}
+              <div className="absolute top-2.5 sm:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#07090E]/65 backdrop-blur-xl border border-white/20">
                 <DropOfficialLogo className="h-4 sm:h-[18px] w-auto max-w-[80px]" />
                 <span className="text-[11px] font-mono text-zinc-300 font-semibold tracking-wider">Trend</span>
               </div>
 
-              {/* Bouton Fermer dans le coin supérieur droit (plus compact sur mobile) */}
+              {/* Bouton Fermer dans le coin supérieur droit */}
               <button
                 type="button"
                 onClick={() => {
@@ -1670,10 +1682,18 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                       const d = e.currentTarget.duration;
                       if (Number.isFinite(d) && d > 0) {
                         setPreviewDuration(d);
+                        if (trimEndSec === 0) setTrimEndSec(d);
                       }
                     }}
                     onTimeUpdate={(e) => {
                       const ct = e.currentTarget.currentTime;
+                      const curEnd = trimEndSec > 0 ? trimEndSec : effectivePreviewDuration;
+                      const curStart = trimStartSec;
+                      if (ct < curStart || ct >= curEnd) {
+                        e.currentTarget.currentTime = curStart;
+                        setPreviewCurrentTime(curStart);
+                        return;
+                      }
                       setPreviewCurrentTime(ct);
                       const d = e.currentTarget.duration;
                       if (Number.isFinite(d) && d > 0 && d !== previewDuration) {
@@ -1751,17 +1771,22 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
                   <input
                     type="range"
-                    min={0}
-                    max={effectivePreviewDuration}
+                    min={activeTrimStart}
+                    max={activeTrimEnd}
                     step={0.05}
-                    value={Math.min(previewCurrentTime, effectivePreviewDuration)}
-                    onChange={handleSeekPreviewVideo}
+                    value={Math.min(Math.max(previewCurrentTime, activeTrimStart), activeTrimEnd)}
+                    onChange={(e) => {
+                      const newT = parseFloat(e.target.value);
+                      setPreviewCurrentTime(newT);
+                      if (previewVideoRef.current) previewVideoRef.current.currentTime = newT;
+                      if (blurredPreviewVideoRef.current) blurredPreviewVideoRef.current.currentTime = newT;
+                    }}
                     aria-label="Barre de lecture vidéo"
                     className="min-w-0 w-0 flex-1 h-1 sm:h-1.5 rounded-full accent-[#ff3b30] bg-white/30 cursor-pointer"
                   />
 
                   <span className="text-[9px] sm:text-[11px] font-mono font-semibold text-white drop-shadow shrink-0 whitespace-nowrap tabular-nums leading-none">
-                    {formatPreviewTime(previewCurrentTime)}/{formatPreviewTime(effectivePreviewDuration)}
+                    {formatPreviewTime(previewCurrentTime)}/{formatPreviewTime(activeTrimEnd)}
                   </span>
                 </div>
               </div>
@@ -1770,15 +1795,31 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             {/* ZONE 2 (SÉPARÉE) : PUBLICATION SUR DROP (STATUT 24H / FIL RECOS) & EXPORT HORS-PLATEFORME */}
             <div className="relative shrink-0 w-full bg-[#0D1017]/95 backdrop-blur-2xl border-t border-white/20 px-4 py-2.5 z-20">
               <div className="max-w-md mx-auto space-y-2">
+                {/* Trimmer / Réduction interactive de la portion vidéo à publier */}
+                <TrendStudioVideoTrimmer
+                  totalDuration={effectivePreviewDuration}
+                  trimStartSec={activeTrimStart}
+                  trimEndSec={activeTrimEnd}
+                  onChangeTrim={(start, end) => {
+                    setTrimStartSec(start);
+                    setTrimEndSec(end);
+                  }}
+                  onPreviewSeek={(time) => {
+                    setPreviewCurrentTime(time);
+                    if (previewVideoRef.current) previewVideoRef.current.currentTime = time;
+                    if (blurredPreviewVideoRef.current) blurredPreviewVideoRef.current.currentTime = time;
+                  }}
+                />
+
                 {onPublishVideoToDrop && watermarkedVideoBlob && (
                   <TrendStudioInAppPublishPanel
                     activeTarget={activeTarget}
                     captureMode={captureMode}
-                    durationSec={effectivePreviewDuration}
+                    durationSec={effectiveTrimmedDuration}
                     onPublishToDrop={async ({ caption, publishToStatus, publishToFeed }) => {
                       const ok = await onPublishVideoToDrop({
                         blob: watermarkedVideoBlob,
-                        durationSec: effectivePreviewDuration,
+                        durationSec: effectiveTrimmedDuration,
                         captureMode,
                         target: activeTarget,
                         caption,
@@ -1889,7 +1930,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                         if (!onPublishVideoToDrop || !watermarkedVideoBlob || statusQuickPublished) return;
                         const ok = await onPublishVideoToDrop({
                           blob: watermarkedVideoBlob,
-                          durationSec: effectivePreviewDuration,
+                          durationSec: effectiveTrimmedDuration,
                           captureMode,
                           target: activeTarget,
                           caption: '',

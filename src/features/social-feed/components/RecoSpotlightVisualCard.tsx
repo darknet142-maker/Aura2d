@@ -8,6 +8,7 @@ import type { SocialFeedPost, StudioAudioCaptureMode } from '../types/social-fee
 import { loadSocialVideoBlob } from '../services/status-video-storage.service';
 import { RecoCardHeaderAndRelay } from './RecoCardHeaderAndRelay';
 import { RecoCardActionBar } from './RecoCardActionBar';
+import { RecoCardReactionsCluster } from './RecoCardReactionsCluster';
 
 export interface RecoSpotlightVisualCardProps {
   post: SocialFeedPost;
@@ -23,12 +24,13 @@ export interface RecoSpotlightVisualCardProps {
   onToggleReDrop: (quote?: string) => void;
   onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
   onDeletePost?: () => void;
+  onReportPost?: (postId: string) => void;
 }
 
 export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = ({
   post, currentUserId, trackPlays = 104_500, onPlayTarget, onPauseMainPlayer,
   onOpenAuthorProfile, onOpenTargetSheet, onOpenArtistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost,
+  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost, onReportPost,
 }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -65,6 +67,7 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
         post={post} isOwnPost={post.authorId === currentUserId}
         onOpenAuthorProfile={onOpenAuthorProfile} onOpenTargetSheet={onOpenTargetSheet}
         onOpenArtistProfile={onOpenArtistProfile} onDeletePost={onDeletePost}
+        onReportPost={onReportPost}
       />
 
       <div className="relative w-full aspect-[4/4.3] max-h-[380px] rounded-2xl overflow-hidden bg-[#131722] border border-white/10">
@@ -94,9 +97,14 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
                 {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
               </button>
             )}
-            <span className="px-2.5 py-1 rounded-full bg-[#07090E]/80 backdrop-blur-md border border-emerald-500/30 font-mono text-[11px] font-bold text-emerald-300 tabular-nums">
-              {formatCompactPlays(trackPlays)} écoutes
-            </span>
+            <RecoCardReactionsCluster
+              post={post}
+              trackPlays={trackPlays}
+              onReact={(type) => {
+                if (type === 'HEART') onToggleLike();
+                else if (type === 'REDROP') onToggleReDrop();
+              }}
+            />
           </div>
         </div>
 

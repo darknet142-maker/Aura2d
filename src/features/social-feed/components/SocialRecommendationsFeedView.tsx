@@ -11,6 +11,7 @@ import { RecoSpotlightVisualCard } from './RecoSpotlightVisualCard';
 import { RecoCommentsDrawer } from './RecoCommentsDrawer';
 import { StatusFullscreenViewerModal } from './StatusFullscreenViewerModal';
 import { PublishRecoAndStatusModal } from './PublishRecoAndStatusModal';
+import { ReportContentModal } from './ReportContentModal';
 
 export interface SocialRecommendationsFeedViewProps {
   feedCtrl: ReturnType<typeof useSocialFeedController>;
@@ -119,6 +120,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
               onToggleReDrop: (q?: string) => feedCtrl.handleTogglePostReDrop(post.id, q),
               onOpenStudioReaction: (mode: StudioAudioCaptureMode) => { inlineAudio.stopInlinePreview(); onOpenCameraStudio(mode, post.target); },
               onDeletePost: post.authorId === currentUser.id ? () => feedCtrl.handleDeletePost(post.id) : undefined,
+              onReportPost: (pId: string) => feedCtrl.setReportingPost(feedCtrl.posts.find((p) => p.id === pId) || null),
             };
             return post.archetype === 'SPOTLIGHT_VISUAL' || post.archetype === 'VIDEO_OPINION' ? (
               <RecoSpotlightVisualCard key={post.id} {...common} onPlayTarget={() => playPostTarget(post)} onPauseMainPlayer={() => { inlineAudio.stopInlinePreview(); onPauseMainPlayer(); }} onOpenTargetSheet={() => navigateToTarget(post.target)} />
@@ -141,6 +143,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
       <RecoCommentsDrawer post={activeCommentsPost} onClose={() => feedCtrl.setActiveCommentsPostId(null)} onSubmitComment={feedCtrl.handleAddComment} onOpenUserProfile={onOpenUserProfile} />
       <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onDeleteStatus={feedCtrl.handleDeleteStatus} onOpenUserProfile={onOpenUserProfile} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
       <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />
+      <ReportContentModal isOpen={Boolean(feedCtrl.reportingPost)} postId={feedCtrl.reportingPost?.id || ''} authorName={feedCtrl.reportingPost?.authorName || ''} onConfirmReport={feedCtrl.handleConfirmReport} onClose={() => feedCtrl.setReportingPost(null)} />
     </div>
   );
 };

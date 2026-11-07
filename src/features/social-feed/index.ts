@@ -23,4 +23,7 @@ export * from './components/StudioSearchableTargetDropdown';
 export * from './components/ProfileQuotaCleanupModal';
 export * from './components/ScoutsLeaderboardPanel';
 export * from './components/UserProfileSocialAndRanksCard';
+export * from './components/RecoCardReactionsCluster';
+export * from './components/ReportContentModal';
+export * from './components/TrendStudioVideoTrimmer';
 export * from './components/SocialRecommendationsFeedView';

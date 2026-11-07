@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Repeat2, Compass, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Repeat2, Compass, MoreHorizontal, Trash2, Flag } from 'lucide-react';
 import type { SocialFeedPost } from '../types/social-feed.types';
 
 export interface RecoCardHeaderAndRelayProps {
@@ -9,10 +9,11 @@ export interface RecoCardHeaderAndRelayProps {
   onOpenTargetSheet: () => void;
   onOpenArtistProfile: () => void;
   onDeletePost?: () => void;
+  onReportPost?: (postId: string) => void;
 }
 
 export const RecoCardHeaderAndRelay: React.FC<RecoCardHeaderAndRelayProps> = ({
-  post, isOwnPost = false, onOpenAuthorProfile, onOpenTargetSheet, onOpenArtistProfile, onDeletePost,
+  post, isOwnPost = false, onOpenAuthorProfile, onOpenTargetSheet, onOpenArtistProfile, onDeletePost, onReportPost,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -76,6 +77,11 @@ export const RecoCardHeaderAndRelay: React.FC<RecoCardHeaderAndRelayProps> = ({
               <button type="button" onClick={() => { setMenuOpen(false); onOpenArtistProfile(); }} className="w-full px-3 py-2 text-left text-[#F8FAFC] hover:bg-white/10 cursor-pointer">
                 Profil de {post.target.entityName}
               </button>
+              {onReportPost && (
+                <button type="button" onClick={() => { setMenuOpen(false); onReportPost(post.id); }} className="w-full px-3 py-2 text-left text-amber-300 hover:bg-white/10 flex items-center gap-1.5 cursor-pointer">
+                  <Flag className="w-3.5 h-3.5 shrink-0" /><span>Signaler</span>
+                </button>
+              )}
               {isOwnPost && onDeletePost && (
                 <button type="button" onClick={() => { setMenuOpen(false); onDeletePost(); }} className="w-full px-3 py-2 text-left text-[#DE1B34] font-bold hover:bg-white/10 flex items-center gap-1.5 cursor-pointer">
                   <Trash2 className="w-3.5 h-3.5 shrink-0" /><span>Supprimer</span>

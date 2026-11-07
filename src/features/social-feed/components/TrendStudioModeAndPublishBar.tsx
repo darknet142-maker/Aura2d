@@ -9,12 +9,15 @@ export interface TrendStudioCaptureModeSelectorProps {
   activeTarget: SocialTargetSubject;
   availableTargets?: SocialTargetSubject[];
   onChangeTarget?: (target: SocialTargetSubject) => void;
+  onPreviewTargetDrop?: (target: SocialTargetSubject) => void;
+  previewingKey?: string | null;
   isRecording: boolean;
   micLevel01: number;
 }
 
 export const TrendStudioCaptureModeSelector: React.FC<TrendStudioCaptureModeSelectorProps> = ({
-  captureMode, onChangeCaptureMode, activeTarget, availableTargets = [], onChangeTarget, isRecording, micLevel01,
+  captureMode, onChangeCaptureMode, activeTarget, availableTargets = [], onChangeTarget,
+  onPreviewTargetDrop, previewingKey, isRecording, micLevel01,
 }) => {
   return (
     <div className="absolute top-14 inset-x-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
@@ -48,6 +51,8 @@ export const TrendStudioCaptureModeSelector: React.FC<TrendStudioCaptureModeSele
               selectedTarget={activeTarget}
               options={availableTargets}
               onSelectTarget={onChangeTarget}
+              onPreviewTargetDrop={onPreviewTargetDrop}
+              previewingKey={previewingKey}
               variant="studio-glass"
               ariaLabel="Choisir la chanson ou le projet pour la vidéo"
             />
