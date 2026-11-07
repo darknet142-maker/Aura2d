@@ -11,6 +11,7 @@ import { triggerBeatAudioDownload } from '../../../services/musicService';
 import type { AlbumNode } from '../../../shared/types/domain.types';
 import { RankBadge } from '../../../shared/ui/RankBadge';
 import { SPRING_SNAPPY, SUBTLE_ENTRANCE_VARIANTS } from '../../../shared/ui/springMotion';
+import { ensureTrackSurgicalAnalysis } from '../../music-intelligence';
 
 export interface AdminCatalogueRepertoireProps {
   catalogue: AlbumNode[];
@@ -208,12 +209,18 @@ export const AdminCatalogueRepertoire: React.FC<
                             )}
                           </div>
                         </div>
-                        <div className="text-[11px] text-[#A3A9BA] truncate mt-0.5">
-                          {t.artist}
-                          {t.featuringArtists && t.featuringArtists.length > 0
-                            ? ` feat. ${t.featuringArtists.join(', ')}`
-                            : ''}{' '}
-                          • {t.category}
+                        <div className="text-[11px] text-[#A3A9BA] truncate mt-0.5 flex items-center gap-1.5">
+                          <span className="truncate">
+                            {t.artist}
+                            {t.featuringArtists && t.featuringArtists.length > 0
+                              ? ` feat. ${t.featuringArtists.join(', ')}`
+                              : ''}{' '}
+                            • {t.category}
+                          </span>
+                          <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded bg-white/[0.04] border border-white/[0.08] font-mono text-[9.5px] text-amber-300 shrink-0">
+                            {t.bpm} BPM • {(t.trackAnalysis || ensureTrackSurgicalAnalysis(t)).confirmedKey || t.musicalKey || '8A'} • Énergie{' '}
+                            {Math.round(((t.trackAnalysis || ensureTrackSurgicalAnalysis(t)).energy ?? 0.78) * 100)}%
+                          </span>
                         </div>
                       </div>
                     </div>

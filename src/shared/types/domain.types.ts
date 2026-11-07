@@ -1,12 +1,14 @@
 import type { ArtworkType } from '../../components/CoverArtwork';
 import type { LyricLine } from '../../components/Immersive3DPlayer';
 import type { FeaturingSplitMode, CreditHandshakeRecord } from '../../utils/rankingEngine';
+import type { TrackAnalysis } from '../../features/music-intelligence/types/music-analysis.types';
 
 export interface AppNotification {
   id: string;
   title: string;
   message: string;
   type: 'PUBLISH' | 'DATABASE' | 'CERTIFICATION' | 'COMMUNITY';
+  audience?: 'ADMIN' | 'USER' | 'ALL';
   createdAt: string;
   read: boolean;
   trackId?: string;
@@ -85,6 +87,7 @@ export interface Track {
   waveformPeaks?: number[];
   isBeatDownloadable?: boolean;
   musicalKey?: string;
+  trackAnalysis?: TrackAnalysis;
 }
 
 export interface AlbumNode {

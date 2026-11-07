@@ -67,6 +67,10 @@ import {
   highlightMatchedText,
   PlaylistVectorIcon,
 } from '../../../components/player/playerEngineHelpers';
+import {
+  MusicIntelligenceSearchBanner,
+  SmartPlaylistExplorerBar,
+} from '../../music-intelligence';
 import type { ReturnTypeUseImmersivePlayerState } from '../hooks/useImmersivePlayerState';
 
 export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerState }> = ({ state }) => {
@@ -530,6 +534,21 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                             }}
                           />
 
+                          {/* RECHERCHE LANGAGE NATUREL MUSIC INTELLIGENCE (Section 6.C) */}
+                          <MusicIntelligenceSearchBanner
+                            query={hubSearchQuery}
+                            onChangeQuery={setHubSearchQuery}
+                          />
+
+                          {/* BARRE D'INTELLIGENCE MUSICALE : SMART PLAYLISTS & DJ MODE (+241) */}
+                          <SmartPlaylistExplorerBar
+                            entries={allTracksFlat}
+                            currentTrack={currentTrack}
+                            isPlaying={isPlaying}
+                            onPlayTrack={handlePlayOrToggleSpecificTrack}
+                            onOpenTrackDetail={openUserTrackSheet}
+                          />
+
                           {/* 1. RANGÉE CARRÉE DÉFILANTE : CATÉGORIES MÉTIERS & GENRES */}
                           <section className="space-y-2.5">
                             <div className="flex items-center justify-between px-0.5">
@@ -579,7 +598,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                   {
                                     id: 'LYRICIST' as StudioEntityRole,
                                     title: 'Paroliers',
-                                    color: '#8b5cf6',
+                                    color: '#0ea5e9',
                                     cover:
                                       allTracksFlat[2]?.track.cover ||
                                       allTracksFlat[0]?.track.cover ||
@@ -662,7 +681,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                   '#e11d38',
                                   '#f59e0b',
                                   '#10b981',
-                                  '#8b5cf6',
+                                  '#0ea5e9',
                                   '#06b6d4',
                                 ];
                                 const gColor = palette[gIdx % palette.length];

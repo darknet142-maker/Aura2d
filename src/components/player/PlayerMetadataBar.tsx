@@ -18,6 +18,7 @@ import { RankMedalSvg } from '../CoverArtwork';
 import { CertificationInfo } from '../../utils/rankingEngine';
 import { triggerBeatAudioDownload } from '../../services/musicService';
 import { SPRING_SNAPPY } from '../../shared/ui/springMotion';
+import { ensureTrackSurgicalAnalysis } from '../../features/music-intelligence';
 import { PlayerTrackItem } from './types';
 
 export interface PlayerMetadataBarProps {
@@ -240,6 +241,18 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
                 {currentTrack.labelName}
               </button>
             )}
+            <button
+              type="button"
+              onClick={onOpenTrackSheet}
+              title="Inspecter la fiche BPM chirurgicale, la tonalité Camelot et la grille de battements"
+              className="px-2 py-0.5 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 text-[10px] font-mono font-bold text-cyan-300 shrink-0 transition cursor-pointer"
+            >
+              {(() => {
+                const ta = ensureTrackSurgicalAnalysis(currentTrack);
+                const effBpm = ta.confirmedBpm ?? ta.detectedBpm ?? currentTrack.bpm;
+                return `${effBpm ? `${effBpm} BPM` : 'BPM —'} • ${ta.camelotKey || '8A'}`;
+              })()}
+            </button>
             <button
               type="button"
               onClick={onOpenTrackSheet}

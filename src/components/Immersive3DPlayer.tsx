@@ -365,18 +365,31 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             isOpen={activeModal === 'EQ'}
             isPro={isPro}
             isPlaying={isPlaying}
+            isDropMode={isDropMode}
             eqGains={eqGains}
+            eqQFactors={props.eqQFactors}
             eqBypassed={eqBypassed}
             preampDb={preampDb}
+            effectivePreampDb={props.effectivePreampDb}
             eqQFactor={eqQFactor}
+            autoHeadroom={props.autoHeadroom}
+            phaseInvert={props.phaseInvert}
+            spatialConfig={props.spatialConfig}
+            playbackPrefs={props.playbackPrefs}
             masterVolume={masterVolume}
             onClose={() => setActiveModal('NONE')}
             onResetEq={onResetEq}
             onApplyEqPreset={onApplyEqPreset}
+            onApplyPrecisionPreset={props.onApplyPrecisionPreset}
             onChangeEqBand={onChangeEqBand}
+            onChangeBandQ={props.onChangeBandQ}
             onToggleEqBypass={onToggleEqBypass}
             onChangePreampDb={onChangePreampDb}
             onChangeEqQFactor={onChangeEqQFactor}
+            onToggleAutoHeadroom={props.onToggleAutoHeadroom}
+            onTogglePhaseInvert={props.onTogglePhaseInvert}
+            onChangeSpatialConfig={props.onChangeSpatialConfig}
+            onChangePlaybackPrefs={props.onChangePlaybackPrefs}
             onChangeMasterVolume={onChangeMasterVolume}
             getAudioSpectrumData={getAudioSpectrumData}
             onToast={showToast}

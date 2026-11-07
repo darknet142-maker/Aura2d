@@ -105,6 +105,20 @@ import {
 import { useAdminDrmSandbox } from '../../backoffice/hooks/useAdminDrmSandbox';
 import { useAdminAnalytics } from '../../backoffice/hooks/useAdminAnalytics';
 import { useAdminUploadController } from '../../backoffice/hooks/useAdminUploadController';
+import {
+  DSP_BANDS_SPEC,
+  createSpatialDspGraph,
+  loadSavedPlaybackPrefs,
+  useStudioAudioDspEngine,
+} from '../../audio-dsp';
+import {
+  classifyNotificationAudience,
+  filterNotificationsForViewer,
+  loadNotificationPrefs,
+  saveNotificationPrefs,
+  shouldDisplayNotificationToast,
+  type NotificationPrefs,
+} from '../../notifications/notificationGovernance';
 
 export function useDropPlatformController() {
   // --- Navigation & Auth State ---
@@ -210,8 +224,12 @@ export function useDropPlatformController() {
 
   // --- Playback & 5-Band Web Audio Equalizer State ---
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isDropMode, setIsDropMode] = useState<boolean>(true);
-  const [currentTime, setCurrentTime] = useState<number>(116); // 1:56 par défaut
+  const [isDropMode, setIsDropMode] = useState<boolean>(
+    () => loadSavedPlaybackPrefs().defaultStartMode !== 'FULL_NONSTOP'
+  );
+  const [currentTime, setCurrentTime] = useState<number>(() =>
+    loadSavedPlaybackPrefs().defaultStartMode === 'FULL_NONSTOP' ? 0 : 116
+  );
 
   // Redirection directe vers une chanson via le QR Code du filigrane Trend (?track=<id>)
   useEffect(() => {
@@ -275,10 +293,6 @@ export function useDropPlatformController() {
   const [repeatMode, setRepeatMode] = useState<number>(0); // 0: Off, 1: All, 2: One
   const isRepeat = repeatMode > 0;
   const [masterVolume, setMasterVolume] = useState<number>(85);
-  const [eqGains, setEqGains] = useState<number[]>([6, 3, -1, 2.5, 4.5]);
-  const [eqBypassed, setEqBypassed] = useState<boolean>(false);
-  const [preampDb, setPreampDb] = useState<number>(0);
-  const [eqQFactor, setEqQFactor] = useState<number>(1.1);
   const [userPlan, setUserPlan] = useState<'BASIC' | 'PRO'>('PRO');
 
   // --- Silent Real Play & Retention Session Tracking ---
@@ -307,9 +321,9 @@ export function useDropPlatformController() {
   const [adminMainTab, setAdminMainTab] = useState<
     'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS' | 'ROYALTIES_BUGADA'
   >('CATALOGUE');
-  const [catalogueSubTab, setCatalogueSubTab] = useState<'REPERTOIRE' | 'ALGO' | 'RULES'>(
-    'REPERTOIRE'
-  );
+  const [catalogueSubTab, setCatalogueSubTab] = useState<
+    'REPERTOIRE' | 'ALGO' | 'MUSIC_INTEL' | 'RULES'
+  >('REPERTOIRE');
   const {
     state: royaltyLedgerState,
     updateSettings: updateRoyaltySettings,
@@ -426,6 +440,22 @@ export function useDropPlatformController() {
   });
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(() =>
+    loadNotificationPrefs()
+  );
+  const appViewRef = useRef(appView);
+  appViewRef.current = appView;
+  const notificationPrefsRef = useRef(notificationPrefs);
+  notificationPrefsRef.current = notificationPrefs;
+  const lastToastAtMsRef = useRef<number>(0);
+  const recentNotifSigRef = useRef<Map<string, number>>(new Map());
+  const isAdminViewer = appView === 'ADMIN';
+
+  const handleChangeNotificationPrefs = useCallback((next: NotificationPrefs) => {
+    setNotificationPrefs(next);
+    saveNotificationPrefs(next);
+    if (next.dndMutePopups) setActiveToast(null);
+  }, []);
 
   useEffect(() => {
     try {
@@ -440,13 +470,22 @@ export function useDropPlatformController() {
       title: string,
       message: string,
       type: AppNotification['type'] = 'PUBLISH',
-      trackId?: string
+      trackId?: string,
+      explicitAudience?: AppNotification['audience']
     ) => {
+      const now = Date.now();
+      const sig = `${type}|${title.trim()}|${message.trim()}`;
+      const prevTs = recentNotifSigRef.current.get(sig) || 0;
+      if (now - prevTs < 25000) return;
+      recentNotifSigRef.current.set(sig, now);
+
+      const audience = classifyNotificationAudience(title, message, type, explicitAudience);
       const newNotif: AppNotification = {
-        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: `notif-${now}-${Math.random().toString(36).slice(2, 6)}`,
         title,
         message,
         type,
+        audience,
         createdAt: new Date().toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
@@ -455,20 +494,36 @@ export function useDropPlatformController() {
         trackId,
       };
       setNotifications((prev) => [newNotif, ...prev.slice(0, 39)]);
-      setActiveToast(newNotif);
+
+      if (
+        shouldDisplayNotificationToast({
+          notif: newNotif,
+          isAdminViewer: appViewRef.current === 'ADMIN',
+          prefs: notificationPrefsRef.current,
+          lastToastAtMs: lastToastAtMsRef.current,
+        })
+      ) {
+        lastToastAtMsRef.current = now;
+        setActiveToast(newNotif);
+      }
     },
     []
   );
 
   useEffect(() => {
     if (!activeToast) return;
-    const t = window.setTimeout(() => setActiveToast(null), 4200);
+    const t = window.setTimeout(() => setActiveToast(null), 3800);
     return () => window.clearTimeout(t);
   }, [activeToast]);
 
+  const visibleNotifications = useMemo(
+    () => filterNotificationsForViewer(notifications, isAdminViewer, notificationPrefs),
+    [notifications, isAdminViewer, notificationPrefs]
+  );
+
   const unreadNotificationsCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications]
+    () => visibleNotifications.filter((n) => !n.read).length,
+    [visibleNotifications]
   );
 
   const markAllNotificationsRead = useCallback(() => {
@@ -526,8 +581,9 @@ export function useDropPlatformController() {
     deleteStudioEntityFromCloud(role, nameToRemove).catch(() => {});
   }, []);
 
-  // Synchronisation automatique du Répertoire des Métiers avec Supabase + Cache Local
+  // Synchronisation automatique du Répertoire des Métiers avec Supabase + Cache Local (sans boucle infinie)
   useEffect(() => {
+    if (isRemoteSyncInProgressRef.current) return;
     syncStudioEntities(entityDb).catch(() => {});
   }, [entityDb]);
 
@@ -546,6 +602,7 @@ export function useDropPlatformController() {
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const previewMediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const fftBinsRef = useRef<Uint8Array | null>(null);
+  const floatFreqBinsRef = useRef<Float32Array | null>(null);
   const timeDomainBinsRef = useRef<Uint8Array | null>(null);
   const isPlayingRef = useRef<boolean>(false);
   const stepCounterRef = useRef<number>(0);
@@ -638,7 +695,8 @@ export function useDropPlatformController() {
                   duration: Number(matchedRow.duration || t.duration),
                   dropStart: Number(matchedRow.drop_start ?? t.dropStart),
                   dropDuration: Number(matchedRow.drop_duration ?? t.dropDuration),
-                  bpm: Number(matchedRow.bpm || t.bpm),
+                  bpm: matchedRow.bpm != null ? Number(matchedRow.bpm) : t.bpm,
+                  trackAnalysis: matchedRow.track_analysis ?? t.trackAnalysis,
                   lyrics:
                     matchedRow.lyrics && matchedRow.lyrics.length > 0
                       ? matchedRow.lyrics
@@ -706,7 +764,11 @@ export function useDropPlatformController() {
               dropStart: Number(row.drop_start || 30),
               dropDuration: Number(row.drop_duration || 22),
               baseFreq: 120,
-              bpm: Number(row.bpm || 120),
+              bpm:
+                row.bpm != null
+                  ? Number(row.bpm)
+                  : row.track_analysis?.confirmedBpm ?? row.track_analysis?.detectedBpm ?? 0,
+              trackAnalysis: row.track_analysis ?? undefined,
               audioUrl:
                 row.source_type === 'file' ? row.stream_url : undefined,
               externalStreamId:
@@ -989,42 +1051,32 @@ export function useDropPlatformController() {
           setAdBanners(payload.banners);
           setTimeout(() => {
             isRemoteSyncInProgressRef.current = false;
-          }, 150);
+          }, 180);
         }
         if (payload.settings && payload.settings.slideIntervalSec) {
           isRemoteSyncInProgressRef.current = true;
           setAdBannerSettings(payload.settings);
           setTimeout(() => {
             isRemoteSyncInProgressRef.current = false;
-          }, 150);
+          }, 180);
         }
-        pushNotification(
-          'Bannières en direct',
-          payload.message ||
-            'Le diaporama publicitaire a été mis à jour par l’administrateur.',
-          'DATABASE'
-        );
       },
-      onEntitiesUpdated: async (payload) => {
-        const freshEntities = await getStudioEntitiesFromCloud(entityDb);
-        setEntityDb(freshEntities);
-        pushNotification(
-          'Talents & Studio',
-          payload.message ||
-            'Mise à jour des crédits et profils du studio en direct.',
-          'DATABASE'
-        );
+      onEntitiesUpdated: async () => {
+        isRemoteSyncInProgressRef.current = true;
+        try {
+          const freshEntities = await getStudioEntitiesFromCloud(entityDb);
+          setEntityDb(freshEntities);
+        } finally {
+          setTimeout(() => {
+            isRemoteSyncInProgressRef.current = false;
+          }, 220);
+        }
       },
       onAdminAnnouncement: (payload) => {
-        pushNotification(payload.title, payload.message, 'DATABASE');
+        pushNotification(payload.title, payload.message, 'DATABASE', undefined, 'ADMIN');
       },
       onAdminSettingsUpdated: (payload) => {
         applyRemoteAdminConfig(payload);
-        pushNotification(
-          'Paramètres Admin synchronisés',
-          payload.message || 'Configuration globale mise à jour en direct.',
-          'DATABASE'
-        );
       },
       onConnectionChange: (status) => {
         if (mounted) {
@@ -1338,19 +1390,70 @@ export function useDropPlatformController() {
     return Math.pow(10, deltaDb / 20);
   }, []);
 
+  const ensureAudioGraphRef = useRef<() => void>(() => {});
+  const dsp = useStudioAudioDspEngine({
+    audioCtxRef,
+    preampGainRef,
+    eqFiltersRef,
+    onEnsureAudioContext: () => ensureAudioGraphRef.current(),
+    onUnlockFullNonStop: () => {
+      setIsDropMode((wasDrop) => {
+        if (wasDrop) {
+          manualSessionRef.current = {
+            trackId: currentTrack.id,
+            active: true,
+            listenedSeconds: 0,
+            playCountedAtOneSec: false,
+            ecgValidatedAt30Sec: false,
+            sessionPointsEarned: 0,
+          };
+        }
+        return false;
+      });
+    },
+  });
+  const {
+    spatialNodesRef,
+    eqGains,
+    eqQFactors,
+    eqQFactor,
+    eqBypassed,
+    preampDb,
+    effectivePreampDb,
+    autoHeadroom,
+    phaseInvert,
+    spatialConfig,
+    playbackPrefs,
+    handleChangeEqBand,
+    handleChangeBandQ,
+    handleChangeEqQFactor,
+    handleApplyEqPreset,
+    handleApplyPrecisionPreset,
+    handleResetEq,
+    handleToggleEqBypass,
+    handleChangePreampDb,
+    handleToggleAutoHeadroom,
+    handleTogglePhaseInvert,
+    handleChangeSpatialConfig,
+    handleChangePlaybackPrefs,
+  } = dsp;
+
   const initAudioContext = useCallback(() => {
     if (!audioCtxRef.current) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx: AudioContext = new AudioCtx();
       audioCtxRef.current = ctx;
 
-      // 0. Analyseur Spectral Temps Réel (FFT 256 bins, 60 FPS) en sortie Master
+      // 0. Analyseur Spectral Mastering Haute Résolution (FFT 4096 -> 2048 bins dBFS dès 20 Hz)
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
+      analyser.fftSize = 4096;
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -6;
       analyser.smoothingTimeConstant = 0.78;
       analyser.connect(ctx.destination);
       analyserNodeRef.current = analyser;
       fftBinsRef.current = new Uint8Array(analyser.frequencyBinCount);
+      floatFreqBinsRef.current = new Float32Array(analyser.frequencyBinCount);
       timeDomainBinsRef.current = new Uint8Array(analyser.fftSize);
 
       // 1. Nœud Master Volume contrôlé par l'utilisateur (0% à 100%)
@@ -1360,7 +1463,6 @@ export function useDropPlatformController() {
       masterGainRef.current = master;
 
       // 2. Compresseur / Limiteur Broadcast (-14.0 LUFS Constant Leveler)
-      // Garantit que toutes les chansons (fichiers audio ou synthé) sortent au même volume perçu sans écrêtage
       const compressor = ctx.createDynamicsCompressor();
       compressor.threshold.value = -16;
       compressor.knee.value = 10;
@@ -1376,13 +1478,17 @@ export function useDropPlatformController() {
       loudnessNorm.connect(compressor);
       loudnessNormGainRef.current = loudnessNorm;
 
-      // 4. Égaliseur Paramétrique Studio 5 bandes (60Hz, 250Hz, 1kHz, 4kHz, 12kHz)
-      const freqs = [60, 250, 1000, 4000, 12000];
-      const filters = freqs.map((f, i) => {
+      // 4. Étage de Spatialisation Stéréo Mid/Side + Haas + Salle Studio
+      const spatialGraph = createSpatialDspGraph(ctx, spatialConfig);
+      spatialGraph.output.connect(loudnessNorm);
+      spatialNodesRef.current = spatialGraph;
+
+      // 5. Égaliseur Paramétrique Studio 5 bandes (60Hz, 250Hz, 1kHz, 4kHz, 12kHz) avec Q indépendant
+      const filters = DSP_BANDS_SPEC.map((spec, i) => {
         const filter = ctx.createBiquadFilter();
-        filter.type = i === 0 ? 'lowshelf' : i === freqs.length - 1 ? 'highshelf' : 'peaking';
-        filter.frequency.value = f;
-        filter.Q.value = eqQFactor;
+        filter.type = spec.filterType;
+        filter.frequency.value = spec.freqHz;
+        filter.Q.value = eqQFactors[i] ?? spec.defaultQ;
         filter.gain.value = eqBypassed ? 0 : (eqGains[i] ?? 0);
         return filter;
       });
@@ -1390,17 +1496,18 @@ export function useDropPlatformController() {
       for (let i = 0; i < filters.length - 1; i++) {
         filters[i].connect(filters[i + 1]);
       }
-      filters[filters.length - 1].connect(loudnessNorm);
+      filters[filters.length - 1].connect(spatialGraph.input);
       eqFiltersRef.current = filters;
 
-      // 5. Pré-amplificateur d'entrée (Preamp -12 dB à +12 dB avec compensation anti-clipping)
+      // 6. Pré-amplificateur Mastering (0.1 dB + Auto-Headroom + Polarité Ø 180°)
       const preamp = ctx.createGain();
-      preamp.gain.value = Math.pow(10, preampDb / 20);
+      preamp.gain.value =
+        (phaseInvert ? -1 : 1) * Math.pow(10, (eqBypassed ? 0 : effectivePreampDb) / 20);
       preamp.connect(filters[0]);
       preampGainRef.current = preamp;
     }
 
-    // 6. Routage universel des lecteurs HTML5 <audio> à travers la chaîne DSP 5 bandes
+    // 7. Routage universel des lecteurs HTML5 <audio> à travers la chaîne DSP
     const ctx = audioCtxRef.current;
     const entryNode =
       preampGainRef.current ||
@@ -1436,12 +1543,16 @@ export function useDropPlatformController() {
   }, [
     masterVolume,
     eqGains,
+    eqQFactors,
     eqBypassed,
-    preampDb,
-    eqQFactor,
+    effectivePreampDb,
+    phaseInvert,
+    spatialConfig,
+    spatialNodesRef,
     computeTrackLoudnessGain,
     currentTrack.lufsMasterLevel,
   ]);
+  ensureAudioGraphRef.current = initAudioContext;
 
   // --- Ajustement automatique du gain de normalisation (-14.0 LUFS) à chaque changement de chanson ---
   useEffect(() => {
@@ -1498,125 +1609,16 @@ export function useDropPlatformController() {
     [computeTrackLoudnessGain, currentTrack.lufsMasterLevel]
   );
 
-  const handleChangeEqBand = useCallback(
-    (bandIdx: number, dbVal: number) => {
-      initAudioContext();
-      const clampedDb = Math.max(-12, Math.min(12, Math.round(dbVal * 2) / 2));
-      setEqGains((prev) => {
-        const next = [...prev];
-        next[bandIdx] = clampedDb;
-        return next;
-      });
-      const filter = eqFiltersRef.current[bandIdx];
-      if (filter && audioCtxRef.current) {
-        const now = audioCtxRef.current.currentTime;
-        filter.gain.cancelScheduledValues(now);
-        filter.gain.setTargetAtTime(eqBypassed ? 0 : clampedDb, now, 0.015);
-      }
-    },
-    [eqBypassed, initAudioContext]
-  );
-
-  const handleApplyEqPreset = useCallback(
-    (gains: number[]) => {
-      initAudioContext();
-      const cleanGains = gains.map((g) => Math.max(-12, Math.min(12, Math.round(g * 2) / 2)));
-      setEqGains(cleanGains);
-      setEqBypassed(false);
-      cleanGains.forEach((val, idx) => {
-        const filter = eqFiltersRef.current[idx];
-        if (filter && audioCtxRef.current) {
-          const now = audioCtxRef.current.currentTime;
-          filter.gain.cancelScheduledValues(now);
-          filter.gain.setTargetAtTime(val, now, 0.02);
-        }
-      });
-    },
-    [initAudioContext]
-  );
-
-  const handleResetEq = useCallback(() => {
-    initAudioContext();
-    const flat = [0, 0, 0, 0, 0];
-    setEqGains(flat);
-    setPreampDb(0);
-    setEqQFactor(1.1);
-    setEqBypassed(false);
-    flat.forEach((val, idx) => {
-      const filter = eqFiltersRef.current[idx];
-      if (filter && audioCtxRef.current) {
-        const now = audioCtxRef.current.currentTime;
-        filter.gain.cancelScheduledValues(now);
-        filter.gain.setTargetAtTime(val, now, 0.02);
-        filter.Q.setTargetAtTime(1.1, now, 0.02);
-      }
-    });
-    if (preampGainRef.current && audioCtxRef.current) {
-      const now = audioCtxRef.current.currentTime;
-      preampGainRef.current.gain.cancelScheduledValues(now);
-      preampGainRef.current.gain.setTargetAtTime(1.0, now, 0.02);
-    }
-  }, [initAudioContext]);
-
-  const handleToggleEqBypass = useCallback(() => {
-    initAudioContext();
-    setEqBypassed((prev) => {
-      const nextBypass = !prev;
-      eqFiltersRef.current.forEach((filter, idx) => {
-        if (filter && audioCtxRef.current) {
-          const now = audioCtxRef.current.currentTime;
-          filter.gain.cancelScheduledValues(now);
-          filter.gain.setTargetAtTime(
-            nextBypass ? 0 : (eqGains[idx] ?? 0),
-            now,
-            0.015
-          );
-        }
-      });
-      return nextBypass;
-    });
-  }, [eqGains, initAudioContext]);
-
-  const handleChangePreampDb = useCallback(
-    (nextDb: number) => {
-      initAudioContext();
-      const clamped = Math.max(-12, Math.min(12, Math.round(nextDb * 2) / 2));
-      setPreampDb(clamped);
-      if (preampGainRef.current && audioCtxRef.current) {
-        const now = audioCtxRef.current.currentTime;
-        preampGainRef.current.gain.cancelScheduledValues(now);
-        preampGainRef.current.gain.setTargetAtTime(
-          Math.pow(10, clamped / 20),
-          now,
-          0.015
-        );
-      }
-    },
-    [initAudioContext]
-  );
-
-  const handleChangeEqQFactor = useCallback(
-    (nextQ: number) => {
-      initAudioContext();
-      const clampedQ = Math.max(0.5, Math.min(3.5, Math.round(nextQ * 10) / 10));
-      setEqQFactor(clampedQ);
-      eqFiltersRef.current.forEach((filter) => {
-        if (filter && audioCtxRef.current) {
-          const now = audioCtxRef.current.currentTime;
-          filter.Q.cancelScheduledValues(now);
-          filter.Q.setTargetAtTime(clampedQ, now, 0.015);
-        }
-      });
-    },
-    [initAudioContext]
-  );
-
   const getAudioSpectrumData = useCallback(() => {
     const analyser = analyserNodeRef.current;
     const fftBins = fftBinsRef.current;
+    const floatBins = floatFreqBinsRef.current;
     const timeBins = timeDomainBinsRef.current;
     if (!analyser || !fftBins || !timeBins) return null;
     analyser.getByteFrequencyData(fftBins as Uint8Array<ArrayBuffer>);
+    if (floatBins) {
+      analyser.getFloatFrequencyData(floatBins as Float32Array<ArrayBuffer>);
+    }
     analyser.getByteTimeDomainData(timeBins as Uint8Array<ArrayBuffer>);
     let sumSq = 0;
     let peak = 0;
@@ -1629,7 +1631,15 @@ export function useDropPlatformController() {
     const rms = Math.sqrt(sumSq / timeBins.length);
     const rmsDb = rms > 0.0001 ? Math.max(-60, 20 * Math.log10(rms)) : -60;
     const peakDb = peak > 0.0001 ? Math.max(-60, 20 * Math.log10(peak)) : -60;
-    return { bins: fftBins, rmsDb, peakDb };
+    return {
+      bins: fftBins,
+      floatDbBins: floatBins ?? undefined,
+      rmsDb,
+      peakDb,
+      gainReductionDb: loudnessCompressorRef.current?.reduction ?? 0,
+      sampleRate: audioCtxRef.current?.sampleRate ?? 48000,
+      fftSize: analyser.fftSize,
+    };
   }, []);
 
   // --- Synthétiseur Iso-Loudness (-14.0 LUFS constant entre tous les titres et modes Drop/Full) ---
@@ -1878,6 +1888,24 @@ export function useDropPlatformController() {
     [currentTrack]
   );
 
+  const applySmoothCrossfadeRamp = useCallback(
+    (targetBpm?: number) => {
+      if (playbackPrefs.crossfadeSec <= 0 || !masterGainRef.current || !audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      const now = ctx.currentTime;
+      const targetGain = masterVolume / 100;
+      const beatSec = targetBpm && targetBpm > 40 ? 60 / targetBpm : 0.5;
+      const rawFade = Math.min(2.8, playbackPrefs.crossfadeSec * 0.45);
+      const fadeDur = playbackPrefs.bpmSyncCrossfade
+        ? Math.max(0.25, Math.round(rawFade / beatSec) * beatSec)
+        : rawFade;
+      masterGainRef.current.gain.cancelScheduledValues(now);
+      masterGainRef.current.gain.setValueAtTime(targetGain * 0.24, now);
+      masterGainRef.current.gain.linearRampToValueAtTime(targetGain, now + fadeDur);
+    },
+    [playbackPrefs.crossfadeSec, playbackPrefs.bpmSyncCrossfade, masterVolume]
+  );
+
   // --- Select Specific Track Index within Active Album ---
   const handleSelectTrackIndex = useCallback(
     (nextT: number) => {
@@ -1889,59 +1917,22 @@ export function useDropPlatformController() {
 
       initAudioContext();
       finalizeListeningSessionOnZap();
+      applySmoothCrossfadeRamp(targetTrack.bpm);
+
+      const fullNonStop = playbackPrefs.defaultStartMode === 'FULL_NONSTOP';
+      const startSec = fullNonStop
+        ? playbackPrefs.autoTrimSilence && targetTrack.duration > 12
+          ? 1
+          : 0
+        : targetTrack.dropStart;
 
       setTrackIdx(clampedT);
-      setIsDropMode(true);
-      setCurrentTime(targetTrack.dropStart);
-
-      manualSessionRef.current = {
-        trackId: targetTrack.id,
-        active: false,
-        listenedSeconds: 0,
-        playCountedAtOneSec: false,
-        ecgValidatedAt30Sec: false,
-        sessionPointsEarned: 0,
-      };
-
-      if (targetTrack.audioUrl && htmlAudioRef.current) {
-        htmlAudioRef.current.src = targetTrack.audioUrl;
-        htmlAudioRef.current.currentTime = targetTrack.dropStart;
-      }
-      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
-        externalPlayerRef.current.loadVideoById({
-          videoId: targetTrack.externalStreamId,
-          startSeconds: targetTrack.dropStart,
-        });
-      }
-      setIsPlaying(true);
-    },
-    [currentAlbum, initAudioContext, finalizeListeningSessionOnZap]
-  );
-
-  // --- Select Specific Album Index in 3D Cover Flow or Central Hub ---
-  const handleSelectAlbumIndex = useCallback(
-    (nextA: number, specificTrackIdx = 0, startFullPlay = false) => {
-      const albumsLen = catalogue.length;
-      if (albumsLen === 0) return;
-      const clampedA = ((nextA % albumsLen) + albumsLen) % albumsLen;
-      const targetAlbum = catalogue[clampedA];
-      if (!targetAlbum || targetAlbum.tracks.length === 0) return;
-      const clampedT = Math.min(specificTrackIdx, targetAlbum.tracks.length - 1);
-      const targetTrack = targetAlbum.tracks[clampedT];
-
-      initAudioContext();
-      finalizeListeningSessionOnZap();
-
-      const startSec = startFullPlay ? 0 : targetTrack.dropStart;
-
-      setAlbumIdx(clampedA);
-      setTrackIdx(clampedT);
-      setIsDropMode(!startFullPlay);
+      setIsDropMode(!fullNonStop);
       setCurrentTime(startSec);
 
       manualSessionRef.current = {
         trackId: targetTrack.id,
-        active: startFullPlay,
+        active: fullNonStop,
         listenedSeconds: 0,
         playCountedAtOneSec: false,
         ecgValidatedAt30Sec: false,
@@ -1960,7 +1951,75 @@ export function useDropPlatformController() {
       }
       setIsPlaying(true);
     },
-    [catalogue, initAudioContext, finalizeListeningSessionOnZap]
+    [
+      currentAlbum,
+      initAudioContext,
+      finalizeListeningSessionOnZap,
+      applySmoothCrossfadeRamp,
+      playbackPrefs.defaultStartMode,
+      playbackPrefs.autoTrimSilence,
+    ]
+  );
+
+  // --- Select Specific Album Index in 3D Cover Flow or Central Hub ---
+  const handleSelectAlbumIndex = useCallback(
+    (nextA: number, specificTrackIdx = 0, startFullPlay?: boolean) => {
+      const albumsLen = catalogue.length;
+      if (albumsLen === 0) return;
+      const clampedA = ((nextA % albumsLen) + albumsLen) % albumsLen;
+      const targetAlbum = catalogue[clampedA];
+      if (!targetAlbum || targetAlbum.tracks.length === 0) return;
+      const clampedT = Math.min(specificTrackIdx, targetAlbum.tracks.length - 1);
+      const targetTrack = targetAlbum.tracks[clampedT];
+
+      initAudioContext();
+      finalizeListeningSessionOnZap();
+      applySmoothCrossfadeRamp(targetTrack.bpm);
+
+      const effectiveFullPlay =
+        startFullPlay !== undefined
+          ? startFullPlay
+          : playbackPrefs.defaultStartMode === 'FULL_NONSTOP';
+      const startSec = effectiveFullPlay
+        ? playbackPrefs.autoTrimSilence && targetTrack.duration > 12
+          ? 1
+          : 0
+        : targetTrack.dropStart;
+
+      setAlbumIdx(clampedA);
+      setTrackIdx(clampedT);
+      setIsDropMode(!effectiveFullPlay);
+      setCurrentTime(startSec);
+
+      manualSessionRef.current = {
+        trackId: targetTrack.id,
+        active: effectiveFullPlay,
+        listenedSeconds: 0,
+        playCountedAtOneSec: false,
+        ecgValidatedAt30Sec: false,
+        sessionPointsEarned: 0,
+      };
+
+      if (targetTrack.audioUrl && htmlAudioRef.current) {
+        htmlAudioRef.current.src = targetTrack.audioUrl;
+        htmlAudioRef.current.currentTime = startSec;
+      }
+      if (targetTrack.externalStreamId && externalPlayerRef.current?.loadVideoById) {
+        externalPlayerRef.current.loadVideoById({
+          videoId: targetTrack.externalStreamId,
+          startSeconds: startSec,
+        });
+      }
+      setIsPlaying(true);
+    },
+    [
+      catalogue,
+      initAudioContext,
+      finalizeListeningSessionOnZap,
+      applySmoothCrossfadeRamp,
+      playbackPrefs.defaultStartMode,
+      playbackPrefs.autoTrimSilence,
+    ]
   );
 
   // --- Navigate Track (Axe Y : Swipe Vertical Haut/Bas ET Boutons Suivant/Précédent dans l'album actif en boucle) ---
@@ -2096,7 +2155,12 @@ export function useDropPlatformController() {
           return currentTrack.dropStart;
         }
 
-        if (prev + 1 >= currentTrack.duration) {
+        const effectiveDuration =
+          playbackPrefs.autoTrimSilence && currentTrack.duration > 15
+            ? currentTrack.duration - 1
+            : currentTrack.duration;
+
+        if (prev + 1 >= effectiveDuration) {
           const trackId = currentTrack.id;
           const session = manualSessionRef.current;
 
@@ -2173,6 +2237,21 @@ export function useDropPlatformController() {
             manualSessionRef.current.listenedSeconds = 0;
           }
 
+          if (playbackPrefs.chainingMode === 'STOP_AT_END') {
+            setIsPlaying(false);
+            return 0;
+          }
+
+          if (
+            playbackPrefs.chainingMode === 'CATALOGUE_NONSTOP' &&
+            !isShuffle &&
+            safeTrackIdx + 1 >= currentAlbum.tracks.length &&
+            catalogue.length > 1
+          ) {
+            handleSelectAlbumIndex((safeAlbumIdx + 1) % catalogue.length, 0, true);
+            return 0;
+          }
+
           navigateTrack(1);
           return 0;
         }
@@ -2184,6 +2263,13 @@ export function useDropPlatformController() {
     isPlaying,
     isDropMode,
     isRepeat,
+    isShuffle,
+    safeAlbumIdx,
+    safeTrackIdx,
+    currentAlbum.tracks.length,
+    catalogue.length,
+    playbackPrefs.autoTrimSilence,
+    playbackPrefs.chainingMode,
     currentTrack,
     currentUser.id,
     isPreviewingUploadDropRef.current,
@@ -2192,16 +2278,29 @@ export function useDropPlatformController() {
     networkOperator,
     seekAllEngines,
     navigateTrack,
+    handleSelectAlbumIndex,
     recordUserAndTrackStats,
   ]);
 
-  // Automatic Drop Preview on first browser gesture while keeping Play button unactivated (isDropMode === true)
+  // Démarrage automatique au premier geste : respecte le mode Lecture Intégrale Non-Stop (Drop OFF) ou Aperçu Drop 30s
   useEffect(() => {
     const startAutoDropPreview = () => {
       initAudioContext();
       if (!isPlayingRef.current && !isPreviewingUploadDropRef.current) {
-        setIsDropMode(true);
-        setCurrentTime(currentTrack.dropStart);
+        const fullNonStop = playbackPrefs.defaultStartMode === 'FULL_NONSTOP';
+        const startSec = fullNonStop ? 0 : currentTrack.dropStart;
+        setIsDropMode(!fullNonStop);
+        setCurrentTime(startSec);
+        if (fullNonStop) {
+          manualSessionRef.current = {
+            trackId: currentTrack.id,
+            active: true,
+            listenedSeconds: 0,
+            playCountedAtOneSec: false,
+            ecgValidatedAt30Sec: false,
+            sessionPointsEarned: 0,
+          };
+        }
         setIsPlaying(true);
       }
       window.removeEventListener('pointerdown', startAutoDropPreview);
@@ -2213,7 +2312,13 @@ export function useDropPlatformController() {
       window.removeEventListener('pointerdown', startAutoDropPreview);
       window.removeEventListener('keydown', startAutoDropPreview);
     };
-  }, [initAudioContext, currentTrack.dropStart, isPreviewingUploadDropRef.current]);
+  }, [
+    initAudioContext,
+    currentTrack.id,
+    currentTrack.dropStart,
+    playbackPrefs.defaultStartMode,
+    isPreviewingUploadDropRef.current,
+  ]);
 
   const handleCentralPlayToggle = () => {
     initAudioContext();
@@ -2729,22 +2834,26 @@ export function useDropPlatformController() {
     isPlaying, setIsPlaying, isDropMode, setIsDropMode, currentTime, setCurrentTime,
     likedTrackIds, recommendedTrackIds, subscribedArtists, artistSubscribers,
     communityRecommendations, isShuffle, setIsShuffle, repeatMode, setRepeatMode,
-    masterVolume, eqGains, eqBypassed, preampDb, eqQFactor, userPlan, setUserPlan, manualSessionRef,
+    masterVolume, eqGains, eqQFactors, eqBypassed, preampDb, effectivePreampDb, eqQFactor,
+    autoHeadroom, phaseInvert, spatialConfig, playbackPrefs, userPlan, setUserPlan, manualSessionRef,
     authMode, setAuthMode, authName, setAuthName, authEmail, setAuthEmail,
     adminMainTab, setAdminMainTab, catalogueSubTab, setCatalogueSubTab,
     royaltyLedgerState, updateRoyaltySettings, resetRoyaltySettings, setHolderTaxStatus,
     closeRoyaltyPeriod, lastAdminSavedAt, isSavingAdmin, adBanners, setAdBanners,
     adBannerSettings, setAdBannerSettings, supabaseHealthMsg, entityDb,
     inlineNewEntityField, setInlineNewEntityField, inlineNewEntityValue, setInlineNewEntityValue,
-    notifications, setNotifications, showNotificationsModal, setShowNotificationsModal,
+    notifications, visibleNotifications, isAdminViewer, notificationPrefs, handleChangeNotificationPrefs,
+    setNotifications, showNotificationsModal, setShowNotificationsModal,
     activeToast, setActiveToast, pushNotification, unreadNotificationsCount,
     markAllNotificationsRead, handleRegisterEntityInDb, handleDeleteEntityFromDb,
     sqlCopiedBanner, setSqlCopiedBanner, showSqlEditorModal, setShowSqlEditorModal,
     htmlAudioRef, uploadPreviewAudioRef, safeAlbumIdx, currentAlbum, safeTrackIdx, currentTrack,
     isRealtimeConnected, handleSaveAndSyncAllAdmin, allTracksFlat, royaltyLedger,
     trackRankMap, finalizeListeningSessionOnZap, handleChangeMasterVolume,
-    handleChangeEqBand, handleApplyEqPreset, handleResetEq,
-    handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor, getAudioSpectrumData,
+    handleChangeEqBand, handleChangeBandQ, handleApplyEqPreset, handleApplyPrecisionPreset, handleResetEq,
+    handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor,
+    handleToggleAutoHeadroom, handleTogglePhaseInvert, handleChangeSpatialConfig, handleChangePlaybackPrefs,
+    getAudioSpectrumData,
     seekAllEngines,
     handleSelectTrackIndex, handleSelectAlbumIndex, navigateTrack, navigateAlbum,
     handleCentralPlayToggle, toggleLike, handleToggleOfflineDownload,

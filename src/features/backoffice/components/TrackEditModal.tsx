@@ -7,6 +7,7 @@ import {
 import type { FeaturingSplitMode } from '../../../utils/rankingEngine';
 import type { EntityDatabase } from '../../../shared/types/domain.types';
 import type { EditingTrackState } from '../backoffice.types';
+import { AnalysisReview, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
 
 export interface TrackEditModalProps {
   editingTrack: EditingTrackState | null;
@@ -380,6 +381,50 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             </div>
           )}
         </div>
+
+        <AnalysisReview
+          analysis={
+            editingTrack.track.trackAnalysis ||
+            ensureTrackSurgicalAnalysis(editingTrack.track)
+          }
+          currentBpm={editingTrack.track.bpm}
+          currentKey={editingTrack.track.musicalKey || 'A minor (8A)'}
+          onConfirmBpm={(confirmedBpm) => {
+            const baseAnalysis =
+              editingTrack.track.trackAnalysis ||
+              ensureTrackSurgicalAnalysis(editingTrack.track);
+            setEditingTrack({
+              ...editingTrack,
+              track: {
+                ...editingTrack.track,
+                bpm: confirmedBpm,
+                trackAnalysis: {
+                  ...baseAnalysis,
+                  confirmedBpm,
+                  confirmedByHumanAt: new Date().toISOString(),
+                  analysisStatus: 'completed',
+                },
+              },
+            });
+          }}
+          onConfirmKey={(confirmedKey) => {
+            const baseAnalysis =
+              editingTrack.track.trackAnalysis ||
+              ensureTrackSurgicalAnalysis(editingTrack.track);
+            setEditingTrack({
+              ...editingTrack,
+              track: {
+                ...editingTrack.track,
+                musicalKey: confirmedKey,
+                trackAnalysis: {
+                  ...baseAnalysis,
+                  confirmedKey,
+                  confirmedByHumanAt: new Date().toISOString(),
+                },
+              },
+            });
+          }}
+        />
 
         <div className="flex items-center justify-between gap-2 bg-[#07080C] p-2.5 rounded-xl border border-white/[0.07]">
           <label className="px-3 py-1.5 rounded-lg bg-white/[0.06] text-xs font-medium text-[#F5F2EB] cursor-pointer">

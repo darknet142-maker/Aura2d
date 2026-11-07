@@ -8,14 +8,17 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     catalogue, safeAlbumIdx, safeTrackIdx, currentTrack, isPlaying, isDropMode, currentTime,
     isShuffle, repeatMode, isCurrentLiked, likedTrackIds, recommendedTrackIds, subscribedArtists,
     artistSubscribers, communityRecommendations, currentRankInfo, trackRankMap, users, currentUser,
-    categories, syncSnapshot, masterVolume, eqGains, eqBypassed, preampDb, eqQFactor,
+    categories, syncSnapshot, masterVolume, eqGains, eqQFactors, eqBypassed, preampDb, effectivePreampDb, eqQFactor,
+    autoHeadroom, phaseInvert, spatialConfig, playbackPrefs,
     userPlan, setUserPlan, navigateAlbum,
     handleSelectAlbumIndex, navigateTrack, handleSelectTrackIndex, handleCentralPlayToggle,
     setIsPlaying, handleSeekFromPlayer, setIsShuffle, setRepeatMode, toggleLike,
     handleRecommendTrack, handleToggleSubscribeArtist, handleRecordLyricsOpen,
     handleToggleOfflineDownload, setAppView, unreadNotificationsCount, setShowNotificationsModal,
-    markAllNotificationsRead, handleChangeMasterVolume, handleChangeEqBand, handleApplyEqPreset,
+    markAllNotificationsRead, handleChangeMasterVolume, handleChangeEqBand, handleChangeBandQ,
+    handleApplyEqPreset, handleApplyPrecisionPreset,
     handleResetEq, handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor,
+    handleToggleAutoHeadroom, handleTogglePhaseInvert, handleChangeSpatialConfig, handleChangePlaybackPrefs,
     getAudioSpectrumData, subscriptionPass, setSubscriptionPass, networkOperator, setNetworkOperator,
     lastEcgValidationMsg, handleConfirmCreditHandshake, handleOpenCreditDispute,
     handleResolveCreditDispute, adBanners, adBannerSettings, enableAwardsCeremony,
@@ -23,7 +26,7 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
   } = ctrl;
 
   return (
-        <main className="relative z-10 h-full w-full flex items-center justify-center bg-[#060608] overflow-hidden">
+        <main className="relative z-10 h-full w-full flex items-center justify-center bg-[#080A0F] overflow-hidden">
           <Immersive3DPlayer
             catalogue={catalogue}
             albumIdx={safeAlbumIdx}
@@ -78,14 +81,26 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             }
             onChangeMasterVolume={handleChangeMasterVolume}
             onChangeEqBand={handleChangeEqBand}
+            onChangeBandQ={handleChangeBandQ}
             onApplyEqPreset={handleApplyEqPreset}
+            onApplyPrecisionPreset={handleApplyPrecisionPreset}
             onResetEq={handleResetEq}
+            eqQFactors={eqQFactors}
             eqBypassed={eqBypassed}
             preampDb={preampDb}
+            effectivePreampDb={effectivePreampDb}
             eqQFactor={eqQFactor}
+            autoHeadroom={autoHeadroom}
+            phaseInvert={phaseInvert}
+            spatialConfig={spatialConfig}
+            playbackPrefs={playbackPrefs}
             onToggleEqBypass={handleToggleEqBypass}
             onChangePreampDb={handleChangePreampDb}
             onChangeEqQFactor={handleChangeEqQFactor}
+            onToggleAutoHeadroom={handleToggleAutoHeadroom}
+            onTogglePhaseInvert={handleTogglePhaseInvert}
+            onChangeSpatialConfig={handleChangeSpatialConfig}
+            onChangePlaybackPrefs={handleChangePlaybackPrefs}
             getAudioSpectrumData={getAudioSpectrumData}
             subscriptionPass={subscriptionPass}
             onChangeSubscriptionPass={setSubscriptionPass}

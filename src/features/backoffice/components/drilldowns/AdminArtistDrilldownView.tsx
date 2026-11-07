@@ -12,6 +12,7 @@ import type { RoyaltySettings } from '../../../economics/economicConfig';
 import type { AppUser } from '../../../../shared/types/domain.types';
 import { RankBadge } from '../../../../shared/ui/RankBadge';
 import { formatCompactCount, formatLongDuration, formatTime } from '../../../../shared/utils/mediaFormatters';
+import { ensureTrackSurgicalAnalysis } from '../../../music-intelligence';
 import type { EditingTrackState } from '../../backoffice.types';
 import type { SelectedTrackDetailData, SelectedArtistAnalyticsData, ConsumerAnalyticsData } from './drilldown.types';
 
@@ -139,6 +140,8 @@ export const AdminArtistDrilldownView: React.FC<AdminArtistDrilldownProps> = ({
           {selectedArtistAnalytics.tracks.map((t) => {
             const rInfo = trackRankMap[t.id] || { rank: 1, delta: 0 };
             const cert = getTrackCertification(t.realPlays);
+            const tAnalysis = ensureTrackSurgicalAnalysis(t);
+            const effBpm = tAnalysis.confirmedBpm ?? tAnalysis.detectedBpm;
             return (
               <div
                 key={t.id}
@@ -165,6 +168,7 @@ export const AdminArtistDrilldownView: React.FC<AdminArtistDrilldownProps> = ({
                         ? ` feat. ${t.featuringArtists.join(', ')}`
                         : ''}{' '}
                       • {formatTime(t.duration)}
+                      {effBpm ? ` • ${effBpm} BPM` : ''} • {tAnalysis.camelotKey || '8A'}
                     </div>
                   </div>
                 </div>

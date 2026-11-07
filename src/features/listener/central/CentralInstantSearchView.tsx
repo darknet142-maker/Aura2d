@@ -10,6 +10,7 @@ import {
 import { getTrackCertification } from '../../../utils/rankingEngine';
 import { highlightMatchedText } from '../../../components/player/playerEngineHelpers';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
+import { MusicIntelligenceSearchBanner } from '../../music-intelligence';
 import type { ReturnTypeUseImmersivePlayerState } from '../hooks/useImmersivePlayerState';
 
 export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersivePlayerState }> = ({
@@ -34,6 +35,11 @@ export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersiveP
 
   return (
     <div className="space-y-3.5 animate-fade-in">
+      <MusicIntelligenceSearchBanner
+        query={hubSearchQuery}
+        onChangeQuery={setHubSearchQuery}
+      />
+
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-bold text-amber-300">
           Recherche « {hubSearchQuery} » ({instantSearchResults.totalCount} résultat
@@ -159,7 +165,9 @@ export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersiveP
                         Prod. {highlightMatchedText(t.beatmakerName || t.artist, hubSearchQuery)}
                       </button>
                       <span>·</span>
-                      <span className="font-mono text-amber-300 shrink-0">{t.bpm || 120} BPM</span>
+                      <span className="font-mono text-amber-300 shrink-0">
+                        {t.bpm ? `${t.bpm} BPM` : 'BPM —'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -275,6 +283,9 @@ export const CentralInstantSearchView: React.FC<{ state: ReturnTypeUseImmersiveP
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/35 text-amber-300 font-mono text-[10px] font-bold">
+                    {t.bpm || 120} BPM
+                  </span>
                   <RankBadgeSvg rank={rInfo.rank} delta={rInfo.delta} />
                   <button
                     type="button"

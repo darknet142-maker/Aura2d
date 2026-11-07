@@ -213,7 +213,8 @@ export async function uploadLocalTrack(
           duration: metadata.duration || durationSec,
           drop_start: metadata.dropStart ?? 30,
           drop_duration: metadata.dropDuration ?? 22,
-          bpm: metadata.bpm ?? 120,
+          bpm: metadata.bpm ?? null,
+          track_analysis: metadata.trackAnalysis ?? null,
           lyrics: metadata.lyrics || [],
         };
 
@@ -276,7 +277,8 @@ export async function uploadLocalTrack(
     duration: metadata.duration || durationSec,
     drop_start: metadata.dropStart ?? 30,
     drop_duration: metadata.dropDuration ?? 22,
-    bpm: metadata.bpm ?? 120,
+    bpm: metadata.bpm ?? null,
+    track_analysis: metadata.trackAnalysis ?? null,
     lyrics: metadata.lyrics || [],
     real_plays: 100000,
     loop_plays_count: 820,
@@ -359,7 +361,8 @@ export async function addYoutubeTrack(
     duration: metadata.duration || 180,
     drop_start: metadata.dropStart ?? 30,
     drop_duration: metadata.dropDuration ?? 22,
-    bpm: metadata.bpm ?? 120,
+    bpm: metadata.bpm ?? null,
+    track_analysis: metadata.trackAnalysis ?? null,
     lyrics: metadata.lyrics || [],
   };
 
@@ -480,7 +483,7 @@ export async function updateTrackMetadataInStorage(
             duration: updates.duration || 180,
             drop_start: updates.drop_start ?? 30,
             drop_duration: updates.drop_duration ?? 22,
-            bpm: updates.bpm ?? 120,
+            bpm: updates.bpm ?? null,
             real_plays: 100000,
             loop_plays_count: 820,
             likes_count: 3400,

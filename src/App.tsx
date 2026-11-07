@@ -79,9 +79,12 @@ export function App() {
         onDismissToast={() => ctrl.setActiveToast(null)}
         showNotificationsModal={ctrl.showNotificationsModal}
         onCloseNotificationsModal={() => ctrl.setShowNotificationsModal(false)}
-        notifications={ctrl.notifications}
+        notifications={ctrl.visibleNotifications}
         onClearAllNotifications={() => ctrl.setNotifications([])}
         onSelectTrackFromNotification={(tid) => ctrl.setSelectedTrackId(tid)}
+        isAdminViewer={ctrl.isAdminViewer}
+        notificationPrefs={ctrl.notificationPrefs}
+        onChangeNotificationPrefs={ctrl.handleChangeNotificationPrefs}
       />
     </div>
   );

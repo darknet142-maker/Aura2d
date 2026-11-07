@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { FeaturingSplitMode } from '../../../utils/rankingEngine';
 import {
   uploadLocalTrack,
@@ -15,6 +15,8 @@ import {
 } from '../../../services/musicService';
 import type { AlbumNode, AppNotification, EntityDatabase, Track } from '../../../shared/types/domain.types';
 import { formatTime, parseDurationInput, extractExternalStreamId } from '../../../shared/utils/mediaFormatters';
+import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
+import type { TrackAnalysis } from '../../music-intelligence/types/music-analysis.types';
 
 export function useAdminUploadController(params: {
   allTracksFlat: Track[];
@@ -73,8 +75,8 @@ export function useAdminUploadController(params: {
   const [newIsExternalLyricist, setNewIsExternalLyricist] = useState<boolean>(true);
   const [newIsInstrumental, setNewIsInstrumental] = useState<boolean>(false);
   const [newIsBeatDownloadable, setNewIsBeatDownloadable] = useState<boolean>(false);
-  const [newBpm, setNewBpm] = useState<number>(124);
-  const [newMusicalKey, setNewMusicalKey] = useState<string>('Do Mineur (Cm)');
+  const [newBpm, setNewBpm] = useState<number | null>(null);
+  const [newMusicalKey, setNewMusicalKey] = useState<string>('');
   const [newCopyrightText, setNewCopyrightText] = useState<string>('');
   const [newAudioCodec, setNewAudioCodec] = useState<'OPUS' | 'AAC' | 'WAV'>('OPUS');
   const [newGabonTerritoryPct, setNewGabonTerritoryPct] = useState<number>(88);
@@ -92,6 +94,9 @@ export function useAdminUploadController(params: {
   // --- Upload Progress & Energy Waveform State ---
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploadingFile, setIsUploadingFile] = useState<boolean>(false);
+  const [currentTrackAnalysis, setCurrentTrackAnalysis] = useState<TrackAnalysis | null>(null);
+  const [isAnalyzingAudio, setIsAnalyzingAudio] = useState<boolean>(false);
+  const analysisAbortRef = useRef<AbortController | null>(null);
   const [waveformPeaks, setWaveformPeaks] = useState<number[]>([]);
   const [detectedHotspotStart, setDetectedHotspotStart] = useState<number | null>(null);
   const [isPreviewingUploadDrop, setIsPreviewingUploadDrop] = useState<boolean>(false);
@@ -134,6 +139,50 @@ export function useAdminUploadController(params: {
     const progInterval = window.setInterval(() => {
       setUploadProgress((p) => (p < 92 ? p + 14 : p));
     }, 90);
+
+    // Lancement de l'analyse chirurgicale en arrière-plan (annulable + zéro BPM 120 fictif)
+    analysisAbortRef.current?.abort();
+    const abortCtrl = new AbortController();
+    analysisAbortRef.current = abortCtrl;
+    setIsAnalyzingAudio(true);
+    analyzeAudioFileSurgically(file, {
+      signal: abortCtrl.signal,
+      existingConfirmedBpm: currentTrackAnalysis?.confirmedBpm,
+      existingConfirmedKey: currentTrackAnalysis?.confirmedKey,
+      previousHistory: currentTrackAnalysis?.analysisHistory,
+    })
+      .then((analysis) => {
+        if (abortCtrl.signal.aborted) return;
+        setIsAnalyzingAudio(false);
+        setCurrentTrackAnalysis(analysis);
+        const validBpm = analysis.confirmedBpm ?? analysis.detectedBpm;
+        if (validBpm != null && analysis.analysisStatus === 'completed') {
+          setNewBpm(validBpm);
+        } else if (analysis.confirmedBpm != null) {
+          setNewBpm(analysis.confirmedBpm);
+        } else {
+          setNewBpm(null);
+        }
+        if (analysis.confirmedKey || analysis.detectedKey) {
+          setNewMusicalKey(analysis.confirmedKey || analysis.detectedKey || '');
+        }
+        pushNotification(
+          analysis.analysisStatus === 'completed'
+            ? 'Analyse BPM & Tonalité Réussie'
+            : analysis.analysisStatus === 'needs_review'
+              ? 'BPM Détecté — Validation Humaine Requise'
+              : 'Analyse Musicale Signalée',
+          analysis.detectedBpm
+            ? `BPM : ${analysis.detectedBpm} (Confiance : ${(analysis.bpmConfidence || 0).toFixed(2)}) • Tonalité : ${analysis.detectedKey || '—'}`
+            : 'Analyse incertaine ou impossible — aucun BPM par défaut attribué.',
+          'PUBLISH'
+        );
+      })
+      .catch(() => {
+        if (!abortCtrl.signal.aborted) {
+          setIsAnalyzingAudio(false);
+        }
+      });
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -248,9 +297,21 @@ export function useAdminUploadController(params: {
     setDetectedHotspotStart(54);
     setNewDropStart(54);
     setNewDropDuration(30);
+    const simulatedAnalysis = ensureTrackSurgicalAnalysis({
+      id: `preset-${Date.now()}`,
+      title: newTitle.trim() || 'Session Master Gabon',
+      category: newCategory,
+      bpm: 124,
+      musicalKey: 'Do Mineur (Cm)',
+      duration: 180,
+      waveformPeaks: uniquePeaks,
+    });
+    setCurrentTrackAnalysis(simulatedAnalysis);
+    setNewBpm(simulatedAnalysis.confirmedBpm ?? 124);
+    setNewMusicalKey(simulatedAnalysis.confirmedKey ?? 'Do Mineur (Cm)');
     pushNotification(
       'Master Studio Opus & Content ID générés',
-      `Piste « ${presetFileName} » calibrée à -14.0 LUFS avec empreinte d’onde unique validée.`,
+      `Piste « ${presetFileName} » calibrée à -14.0 LUFS avec empreinte d’onde et analyse musicale validée.`,
       'PUBLISH'
     );
   };
@@ -288,10 +349,102 @@ export function useAdminUploadController(params: {
     setNewAudioUrl('');
     setNewExternalUrl('');
     setSelectedRawAudioFile(null);
+    setCurrentTrackAnalysis(null);
     setWaveformPeaks([]);
     setUploadProgress(0);
     setDetectedHotspotStart(null);
   };
+
+  const handleConfirmBpm = useCallback((confirmedBpm: number) => {
+    setNewBpm(confirmedBpm);
+    setCurrentTrackAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            confirmedBpm,
+            confirmedByHumanAt: new Date().toISOString(),
+            analysisStatus: 'completed',
+          }
+        : {
+            detectedBpm: null,
+            confirmedBpm,
+            alternativeBpms: [],
+            bpmConfidence: null,
+            detectedKey: null,
+            confirmedKey: null,
+            mode: null,
+            energy: null,
+            danceability: null,
+            beatPositions: [],
+            durationSec: parsedNewDuration || 180,
+            analysisStatus: 'completed',
+            algorithmVersion: 'human-verified-v1',
+            analyzedAt: null,
+            confirmedByHumanAt: new Date().toISOString(),
+          }
+    );
+  }, [parsedNewDuration]);
+
+  const handleConfirmKey = useCallback((confirmedKey: string) => {
+    setNewMusicalKey(confirmedKey);
+    setCurrentTrackAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            confirmedKey,
+            confirmedByHumanAt: new Date().toISOString(),
+          }
+        : null
+    );
+  }, []);
+
+  const handleCancelAudioAnalysis = useCallback(() => {
+    analysisAbortRef.current?.abort();
+    analysisAbortRef.current = null;
+    setIsAnalyzingAudio(false);
+    setCurrentTrackAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            analysisStatus: prev.confirmedBpm ? 'completed' : 'needs_review',
+            failureReason: 'Analyse annulée manuellement — validation humaine disponible.',
+          }
+        : null
+    );
+  }, []);
+
+  const handleReanalyzeAudio = useCallback(() => {
+    if (!selectedRawAudioFile) return;
+    analysisAbortRef.current?.abort();
+    const abortCtrl = new AbortController();
+    analysisAbortRef.current = abortCtrl;
+    setIsAnalyzingAudio(true);
+    analyzeAudioFileSurgically(selectedRawAudioFile, {
+      signal: abortCtrl.signal,
+      existingConfirmedBpm: currentTrackAnalysis?.confirmedBpm,
+      existingConfirmedKey: currentTrackAnalysis?.confirmedKey,
+      previousHistory: currentTrackAnalysis?.analysisHistory,
+    })
+      .then((analysis) => {
+        if (abortCtrl.signal.aborted) return;
+        setIsAnalyzingAudio(false);
+        setCurrentTrackAnalysis(analysis);
+        // Ne jamais écraser une confirmation humaine existante
+        if (analysis.confirmedBpm != null) {
+          setNewBpm(analysis.confirmedBpm);
+        } else if (analysis.detectedBpm != null && analysis.analysisStatus === 'completed') {
+          setNewBpm(analysis.detectedBpm);
+        }
+        if (analysis.confirmedKey || analysis.detectedKey) {
+          setNewMusicalKey(analysis.confirmedKey || analysis.detectedKey || '');
+        }
+      })
+      .catch(() => {
+        if (!abortCtrl.signal.aborted) {
+          setIsAnalyzingAudio(false);
+        }
+      });
+  }, [selectedRawAudioFile, currentTrackAnalysis]);
 
   // --- Analyse obligatoire de la forme d'onde & Attribution du Content ID (DROP-CID) ---
   const newDropContentId = useMemo(() => {
@@ -411,13 +564,16 @@ export function useAdminUploadController(params: {
 
   const isWizardStep2Valid = useMemo(() => {
     if (waveformVerificationReport?.isBlocked) return false;
+    const validConfirmedBpm =
+      newBpm !== null && Number.isFinite(newBpm) && newBpm >= 40 && newBpm <= 240;
     return Boolean(
       newTitle.trim() &&
         newArtist.trim() &&
         newCategory.trim() &&
-        parsedNewDuration >= 15
+        parsedNewDuration >= 15 &&
+        validConfirmedBpm
     );
-  }, [waveformVerificationReport, newTitle, newArtist, newCategory, parsedNewDuration]);
+  }, [waveformVerificationReport, newTitle, newArtist, newCategory, parsedNewDuration, newBpm]);
 
   const isWizardStep3Valid = useMemo(() => {
     if (waveformVerificationReport?.isBlocked) return false;
@@ -678,7 +834,22 @@ export function useAdminUploadController(params: {
       dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 15)),
       dropDuration: Math.min(newDropDuration, parsedNewDuration),
       baseFreq: 110 + Math.floor(Math.random() * 50),
-      bpm: newBpm || 124,
+      bpm:
+        newBpm ??
+        currentTrackAnalysis?.confirmedBpm ??
+        currentTrackAnalysis?.detectedBpm ??
+        100,
+      trackAnalysis:
+        currentTrackAnalysis ||
+        ensureTrackSurgicalAnalysis({
+          id: `t-${Date.now()}`,
+          title: newTitle.trim(),
+          category: newCategory,
+          bpm: newBpm ?? 100,
+          musicalKey: newMusicalKey.trim() || 'A minor (8A)',
+          duration: parsedNewDuration,
+          waveformPeaks: finalPeaks,
+        }),
       audioUrl: uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined,
       externalStreamId: streamId || undefined,
       realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
@@ -767,6 +938,7 @@ export function useAdminUploadController(params: {
       dropStart: createdTrack.dropStart,
       dropDuration: createdTrack.dropDuration,
       bpm: createdTrack.bpm,
+      trackAnalysis: createdTrack.trackAnalysis,
       lyrics: createdTrack.lyrics,
     };
 
@@ -815,6 +987,9 @@ export function useAdminUploadController(params: {
     setNewCoverFileName('');
     setSelectedRawAudioFile(null);
     setSelectedRawCoverFile(null);
+    setNewBpm(null);
+    setNewMusicalKey('');
+    setCurrentTrackAnalysis(null);
     setWaveformPeaks([]);
     setDetectedHotspotStart(null);
     setWizardStep(1);
@@ -934,6 +1109,8 @@ export function useAdminUploadController(params: {
       cover_url: track.cover || null,
       duration: updatedDuration,
       drop_start: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
+      bpm: track.bpm,
+      track_analysis: track.trackAnalysis ?? null,
     }).catch(() => {});
 
     pushNotification(
@@ -962,6 +1139,8 @@ export function useAdminUploadController(params: {
     newDropStart, setNewDropStart, newDropDuration, setNewDropDuration,
     newAudioUrl, newAudioFileName, newMeasuredLufs, newExternalUrl, setNewExternalUrl,
     uploadSuccess, uploadProgress, isUploadingFile, waveformPeaks, detectedHotspotStart,
+    currentTrackAnalysis, isAnalyzingAudio,
+    handleConfirmBpm, handleConfirmKey, handleReanalyzeAudio, handleCancelAudioAnalysis,
     isPreviewingUploadDrop, uploadPreviewTime, editingTrack, setEditingTrack,
     searchQuery, setSearchQuery, parsedNewDuration,
     handleAudioFileDrop, handleLoadStudioOpusMasterPreset, handleSimulateDuplicateWaveformUpload,

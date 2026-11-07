@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { CoverArtwork } from '../../../../components/CoverArtwork';
 import { formatTime } from '../../../../shared/utils/mediaFormatters';
+import { MusicMetadataCard, ensureTrackSurgicalAnalysis } from '../../../music-intelligence';
 import type { AdminUploadWizardProps } from './uploadWizard.types';
 
 export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
@@ -94,6 +95,7 @@ export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
   setNewDropDuration,
   newCopyrightText,
   waveformPeaks,
+  currentTrackAnalysis,
   handlePublishTrack,
 }) => {
   return (
@@ -333,6 +335,23 @@ export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* FICHE D'ANALYSE MUSICALE CHIRURGICALE OFFICIELLE (MUSIC INTELLIGENCE) */}
+              <MusicMetadataCard
+                analysis={
+                  currentTrackAnalysis ||
+                  ensureTrackSurgicalAnalysis({
+                    id: 'preview-cid',
+                    title: newTitle || 'Piste en cours',
+                    category: newCategory,
+                    bpm: newBpm || 120,
+                    musicalKey: newMusicalKey || 'Do Mineur (Cm)',
+                    duration: parsedNewDuration || 180,
+                    waveformPeaks,
+                  })
+                }
+                trackTitle={newTitle || 'Aperçu'}
+              />
 
               {/* SECTION 3 */}
               <div className="rounded-xl bg-[#07090E]/45 border border-white/[0.08] p-3 space-y-2">

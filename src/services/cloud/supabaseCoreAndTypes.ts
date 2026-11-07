@@ -4,6 +4,7 @@ import {
   optimizeForStorageUpload,
 } from '../imageOptimizer';
 import { broadcastLiveSync } from '../realtimeSync';
+import type { TrackAnalysis } from '../../features/music-intelligence/types/music-analysis.types';
 
 // ============================================================================
 // CONFIGURATION SUPABASE & FALLBACK HYBRIDE LOCAL PERSISTANT
@@ -128,7 +129,7 @@ export interface SupabaseTrackRow {
   duration: number;
   drop_start: number;
   drop_duration: number;
-  bpm: number;
+  bpm: number | null;
   lyrics?: { time: number; text: string }[];
   real_plays: number;
   loop_plays_count: number;
@@ -137,6 +138,7 @@ export interface SupabaseTrackRow {
   listen_sessions: number;
   avg_retention_pct: number;
   created_at: string;
+  track_analysis?: TrackAnalysis | null;
 }
 
 export interface UploadTrackMetadataInput {
@@ -161,8 +163,9 @@ export interface UploadTrackMetadataInput {
   duration?: number;
   dropStart?: number;
   dropDuration?: number;
-  bpm?: number;
+  bpm?: number | null;
   lyrics?: { time: number; text: string }[];
+  trackAnalysis?: TrackAnalysis;
 }
 
 export interface StudioEntityRecord {

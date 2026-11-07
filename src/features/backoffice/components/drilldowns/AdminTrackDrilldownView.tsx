@@ -12,6 +12,7 @@ import type { RoyaltySettings } from '../../../economics/economicConfig';
 import type { AppUser } from '../../../../shared/types/domain.types';
 import { RankBadge } from '../../../../shared/ui/RankBadge';
 import { formatCompactCount, formatLongDuration, formatTime } from '../../../../shared/utils/mediaFormatters';
+import { ensureTrackSurgicalAnalysis, MusicMetadataCard } from '../../../music-intelligence';
 import type { EditingTrackState } from '../../backoffice.types';
 import type { SelectedTrackDetailData, SelectedArtistAnalyticsData, ConsumerAnalyticsData } from './drilldown.types';
 
@@ -35,10 +36,10 @@ export const AdminTrackDrilldownView: React.FC<AdminTrackDrilldownProps> = ({
   return (
     <div className="w-full flex flex-col bg-[#0D1017] border border-white/[0.08] rounded-2xl p-4 gap-4">
       <div className="w-full flex items-center justify-between gap-2 pb-3 border-b border-white/[0.07] shrink-0">
-        <button
+          <button
           type="button"
           onClick={onClose}
-          className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-[#F5F2EB] flex items-center gap-1.5 shrink-0 cursor-pointer"
+          className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-[#F8FAFC] flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Retour</span>
@@ -246,6 +247,12 @@ export const AdminTrackDrilldownView: React.FC<AdminTrackDrilldownProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Fiche d'Intelligence Musicale Chirurgicale (BPM, Confiance, Tonalité Camelot, Grille & Spectre 4 Bandes) */}
+        <MusicMetadataCard
+          analysis={ensureTrackSurgicalAnalysis(selectedTrackDetail.track)}
+          trackTitle={selectedTrackDetail.track.title}
+        />
       </div>
     </div>
   );

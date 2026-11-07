@@ -24,6 +24,13 @@ import {
 import type { RoyaltySettings } from '../../features/economics/economicConfig';
 import type { RightsLine } from '../../features/economics/rightsSplitEngine';
 import type { PayoutStatement } from '../../features/economics/payoutEngine';
+import type { TrackAnalysis } from '../../features/music-intelligence/types/music-analysis.types';
+import type {
+  AudioSpectrumSnapshot,
+  PlaybackEnginePrefs,
+  PrecisionEqPreset,
+  SpatialAudioConfig,
+} from '../../features/audio-dsp';
 
 export interface LyricLine {
   time: number;
@@ -92,6 +99,7 @@ export interface PlayerTrackItem {
   downloadedOffline?: boolean;
   inPlaylist?: boolean;
   lyrics?: LyricLine[];
+  trackAnalysis?: TrackAnalysis;
 }
 
 export interface PlayerAlbumNode {
@@ -181,9 +189,15 @@ export interface Immersive3DPlayerProps {
   categories?: string[];
   masterVolume: number;
   eqGains: number[];
+  eqQFactors?: number[];
   eqBypassed?: boolean;
   preampDb?: number;
+  effectivePreampDb?: number;
   eqQFactor?: number;
+  autoHeadroom?: boolean;
+  phaseInvert?: boolean;
+  spatialConfig?: SpatialAudioConfig;
+  playbackPrefs?: PlaybackEnginePrefs;
   userPlan: 'BASIC' | 'PRO';
   syncSnapshot: SyncStatusSnapshot;
   onToggleUserPlan: () => void;
@@ -211,16 +225,18 @@ export interface Immersive3DPlayerProps {
   onToggleDownload: (trackId: string) => void;
   onChangeMasterVolume: (val: number) => void;
   onChangeEqBand: (bandIdx: number, gainDb: number) => void;
+  onChangeBandQ?: (bandIdx: number, q: number, applyAll?: boolean) => void;
   onApplyEqPreset: (gains: number[]) => void;
+  onApplyPrecisionPreset?: (preset: PrecisionEqPreset) => void;
   onResetEq: () => void;
   onToggleEqBypass?: () => void;
   onChangePreampDb?: (db: number) => void;
   onChangeEqQFactor?: (q: number) => void;
-  getAudioSpectrumData?: () => {
-    bins: Uint8Array;
-    rmsDb: number;
-    peakDb: number;
-  } | null;
+  onToggleAutoHeadroom?: () => void;
+  onTogglePhaseInvert?: () => void;
+  onChangeSpatialConfig?: (cfg: SpatialAudioConfig) => void;
+  onChangePlaybackPrefs?: (prefs: PlaybackEnginePrefs) => void;
+  getAudioSpectrumData?: () => AudioSpectrumSnapshot | null;
   onOpenArtistProfile?: (artistName: string) => void;
   onOpenTrackDetail?: (trackId: string) => void;
   onOpenAdminStudio: () => void;
@@ -563,6 +579,7 @@ export function normalizeToAnalyticsTrack(t: PlayerTrackItem): AnalyticsTrackIte
     artistBaselinePlays: t.artistBaselinePlays,
     downloadedOffline: t.downloadedOffline,
     inPlaylist: t.inPlaylist,
+    trackAnalysis: t.trackAnalysis,
   };
 }
 

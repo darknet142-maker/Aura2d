@@ -18,6 +18,12 @@ import {
   AdBannerSlide,
   AdBannerSettings,
 } from '../../services/musicService';
+import type {
+  AudioSpectrumSnapshot,
+  PlaybackEnginePrefs,
+  PrecisionEqPreset,
+  SpatialAudioConfig,
+} from '../../features/audio-dsp';
 
 export interface LyricLine {
   time: number;
@@ -229,15 +235,27 @@ export interface Immersive3DPlayerProps {
   onToggleDownload: (trackId: string) => void;
   onChangeMasterVolume: (val: number) => void;
   onChangeEqBand: (bandIdx: number, gainDb: number) => void;
+  onChangeBandQ?: (bandIdx: number, q: number, applyAll?: boolean) => void;
   onApplyEqPreset: (gains: number[]) => void;
+  onApplyPrecisionPreset?: (preset: PrecisionEqPreset) => void;
   onResetEq: () => void;
+  eqQFactors?: number[];
   eqBypassed?: boolean;
   preampDb?: number;
+  effectivePreampDb?: number;
   eqQFactor?: number;
+  autoHeadroom?: boolean;
+  phaseInvert?: boolean;
+  spatialConfig?: SpatialAudioConfig;
+  playbackPrefs?: PlaybackEnginePrefs;
   onToggleEqBypass?: () => void;
   onChangePreampDb?: (db: number) => void;
   onChangeEqQFactor?: (q: number) => void;
-  getAudioSpectrumData?: () => { bins: Uint8Array; rmsDb: number; peakDb: number } | null;
+  onToggleAutoHeadroom?: () => void;
+  onTogglePhaseInvert?: () => void;
+  onChangeSpatialConfig?: (cfg: SpatialAudioConfig) => void;
+  onChangePlaybackPrefs?: (prefs: PlaybackEnginePrefs) => void;
+  getAudioSpectrumData?: () => AudioSpectrumSnapshot | null;
   onOpenArtistProfile?: (artistName: string) => void;
   onOpenTrackDetail?: (trackId: string) => void;
   onOpenAdminStudio: () => void;

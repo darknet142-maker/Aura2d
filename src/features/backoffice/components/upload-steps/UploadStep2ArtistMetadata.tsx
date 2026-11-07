@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { CoverArtwork } from '../../../../components/CoverArtwork';
 import { formatTime } from '../../../../shared/utils/mediaFormatters';
+import { AnalysisReview } from '../../../music-intelligence';
 import type { AdminUploadWizardProps } from './uploadWizard.types';
 
 export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
@@ -94,6 +95,9 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
   setNewDropDuration,
   newCopyrightText,
   waveformPeaks,
+  currentTrackAnalysis,
+  handleConfirmBpm,
+  handleConfirmKey,
   handlePublishTrack,
 }) => {
   return (
@@ -328,30 +332,28 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
                   className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] text-amber-300 mb-1">Tempo (BPM)</label>
-                  <input
-                    type="number"
-                    min={60}
-                    max={220}
-                    value={newBpm}
-                    onChange={(e) => setNewBpm(Number(e.target.value) || 120)}
-                    className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-amber-300"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-cyan-300 mb-1">Tonalité (Key)</label>
-                  <input
-                    type="text"
-                    value={newMusicalKey}
-                    onChange={(e) => setNewMusicalKey(e.target.value)}
-                    placeholder="Fa# Mineur (F#m)"
-                    className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-2 text-xs text-cyan-200"
-                  />
-                </div>
-              </div>
             </div>
+
+            {/* MODULE DE DÉTECTION CHIRURGICALE BPM, CANDIDATS OCTAVE & VALIDATION HUMAINE */}
+            <AnalysisReview
+              analysis={currentTrackAnalysis || null}
+              currentBpm={newBpm}
+              currentKey={newMusicalKey || ''}
+              onConfirmBpm={(bpm) => {
+                if (handleConfirmBpm) {
+                  handleConfirmBpm(bpm);
+                } else {
+                  setNewBpm(bpm);
+                }
+              }}
+              onConfirmKey={(key) => {
+                if (handleConfirmKey) {
+                  handleConfirmKey(key);
+                } else {
+                  setNewMusicalKey(key);
+                }
+              }}
+            />
 
             <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-2">
               <span className="text-[11px] text-[#A3A9BA]">
@@ -393,7 +395,7 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
 
             {!isWizardStep2Valid && (
               <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
-                Veuillez renseigner le Titre et l'Artiste Principal pour débloquer l'étape 3.
+                Veuillez renseigner le Titre, l&apos;Artiste Principal et confirmer un BPM chirurgical valide (zéro BPM fictif par défaut) pour débloquer l&apos;étape 3.
               </div>
             )}
           </div>

@@ -327,7 +327,8 @@ CREATE TABLE IF NOT EXISTS public.tracks (
     duration INTEGER NOT NULL DEFAULT 180,                     -- Durée totale en secondes
     drop_start INTEGER NOT NULL DEFAULT 30,                    -- Point de départ du Drop en secondes
     drop_duration INTEGER NOT NULL DEFAULT 22,                 -- Durée de la boucle Drop (15s à 30s)
-    bpm INTEGER NOT NULL DEFAULT 120,
+    bpm INTEGER DEFAULT NULL,                                  -- BPM chirurgical confirmé ou détecté (jamais de 120 fictif)
+    track_analysis JSONB DEFAULT NULL,                         -- Fiche Music Intelligence complète (confiance, Camelot, beats, historique)
     lyrics JSONB DEFAULT '[]'::jsonb,                          -- Paroles synchronisées [{time, text}]
 
     -- Métriques d'écoutes, Likes & Fidélité
@@ -345,6 +346,11 @@ CREATE TABLE IF NOT EXISTS public.tracks (
 CREATE INDEX IF NOT EXISTS idx_tracks_created_at ON public.tracks (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tracks_category ON public.tracks (category);
 CREATE INDEX IF NOT EXISTS idx_tracks_artist ON public.tracks (artist);
+
+-- Migration idempotente Music Intelligence (zéro BPM 120 fictif + stockage JSONB)
+ALTER TABLE public.tracks ALTER COLUMN bpm DROP NOT NULL;
+ALTER TABLE public.tracks ALTER COLUMN bpm DROP DEFAULT;
+ALTER TABLE public.tracks ADD COLUMN IF NOT EXISTS track_analysis JSONB DEFAULT NULL;
 
 -- ----------------------------------------------------------------------------
 -- 2. TABLE DU RÉPERTOIRE DES MÉTIERS : public.studio_entities

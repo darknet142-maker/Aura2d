@@ -21,6 +21,7 @@ import type { ClosedPeriodRecord } from './royaltyLedgerStore';
 import { FinancialSimulator36M } from './FinancialSimulator36M';
 import { B2bHorecaBugadaPanel } from './B2bHorecaBugadaPanel';
 import { TelecomCemacCompliancePanel } from './TelecomCemacCompliancePanel';
+import type { DjB2bTrackLite } from '../music-intelligence';
 
 export interface BugadaRoyaltiesAdminPanelProps {
   ledger: RoyaltyLedger;
@@ -31,6 +32,8 @@ export interface BugadaRoyaltiesAdminPanelProps {
   onChangeHolderTaxStatus: (holderName: string, status: RightsHolderTaxStatus) => void;
   onCloseAccountingPeriod: (period: string) => void;
   onSaveAndSyncAll?: (sectionLabel?: string) => void;
+  tracks?: DjB2bTrackLite[];
+  onTriggerDjTransition?: (targetTrackId: string, crossfadeSec: number) => void;
 }
 
 type RoyaltySubTab =
@@ -50,6 +53,8 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
   onChangeHolderTaxStatus,
   onCloseAccountingPeriod,
   onSaveAndSyncAll,
+  tracks,
+  onTriggerDjTransition,
 }) => {
   const [subTab, setSubTab] = useState<RoyaltySubTab>('REPARTITION');
   const [period] = useState<string>(() => currentAccountingPeriod());
@@ -440,7 +445,11 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
         )}
 
         {subTab === 'B2B_HORECA' && (
-          <B2bHorecaBugadaPanel onSaveAndSyncAll={onSaveAndSyncAll} />
+          <B2bHorecaBugadaPanel
+            onSaveAndSyncAll={onSaveAndSyncAll}
+            tracks={tracks}
+            onTriggerDjTransition={onTriggerDjTransition}
+          />
         )}
 
         {subTab === 'SIMULATEUR_36M' && (

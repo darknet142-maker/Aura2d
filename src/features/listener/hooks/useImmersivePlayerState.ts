@@ -30,6 +30,10 @@ import {
   normalizeSearchStr,
   normalizeToAnalyticsTrack,
 } from '../../../components/player/playerEngineHelpers';
+import {
+  ensureTrackSurgicalAnalysis,
+  parseMusicIntelligenceNaturalQuery,
+} from '../../music-intelligence';
 
 export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
   const {
@@ -584,6 +588,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     };
 
     const matchingGenres = availableGenres.filter((g) => scoreMatch(g) > 0);
+    const nq = parseMusicIntelligenceNaturalQuery(hubSearchQuery);
 
     const allScoredTracks = allTracksFlat
       .map((item) => {
@@ -597,7 +602,37 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
             ? Math.max(...track.lyrics.map((l) => scoreMatch(l.text))) * 0.7
             : 0;
 
-        const score = Math.max(
+        let nqBoost = 0;
+        const analysis = ensureTrackSurgicalAnalysis(track);
+        const effBpm = analysis.confirmedBpm ?? analysis.detectedBpm ?? track.bpm;
+        if (nq.targetBpm && effBpm) {
+          const delta = Math.abs(effBpm - nq.targetBpm);
+          if (delta <= nq.bpmTolerance) nqBoost += 90 - delta * 4;
+        }
+        if (nq.bpmRange && effBpm && effBpm >= nq.bpmRange[0] && effBpm <= nq.bpmRange[1]) {
+          nqBoost += 88;
+        }
+        const effKey = (analysis.confirmedKey || analysis.detectedKey || track.musicalKey || '').toLowerCase();
+        if (nq.targetKeyQuery && effKey.includes(nq.targetKeyQuery.toLowerCase())) {
+          nqBoost += 82;
+        }
+        if (nq.targetCamelot && (analysis.camelotKey || '').toUpperCase() === nq.targetCamelot) {
+          nqBoost += 85;
+        }
+        if (nq.minEnergy && (analysis.energy ?? 0.78) >= nq.minEnergy) {
+          nqBoost += 42;
+        }
+        if (nq.maxEnergy && (analysis.energy ?? 0.72) <= nq.maxEnergy) {
+          nqBoost += 42;
+        }
+        if (nq.minDanceability && (analysis.danceability ?? 0.78) >= nq.minDanceability) {
+          nqBoost += 38;
+        }
+        if (nq.targetGenreHint && track.category.toLowerCase().includes(nq.targetGenreHint.slice(0, 4))) {
+          nqBoost += 65;
+        }
+
+        const baseScore = Math.max(
           scoreMatch(track.title) * 1.4,
           scoreMatch(track.artist) * 1.25,
           featScore * 1.2,
@@ -611,6 +646,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
           scoreMatch(track.musicalKey) * 0.85,
           lyricsTextScore
         );
+        const score = baseScore > 0 ? baseScore + nqBoost : nqBoost > 0 ? nqBoost : 0;
         return { ...item, score };
       })
       .filter((item) => item.score > 0)

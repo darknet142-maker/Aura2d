@@ -22,6 +22,8 @@ import {
   type B2bProPackSpec,
 } from '../economics/monthlyTreasury36M';
 import { formatFcfa } from '../economics/formatters';
+import { INITIAL_CATALOGUE } from '../../mocks/catalogue.mock';
+import { DjModeB2bDeckCard, type DjB2bTrackLite } from '../music-intelligence';
 
 const B2B_STORAGE_KEY = 'drop_b2b_horeca_settings_v1';
 
@@ -50,10 +52,14 @@ function loadB2bConfig(): Partial<SavedB2bConfig> {
 
 export interface B2bHorecaBugadaPanelProps {
   onSaveAndSyncAll?: (sectionLabel?: string) => void;
+  tracks?: DjB2bTrackLite[];
+  onTriggerDjTransition?: (targetTrackId: string, crossfadeSec: number) => void;
 }
 
 export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
   onSaveAndSyncAll,
+  tracks,
+  onTriggerDjTransition,
 }) => {
   const initial = loadB2bConfig();
 
@@ -683,8 +689,8 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                   Supprime les blancs entre deux morceaux pour maintenir l&apos;ambiance du bar.
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-1.5 shrink-0">
-                {[2, 3, 4].map((sec) => (
+              <div className="grid grid-cols-4 gap-1.5 shrink-0">
+                {[2, 4, 6, 8].map((sec) => (
                   <button
                     key={sec}
                     type="button"
@@ -700,6 +706,14 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Platine DJ Mode B2B (Section 6.B — Intro/Outro, Phase, Roue de Camelot & Carrure 4/8 mesures) */}
+            <DjModeB2bDeckCard
+              tracks={tracks && tracks.length > 0 ? tracks : INITIAL_CATALOGUE.flatMap((a) => a.tracks)}
+              activeCrossfadeSec={crossfadeSeconds}
+              onApplyCrossfadeSec={(sec) => setCrossfadeSeconds(sec)}
+              onTriggerTransition={onTriggerDjTransition}
+            />
 
             {/* Dayparting & Auto-Pause Fermeture */}
             <div className="rounded-xl bg-slate-950 p-3 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">

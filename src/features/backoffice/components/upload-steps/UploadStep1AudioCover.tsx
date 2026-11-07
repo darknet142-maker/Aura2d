@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { CoverArtwork } from '../../../../components/CoverArtwork';
 import { formatTime } from '../../../../shared/utils/mediaFormatters';
+import { AnalysisStatus } from '../../../music-intelligence';
 import type { AdminUploadWizardProps } from './uploadWizard.types';
 
 export const UploadStep1AudioCover: React.FC<AdminUploadWizardProps> = ({
@@ -94,6 +95,10 @@ export const UploadStep1AudioCover: React.FC<AdminUploadWizardProps> = ({
   setNewDropDuration,
   newCopyrightText,
   waveformPeaks,
+  currentTrackAnalysis,
+  isAnalyzingAudio,
+  handleReanalyzeAudio,
+  handleCancelAudioAnalysis,
   handlePublishTrack,
 }) => {
   return (
@@ -244,6 +249,35 @@ export const UploadStep1AudioCover: React.FC<AdminUploadWizardProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* STATUT DU MOTEUR D'INTELLIGENCE MUSICALE & BPM SUR LE FICHIER IMPORTÉ */}
+            {(newAudioFileName || currentTrackAnalysis || isAnalyzingAudio) && (
+              <AnalysisStatus
+                analysis={
+                  currentTrackAnalysis ||
+                  (isAnalyzingAudio
+                    ? {
+                        detectedBpm: null,
+                        confirmedBpm: null,
+                        alternativeBpms: [],
+                        bpmConfidence: null,
+                        detectedKey: null,
+                        confirmedKey: null,
+                        mode: null,
+                        energy: null,
+                        danceability: null,
+                        beatPositions: [],
+                        durationSec: 0,
+                        analysisStatus: 'processing',
+                        algorithmVersion: 'essentia-multiband-v2.4',
+                        analyzedAt: null,
+                      }
+                    : null)
+                }
+                onReanalyze={handleReanalyzeAudio}
+                onCancel={handleCancelAudioAnalysis}
+              />
+            )}
 
             {/* ÉTAPE DE VÉRIFICATION OBLIGATOIRE DE LA FORME D'ONDE & ATTRIBUTION DU CONTENT ID DROP */}
             {waveformVerificationReport && (

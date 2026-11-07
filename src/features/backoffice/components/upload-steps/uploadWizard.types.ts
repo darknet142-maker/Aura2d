@@ -2,6 +2,7 @@ import type React from 'react';
 import type { FeaturingSplitMode } from '../../../../utils/rankingEngine';
 import type { WaveformConcordanceResult } from '../../../../services/musicService';
 import type { EntityDatabase, Track } from '../../../../shared/types/domain.types';
+import type { TrackAnalysis } from '../../../music-intelligence/types/music-analysis.types';
 
 export interface WaveformVerificationReportData {
   candidatePeaks: number[];
@@ -67,8 +68,8 @@ export interface AdminUploadWizardProps {
   setNewGabonTerritoryPct: React.Dispatch<React.SetStateAction<number>>;
   newAlbum: string;
   setNewAlbum: React.Dispatch<React.SetStateAction<string>>;
-  newBpm: number;
-  setNewBpm: React.Dispatch<React.SetStateAction<number>>;
+  newBpm: number | null;
+  setNewBpm: React.Dispatch<React.SetStateAction<number | null>>;
   newMusicalKey: string;
   setNewMusicalKey: React.Dispatch<React.SetStateAction<string>>;
   categories: string[];
@@ -104,5 +105,11 @@ export interface AdminUploadWizardProps {
   setNewDropDuration: React.Dispatch<React.SetStateAction<number>>;
   newCopyrightText: string;
   waveformPeaks: number[];
+  currentTrackAnalysis?: TrackAnalysis | null;
+  isAnalyzingAudio?: boolean;
+  handleConfirmBpm?: (bpm: number) => void;
+  handleConfirmKey?: (key: string) => void;
+  handleReanalyzeAudio?: () => void;
+  handleCancelAudioAnalysis?: () => void;
   handlePublishTrack: () => void;
 }

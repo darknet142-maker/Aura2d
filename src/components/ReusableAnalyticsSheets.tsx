@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Play,
@@ -53,6 +53,12 @@ import type { PayoutStatement } from '../features/economics/payoutEngine';
 import { ArtistRoyaltyAndTipCard } from '../features/royalties/ArtistRoyaltyAndTipCard';
 import { ListenerPassAndDataSaverCard } from '../features/royalties/ListenerPassAndDataSaverCard';
 import { TrackRoyaltySplitBadge } from '../features/royalties/TrackRoyaltySplitBadge';
+import type { TrackAnalysis } from '../features/music-intelligence/types/music-analysis.types';
+import {
+  MusicMetadataCard,
+  ensureTrackSurgicalAnalysis,
+  computeDjTransitionCompatibility,
+} from '../features/music-intelligence';
 
 export type StudioEntityRole =
   | 'ARTIST'
@@ -123,6 +129,7 @@ export interface AnalyticsTrackItem {
   isBeatDownloadable?: boolean;
   musicalKey?: string;
   audioUrl?: string;
+  trackAnalysis?: TrackAnalysis;
 }
 
 export interface AnalyticsAlbumNode {
@@ -1125,6 +1132,49 @@ export const ReusableTrackDetailSheet: React.FC<
   const mixEng = track.mixingEngineerName || track.soundEngineerName;
   const mastEng = track.masteringEngineerName || track.soundEngineerName;
 
+  const trackAnalysis = useMemo(
+    () =>
+      track.trackAnalysis ||
+      ensureTrackSurgicalAnalysis({
+        id: track.id,
+        title: track.title,
+        category: track.category,
+        bpm: track.bpm,
+        musicalKey: track.musicalKey,
+        duration: track.duration,
+        waveformPeaks: track.waveformPeaks,
+      }),
+    [track]
+  );
+
+  const djCompatibleTracks = useMemo(() => {
+    if (!album?.tracks || album.tracks.length <= 1) return [];
+    return album.tracks
+      .filter((t) => t.id !== track.id)
+      .map((t) => {
+        const targetAnalysis = t.trackAnalysis || ensureTrackSurgicalAnalysis(t);
+        return computeDjTransitionCompatibility(
+          {
+            bpm: trackAnalysis.confirmedBpm ?? trackAnalysis.detectedBpm ?? 120,
+            camelotKey: trackAnalysis.camelotKey,
+            downbeatOffsetSec: trackAnalysis.downbeatOffsetSec,
+            energy: trackAnalysis.energy,
+          },
+          {
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            bpm: targetAnalysis.confirmedBpm ?? targetAnalysis.detectedBpm ?? 120,
+            key: targetAnalysis.confirmedKey ?? targetAnalysis.detectedKey ?? '8A',
+            camelotKey: targetAnalysis.camelotKey,
+            downbeatOffsetSec: targetAnalysis.downbeatOffsetSec,
+            energy: targetAnalysis.energy,
+          }
+        );
+      })
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+  }, [album, track.id, trackAnalysis]);
+
   const rawHs = track.creditHandshake;
   const isRawEscrow =
     rawHs?.status === 'DISPUTED' || rawHs?.escrowFrozen === true;
@@ -1944,6 +1994,14 @@ export const ReusableTrackDetailSheet: React.FC<
             )}
           </div>
         </div>
+
+        {/* Fiche d'Intelligence Musicale Chirurgicale (BPM Multibande, Octave, Tonalité Camelot, Énergie & DJ Mode) */}
+        <MusicMetadataCard
+          analysis={trackAnalysis}
+          trackTitle={track.title}
+          djCompatibleTracks={djCompatibleTracks}
+          onSelectCompatibleTrack={onSelectTrackDetail}
+        />
 
         {/* Pistes de l'Album & Navigation Croisée Intelligente */}
         {album.tracks.length > 1 && (

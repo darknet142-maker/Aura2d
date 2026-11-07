@@ -1,7 +1,8 @@
 import React from 'react';
-import { Disc, Flame, Shield } from 'lucide-react';
+import { Activity, Disc, Flame, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
 import { BugadaRoyaltiesAdminPanel } from '../royalties/BugadaRoyaltiesAdminPanel';
+import { CatalogueMusicAnalyticsPanel } from '../music-intelligence';
 import type { StatsBaseline } from '../royalties/royaltyLedgerStore';
 import { SPRING_SNAPPY, SUBTLE_ENTRANCE_VARIANTS } from '../../shared/ui/springMotion';
 import {
@@ -170,8 +171,8 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
 
               {adminMainTab === 'CATALOGUE' && (
                 <div className="w-full flex flex-col gap-3">
-                  {/* SOUS-ONGLETS DU CATALOGUE EN GRILLE SYMÉTRIQUE 3 COLONNES */}
-                  <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]">
+                  {/* SOUS-ONGLETS DU CATALOGUE EN GRILLE SYMÉTRIQUE 4 COLONNES */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]">
                     <motion.button
                       type="button"
                       whileHover={{ y: -1.5 }}
@@ -201,6 +202,21 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                     >
                       <Flame className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span className="truncate">Rangs Anti-Halo &amp; Awards</span>
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      whileHover={{ y: -1.5 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={SPRING_SNAPPY}
+                      onClick={() => setCatalogueSubTab('MUSIC_INTEL')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border cursor-pointer ${
+                        catalogueSubTab === 'MUSIC_INTEL'
+                          ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                          : 'bg-[#07090E] border-white/[0.08] text-[#A3A9BA] hover:text-white'
+                      }`}
+                    >
+                      <Activity className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate">Intelligence BPM &amp; Benchmark</span>
                     </motion.button>
                     <motion.button
                       type="button"
@@ -247,6 +263,14 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                       onSelectArtist={(name) => setSelectedArtistName(name)}
                       onSelectTrack={(tid) => setSelectedTrackId(tid)}
                       onSaveAndSyncAll={handleSaveAndSyncAllAdmin}
+                    />
+                  )}
+
+                  {catalogueSubTab === 'MUSIC_INTEL' && (
+                    <CatalogueMusicAnalyticsPanel
+                      tracks={allTracksFlat}
+                      onSelectTrack={(tid) => setSelectedTrackId(tid)}
+                      onSelectArtist={(name) => setSelectedArtistName(name)}
                     />
                   )}
 
@@ -358,6 +382,12 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                   setNewDropDuration={setNewDropDuration}
                   newCopyrightText={newCopyrightText}
                   waveformPeaks={waveformPeaks}
+                  currentTrackAnalysis={ctrl.currentTrackAnalysis}
+                  isAnalyzingAudio={ctrl.isAnalyzingAudio}
+                  handleConfirmBpm={ctrl.handleConfirmBpm}
+                  handleConfirmKey={ctrl.handleConfirmKey}
+                  handleReanalyzeAudio={ctrl.handleReanalyzeAudio}
+                  handleCancelAudioAnalysis={ctrl.handleCancelAudioAnalysis}
                   handlePublishTrack={handlePublishTrack}
                 />
               )}
@@ -403,6 +433,31 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                   onResetSettings={resetRoyaltySettings}
                   onChangeHolderTaxStatus={setHolderTaxStatus}
                   onSaveAndSyncAll={handleSaveAndSyncAllAdmin}
+                  tracks={allTracksFlat}
+                  onTriggerDjTransition={(targetTrackId, crossfadeSec) => {
+                    for (let aIdx = 0; aIdx < catalogue.length; aIdx++) {
+                      const tIdx = catalogue[aIdx].tracks.findIndex((t) => t.id === targetTrackId);
+                      if (tIdx >= 0) {
+                        const snapped = ([0, 2, 4, 6, 8] as const).reduce((prev, curr) =>
+                          Math.abs(curr - crossfadeSec) < Math.abs(prev - crossfadeSec) ? curr : prev
+                        );
+                        ctrl.handleChangePlaybackPrefs({
+                          ...ctrl.playbackPrefs,
+                          defaultStartMode: 'FULL_NONSTOP',
+                          chainingMode: 'CATALOGUE_NONSTOP',
+                          crossfadeSec: snapped,
+                          bpmSyncCrossfade: true,
+                        });
+                        finalizeListeningSessionOnZap();
+                        setAlbumIdx(aIdx);
+                        setTrackIdx(tIdx);
+                        setIsDropMode(false);
+                        seekAllEngines(0);
+                        setIsPlaying(true);
+                        break;
+                      }
+                    }
+                  }}
                   onCloseAccountingPeriod={(period) => {
                     const currentStats: StatsBaseline = {};
                     users.forEach((u) => {
