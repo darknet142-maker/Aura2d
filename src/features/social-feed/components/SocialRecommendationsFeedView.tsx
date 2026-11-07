@@ -50,6 +50,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
   }), [currentTrack]);
 
   const { trackOpts, albumOpts, artistOpts } = useMemo(() => buildComposerOptionsFromCatalogue(allTracksFlat), [allTracksFlat]);
+  const catalogueAudioLookup = useMemo(() => allTracksFlat.map((m) => ({ id: m.track.id, title: m.track.title, artist: m.track.artist, audioUrl: m.track.audioUrl, dropStart: m.track.dropStart, dropDuration: m.track.dropDuration, bpm: m.track.bpm })), [allTracksFlat]);
 
   const navigateToTarget = (target: SocialTargetSubject) => {
     if (target.kind === 'ARTIST' || !target.trackId) onOpenEntitySheet(target.entityName, 'ARTIST');
@@ -141,7 +142,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
       <RecoReactionsDetailModal isOpen={Boolean(reactionsModal)} initialTab={reactionsModal?.initialTab} post={reactionsModal?.post ?? null} onClose={() => setReactionsModal(null)} onOpenUserProfile={onOpenUserProfile} />
       <RecoCommentsDrawer post={activeCommentsPost} onClose={() => feedCtrl.setActiveCommentsPostId(null)} onSubmitComment={feedCtrl.handleAddComment} onOpenUserProfile={onOpenUserProfile} />
       <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onDeleteStatus={feedCtrl.handleDeleteStatus} onOpenUserProfile={onOpenUserProfile} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
-      <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />
+      <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} catalogueLookup={catalogueAudioLookup} />
       <ReportContentModal isOpen={Boolean(feedCtrl.reportingPost)} postId={feedCtrl.reportingPost?.id || ''} authorName={feedCtrl.reportingPost?.authorName || ''} onConfirmReport={feedCtrl.handleConfirmReport} onClose={() => feedCtrl.setReportingPost(null)} />
       <TasteOnboardingVibesModal isOpen={isTasteModalOpen} onClose={() => setIsTasteModalOpen(false)} onApplyVibes={() => feedCtrl.shuffleDiscoveryFeed()} />
     </div>

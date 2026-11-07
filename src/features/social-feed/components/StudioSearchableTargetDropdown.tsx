@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import type { SocialTargetSubject } from '../types/social-feed.types';
-import { useTargetDropAudioPreview } from '../hooks/useTargetDropAudioPreview';
+import { useTargetDropAudioPreview, getSocialTargetUniqueKey, type TargetAudioLookupItem } from '../hooks/useTargetDropAudioPreview';
 
 function norm(s?: string): string { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
 export function filterTargetsInstant(targets: SocialTargetSubject[], rawQuery: string): SocialTargetSubject[] {
@@ -26,10 +26,12 @@ export function filterTargetsInstant(targets: SocialTargetSubject[], rawQuery: s
 export interface StudioSearchableTargetDropdownProps {
   selectedTarget: SocialTargetSubject; options: SocialTargetSubject[]; onSelectTarget: (target: SocialTargetSubject) => void;
   onPreviewTargetDrop?: (target: SocialTargetSubject) => void; previewingKey?: string | null; variant?: 'studio-glass' | 'modal-surface'; ariaLabel?: string;
+  catalogueLookup?: TargetAudioLookupItem[];
 }
 
 export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDropdownProps> = ({
   selectedTarget, options, onSelectTarget, onPreviewTargetDrop, previewingKey, variant = 'modal-surface', ariaLabel = 'Sélectionner une chanson ou un artiste',
+  catalogueLookup,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -38,9 +40,10 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const filtered = useMemo(() => filterTargetsInstant(options, query), [options, query]);
-  const targetKey = (t: SocialTargetSubject) => `${t.kind}:${t.trackId || t.albumId || t.entityName}:${t.title}`;
+  const targetKey = (t: SocialTargetSubject) => getSocialTargetUniqueKey(t);
   const selectedKey = targetKey(selectedTarget);
   const activePlayKey = previewingKey !== undefined ? previewingKey : fallbackPreview.previewingKey;
+  const isSelectedPlaying = activePlayKey === selectedKey;
 
   useEffect(() => {
     if (isOpen) { setHighlightIdx(0); setTimeout(() => searchInputRef.current?.focus(), 40); }
@@ -58,11 +61,31 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
   const toggleDropPlay = (e: React.MouseEvent, item: SocialTargetSubject) => {
     e.stopPropagation();
     if (onPreviewTargetDrop) onPreviewTargetDrop(item);
-    else void fallbackPreview.togglePreview(item);
+    else void fallbackPreview.togglePreview(item, catalogueLookup);
   };
 
+  const renderPlayPill = (item: SocialTargetSubject, isPlaying: boolean, compact = false) => (
+    <button
+      type="button" onClick={(e) => toggleDropPlay(e, item)}
+      aria-label={isPlaying ? `Pause ${item.title}` : `Écouter l'extrait de ${item.title}`}
+      title={`Écouter le Drop (30s) : ${item.title}`}
+      className={`${compact ? 'h-6 px-2' : 'h-7 px-2.5'} rounded-full flex items-center gap-1 text-[10.5px] font-bold transition cursor-pointer shrink-0 ${
+        isPlaying ? 'bg-[#DE1B34] text-white shadow-[0_0_12px_rgba(222,27,52,0.6)]' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC] border border-white/10 hover:border-amber-400/40'
+      }`}
+    >
+      {isPlaying ? (
+        <span className="flex items-center gap-1">
+          <span className="flex items-end gap-[1.5px] h-2.5 mr-0.5"><span className="w-[2px] h-2.5 bg-white rounded-full animate-pulse" /><span className="w-[2px] h-1.5 bg-white rounded-full animate-ping" /><span className="w-[2px] h-2 bg-white rounded-full animate-pulse" /></span>
+          <Pause className="w-2.5 h-2.5 fill-current" />
+        </span>
+      ) : (
+        <span className="flex items-center gap-1"><Play className="w-2.5 h-2.5 fill-current ml-0.5" /><span className="text-[9.5px] font-mono font-extrabold text-amber-300">Drop</span></span>
+      )}
+    </button>
+  );
+
   return (
-    <div ref={rootRef} className={`relative ${variant === 'studio-glass' ? 'w-full max-w-[330px]' : 'w-full'}`}>
+    <div ref={rootRef} className={`relative ${variant === 'studio-glass' ? 'w-full max-w-[340px]' : 'w-full'}`}>
       <button
         type="button" role="combobox" aria-expanded={isOpen} aria-label={ariaLabel}
         onClick={() => { setIsOpen((v) => !v); setHighlightIdx(0); }}
@@ -84,7 +107,10 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
             <p className="text-[11px] text-[#A3A9BA] truncate">{selectedTarget.subtitle}</p>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-[#A3A9BA] shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-180 text-amber-300' : ''}`} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          {renderPlayPill(selectedTarget, isSelectedPlaying)}
+          <ChevronDown className={`w-4 h-4 text-[#A3A9BA] shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-180 text-amber-300' : ''}`} />
+        </div>
       </button>
 
       <AnimatePresence>
@@ -112,23 +138,7 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
                         <div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#F8FAFC] truncate">{item.title}</p><p className="text-[10.5px] text-[#A3A9BA] truncate">{item.subtitle} • {item.genre}</p></div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button" onClick={(e) => toggleDropPlay(e, item)}
-                          aria-label={isPlayingThis ? `Pause ${item.title}` : `Écouter l'extrait de ${item.title}`}
-                          title={`Écouter le Drop (30s) : ${item.title}`}
-                          className={`h-6 px-2 rounded-full flex items-center gap-1 text-[10.5px] font-bold transition cursor-pointer ${
-                            isPlayingThis ? 'bg-[#DE1B34] text-white shadow-[0_0_12px_rgba(222,27,52,0.6)]' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC] border border-white/10 hover:border-amber-400/40'
-                          }`}
-                        >
-                          {isPlayingThis ? (
-                            <span className="flex items-center gap-1">
-                              <span className="flex items-end gap-[1.5px] h-2.5 mr-0.5"><span className="w-[2px] h-2.5 bg-white rounded-full animate-pulse" /><span className="w-[2px] h-1.5 bg-white rounded-full animate-ping" /><span className="w-[2px] h-2 bg-white rounded-full animate-pulse" /></span>
-                              <Pause className="w-2.5 h-2.5 fill-current" />
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1"><Play className="w-2.5 h-2.5 fill-current ml-0.5" /><span className="text-[9.5px] font-mono font-extrabold text-amber-300">Drop</span></span>
-                          )}
-                        </button>
+                        {renderPlayPill(item, isPlayingThis, true)}
                         {isSelected ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-[9.5px] font-semibold text-[#A3A9BA]">{kindLabel(item.kind)}</span>}
                       </div>
                     </div>

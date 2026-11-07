@@ -34,6 +34,7 @@ export function buildComposerOptionsFromCatalogue(
           kind: 'ALBUM', albumId: album.id, trackId: track.id, entityName: album.artist,
           title: album.albumTitle, subtitle: album.artist, genre: album.category,
           cover: track.cover, artworkType: track.artworkType,
+          audioUrl: track.audioUrl, dropStart: track.dropStart, dropDuration: track.dropDuration, bpm: track.bpm,
         },
       });
     }
@@ -45,6 +46,7 @@ export function buildComposerOptionsFromCatalogue(
           kind: 'ARTIST', trackId: track.id, entityName: track.artist,
           title: track.artist, subtitle: `Catalogue ${track.category}`, genre: track.category,
           cover: track.cover, artworkType: track.artworkType,
+          audioUrl: track.audioUrl, dropStart: track.dropStart, dropDuration: track.dropDuration, bpm: track.bpm,
         },
       });
     }

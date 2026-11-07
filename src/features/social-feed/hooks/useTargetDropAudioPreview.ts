@@ -4,31 +4,25 @@ import { globalAudioCoordinator } from '../../../services/globalAudioCoordinator
 import type { SocialTargetSubject } from '../types/social-feed.types';
 
 export interface TargetAudioLookupItem {
-  id: string;
-  audioUrl?: string;
-  dropStart?: number;
-  dropDuration?: number;
-  bpm?: number;
+  id: string; audioUrl?: string; dropStart?: number; dropDuration?: number; bpm?: number;
+  notes?: number[]; baseFreq?: number; title?: string; artist?: string;
 }
 
-/**
- * Moteur intelligent de pré-écoute acoustique du Drop (30s max).
- * Lit STRICTEMENT le fichier audio réel du morceau sélectionné.
- * Zéro son synthétique, zéro bruit de fond par défaut : silence strict si aucun binaire n'est chargé.
- */
+export function getSocialTargetUniqueKey(t: SocialTargetSubject): string {
+  return `${t.kind}:${t.trackId || t.albumId || t.id || t.entityName}:${t.title}`;
+}
+
 export function useTargetDropAudioPreview(onPauseMainPlayer?: () => void) {
   const [previewingKey, setPreviewingKey] = useState<string | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const stopPreview = useCallback(() => {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
     if (audioElRef.current) {
       audioElRef.current.pause();
-      audioElRef.current.src = '';
+      audioElRef.current.removeAttribute('src');
+      audioElRef.current.load();
       audioElRef.current = null;
     }
     globalAudioCoordinator.release('DROPDOWN_DROP_PREVIEW');
@@ -37,83 +31,102 @@ export function useTargetDropAudioPreview(onPauseMainPlayer?: () => void) {
 
   useEffect(() => {
     const unreg = globalAudioCoordinator.register('DROPDOWN_DROP_PREVIEW', () => stopPreview());
-    return () => {
-      unreg();
-      stopPreview();
-    };
+    return () => { unreg(); stopPreview(); };
   }, [stopPreview]);
 
-  const togglePreview = useCallback(
-    async (target: SocialTargetSubject, catalogueLookup: TargetAudioLookupItem[] = []): Promise<boolean> => {
-      const tid = target.trackId || (target.kind === 'TRACK' ? target.id : '') || '';
-      const targetKey = `${target.kind}:${tid || target.entityName}:${target.title}`;
+  const togglePreview = useCallback(async (target: SocialTargetSubject, catalogueLookup: TargetAudioLookupItem[] = []): Promise<boolean> => {
+    const targetKey = getSocialTargetUniqueKey(target);
+    if (previewingKey === targetKey) { stopPreview(); return false; }
+    stopPreview();
+    globalAudioCoordinator.claim('DROPDOWN_DROP_PREVIEW');
+    onPauseMainPlayer?.();
 
-      if (previewingKey === targetKey) {
-        stopPreview();
-        return false;
-      }
+    const tid = target.trackId || (target.kind === 'TRACK' ? target.id : '') || '';
+    const cleanTitle = (target.title || '').trim().toLowerCase();
+    const cleanArtist = (target.entityName || target.subtitle || '').trim().toLowerCase();
+    const lookup = catalogueLookup.find((c) =>
+      (tid && c.id === tid) ||
+      (cleanTitle && c.title && c.title.trim().toLowerCase() === cleanTitle) ||
+      (cleanArtist && c.artist && c.artist.trim().toLowerCase() === cleanArtist && target.kind === 'ARTIST')
+    );
+    const dropStart = lookup?.dropStart ?? target.dropStart ?? 0;
+    const dropDuration = Math.min(30, Math.max(5, lookup?.dropDuration ?? target.dropDuration ?? 30));
+    const searchId = tid || lookup?.id;
 
+    // Résolution prioritaire du binaire audio réel (IndexedDB Blob frais > audioUrl)
+    let resolvedUrl: string | null = null;
+    if (searchId) {
+      try { resolvedUrl = await getPersistentAudioBlobUrl(searchId); } catch {}
+    }
+    if (!resolvedUrl) {
+      const candidate = target.audioUrl || lookup?.audioUrl;
+      if (candidate && (!candidate.startsWith('blob:') || !searchId)) resolvedUrl = candidate;
+    }
+    if (!resolvedUrl && searchId) {
+      try { resolvedUrl = await getPersistentAudioBlobUrl(searchId); } catch {}
+    }
+
+    if (!resolvedUrl) {
       stopPreview();
-      globalAudioCoordinator.claim('DROPDOWN_DROP_PREVIEW');
-      onPauseMainPlayer?.();
+      return false;
+    }
 
-      const lookup = catalogueLookup.find((c) => c.id === tid);
-      const dropStart = lookup?.dropStart ?? target.dropStart ?? 0;
-      const dropDuration = Math.min(30, Math.max(5, lookup?.dropDuration ?? target.dropDuration ?? 30));
+    setPreviewingKey(targetKey);
+    try {
+      const audio = new Audio();
+      if (/^https?:\/\//i.test(resolvedUrl)) audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      audio.src = resolvedUrl;
+      audioElRef.current = audio;
 
-      let resolvedUrl = target.audioUrl || lookup?.audioUrl;
-      if (!resolvedUrl && tid) {
+      let started = false;
+      const onReady = () => {
+        if (started || audioElRef.current !== audio) return;
+        started = true;
         try {
-          const persisted = await getPersistentAudioBlobUrl(tid);
-          if (persisted) resolvedUrl = persisted;
-        } catch {
-          resolvedUrl = undefined;
-        }
-      }
-
-      // Si aucun fichier audio réel n'est associé à cette piste, zéro bruit artificiel
-      if (!resolvedUrl) {
-        stopPreview();
-        return false;
-      }
-
-      try {
-        const audio = new Audio();
-        if (/^https?:\/\//i.test(resolvedUrl)) {
-          audio.crossOrigin = 'anonymous';
-        }
-        audio.preload = 'auto';
-        audio.src = resolvedUrl;
-        audioElRef.current = audio;
-        setPreviewingKey(targetKey);
-
-        const playAtStart = () => {
-          try {
+          if (dropStart > 0 && Number.isFinite(dropStart) && (!audio.duration || audio.duration > dropStart)) {
             audio.currentTime = dropStart;
-          } catch {
-            // Attente du buffering
           }
-          audio.play().catch(() => {
+        } catch {}
+        audio.play().catch(() => {
+          try {
+            audio.currentTime = 0;
+            audio.play().catch(() => stopPreview());
+          } catch {
             stopPreview();
-          });
-        };
+          }
+        });
+      };
 
-        if (audio.readyState >= 1) {
-          playAtStart();
-        } else {
-          audio.addEventListener('loadedmetadata', playAtStart, { once: true });
-        }
-
-        audio.addEventListener('error', () => stopPreview(), { once: true });
-        timerRef.current = window.setTimeout(() => stopPreview(), dropDuration * 1000);
-        return true;
-      } catch {
-        stopPreview();
-        return false;
+      if (audio.readyState >= 1) {
+        onReady();
+      } else {
+        audio.addEventListener('loadedmetadata', onReady, { once: true });
+        audio.addEventListener('canplay', onReady, { once: true });
+        setTimeout(() => { if (!started && audioElRef.current === audio) onReady(); }, 2500);
       }
-    },
-    [previewingKey, onPauseMainPlayer, stopPreview]
-  );
+
+      audio.addEventListener('error', async () => {
+        if (searchId) {
+          try {
+            const fresh = await getPersistentAudioBlobUrl(searchId);
+            if (fresh && audioElRef.current === audio) {
+              audio.src = fresh;
+              void audio.play().catch(() => stopPreview());
+              return;
+            }
+          } catch {}
+        }
+        stopPreview();
+      }, { once: true });
+
+      timerRef.current = window.setTimeout(() => stopPreview(), dropDuration * 1000);
+      return true;
+    } catch {
+      stopPreview();
+      return false;
+    }
+  }, [previewingKey, onPauseMainPlayer, stopPreview]);
 
   return { previewingKey, togglePreview, stopPreview };
 }

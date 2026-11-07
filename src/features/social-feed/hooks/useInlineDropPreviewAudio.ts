@@ -59,7 +59,11 @@ export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
       setElapsedSec(0);
       setActivePostId(postId);
 
-      const resolvedUrl = source.audioUrl || (await getPersistentAudioBlobUrl(source.id).catch(() => null)) || '';
+      let resolvedUrl: string = '';
+      if (source.id) {
+        resolvedUrl = (await getPersistentAudioBlobUrl(source.id).catch(() => null)) || '';
+      }
+      if (!resolvedUrl) resolvedUrl = source.audioUrl || '';
       if (resolvedUrl) {
         const audio = new Audio(resolvedUrl);
         audio.preload = 'auto';

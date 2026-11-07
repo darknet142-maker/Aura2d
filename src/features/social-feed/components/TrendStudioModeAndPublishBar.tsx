@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mic, Music2, Check, Globe, Radio } from 'lucide-react';
 import type { SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { StudioSearchableTargetDropdown } from './StudioSearchableTargetDropdown';
+import type { TargetAudioLookupItem } from '../hooks/useTargetDropAudioPreview';
 
 export interface TrendStudioCaptureModeSelectorProps {
   captureMode: StudioAudioCaptureMode;
@@ -13,11 +14,12 @@ export interface TrendStudioCaptureModeSelectorProps {
   previewingKey?: string | null;
   isRecording: boolean;
   micLevel01: number;
+  catalogueLookup?: TargetAudioLookupItem[];
 }
 
 export const TrendStudioCaptureModeSelector: React.FC<TrendStudioCaptureModeSelectorProps> = ({
   captureMode, onChangeCaptureMode, activeTarget, availableTargets = [], onChangeTarget,
-  onPreviewTargetDrop, previewingKey, isRecording, micLevel01,
+  onPreviewTargetDrop, previewingKey, isRecording, micLevel01, catalogueLookup,
 }) => {
   return (
     <div className="absolute top-14 inset-x-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
@@ -55,6 +57,7 @@ export const TrendStudioCaptureModeSelector: React.FC<TrendStudioCaptureModeSele
               previewingKey={previewingKey}
               variant="studio-glass"
               ariaLabel="Choisir la chanson ou le projet pour la vidéo"
+              catalogueLookup={catalogueLookup}
             />
           ) : (
             <span className="max-w-[90%] px-3 py-1 rounded-full bg-[#07090E]/75 border border-white/15 text-[11px] font-medium text-[#F8FAFC] truncate">

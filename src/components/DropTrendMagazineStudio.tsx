@@ -82,6 +82,8 @@ export interface DropTrendMagazineStudioProps {
     notes?: number[];
     bpm?: number;
     baseFreq?: number;
+    title?: string;
+    artist?: string;
   }[];
   onPublishVideoToDrop?: (payload: {
     blob: Blob;
@@ -1571,6 +1573,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
               previewingKey={dropPreviewEngine.previewingKey}
               isRecording={isRecording}
               micLevel01={micLevel01}
+              catalogueLookup={catalogueAudioLookup}
             />
 
             {/* Zone basse du châssis vertical 9:16 : bouton rouge d'enregistrement et bascule caméra */}

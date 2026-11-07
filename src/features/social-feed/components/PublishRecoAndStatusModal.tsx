@@ -4,25 +4,23 @@ import { motion } from 'motion/react';
 import { SPRING_DRAWER } from '../../../shared/ui/springMotion';
 import type { PostArchetype, SocialTargetKind, SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { StudioSearchableTargetDropdown } from './StudioSearchableTargetDropdown';
+import type { TargetAudioLookupItem } from '../hooks/useTargetDropAudioPreview';
 
 export interface ComposerSelectableOption { key: string; target: SocialTargetSubject; }
 
 export interface PublishRecoAndStatusModalProps {
-  isOpen: boolean;
-  defaultTrackTarget: SocialTargetSubject;
-  trackOptions: ComposerSelectableOption[];
-  albumOptions: ComposerSelectableOption[];
-  artistOptions: ComposerSelectableOption[];
-  activeCount?: number;
-  maxCount?: number;
-  onClose: () => void;
+  isOpen: boolean; defaultTrackTarget: SocialTargetSubject;
+  trackOptions: ComposerSelectableOption[]; albumOptions: ComposerSelectableOption[]; artistOptions: ComposerSelectableOption[];
+  activeCount?: number; maxCount?: number; onClose: () => void;
   onPublishCard: (archetype: PostArchetype, target: SocialTargetSubject, caption: string) => boolean | void;
   onOpenCameraStudio: (mode: StudioAudioCaptureMode, target: SocialTargetSubject) => void;
+  catalogueLookup?: TargetAudioLookupItem[];
 }
 
 export const PublishRecoAndStatusModal: React.FC<PublishRecoAndStatusModalProps> = ({
   isOpen, defaultTrackTarget, trackOptions, albumOptions, artistOptions,
   activeCount = 0, maxCount = 10, onClose, onPublishCard, onOpenCameraStudio,
+  catalogueLookup,
 }) => {
   const [targetKind, setTargetKind] = useState<SocialTargetKind>('TRACK');
   const [selectedKey, setSelectedKey] = useState<string>('');
@@ -93,6 +91,7 @@ export const PublishRecoAndStatusModal: React.FC<PublishRecoAndStatusModalProps>
               setSelectedKey(match?.key || '');
             }}
             variant="modal-surface"
+            catalogueLookup={catalogueLookup}
           />
         </div>
 

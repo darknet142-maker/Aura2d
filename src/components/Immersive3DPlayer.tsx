@@ -720,6 +720,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             availableTargets={studioSelectableTargets}
             catalogueAudioLookup={allTracksFlat.map((m) => ({
               id: m.track.id,
+              title: m.track.title,
+              artist: m.track.artist,
               audioUrl: m.track.audioUrl,
               dropStart: m.track.dropStart,
               dropDuration: m.track.dropDuration,
