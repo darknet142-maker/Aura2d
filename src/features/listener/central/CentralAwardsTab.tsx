@@ -31,7 +31,6 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
-  Sparkles,
   Flame,
   Radio,
   Download,

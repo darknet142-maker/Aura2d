@@ -8,7 +8,6 @@ import {
   Radio,
   Clock,
   Smartphone,
-  Sparkles,
   CheckCircle2,
   AlertTriangle,
   Sliders,
@@ -464,7 +463,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <Radio className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
                 3. Mode « Jukebox Social &amp; Dédicace par QR Code de Table » + Sponsoring CHR
                 Année 1

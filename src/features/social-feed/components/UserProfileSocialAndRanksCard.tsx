@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Heart, MessageCircle, Play, Repeat, Sparkles, Trash2, Clock, Trophy } from 'lucide-react';
+import { Compass, Heart, MessageCircle, Play, Repeat, Radio, Trash2, Clock, Trophy } from 'lucide-react';
 import { CoverArtwork, RankMedalSvg } from '../../../components/CoverArtwork';
 import type { CommunityMemberCompleteStats } from '../services/community-scouts-leaderboard.service';
 import type { SocialTargetSubject } from '../types/social-feed.types';
@@ -24,7 +24,7 @@ export const UserProfileSocialAndRanksCard: React.FC<UserProfileSocialAndRanksCa
     { label: "J'aime", value: stats.totalLikesGiven, icon: Heart, accent: 'text-[#DE1B34]' },
     { label: 'Recommandations', value: stats.recommendationsCount, icon: Compass, accent: 'text-amber-300' },
     { label: 'Commentaires', value: stats.commentsCount, icon: MessageCircle, accent: 'text-sky-300' },
-    { label: 'Découvertes', value: stats.discoveriesGenerated, icon: Sparkles, accent: 'text-emerald-300' },
+    { label: 'Découvertes', value: stats.discoveriesGenerated, icon: Radio, accent: 'text-emerald-300' },
   ];
 
   const rankBadges = [

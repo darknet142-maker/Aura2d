@@ -7,6 +7,7 @@ import type { GroupedUserStatusRing } from '../hooks/useStatusStoriesState';
 import type { SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { loadSocialVideoBlob } from '../services/status-video-storage.service';
 import { formatRemaining4hLabel } from './ProfileQuotaCleanupModal';
+import { globalAudioCoordinator } from '../../../services/globalAudioCoordinator';
 
 export interface StatusFullscreenViewerModalProps {
   activeUserId: string | null; currentUserId: string; groupedRings: GroupedUserStatusRing[];
@@ -30,6 +31,10 @@ export const StatusFullscreenViewerModal: React.FC<StatusFullscreenViewerModalPr
   const activeStory = currentGroup?.statuses[Math.min(storyIdx, (currentGroup?.statuses.length || 1) - 1)] ?? null;
 
   useEffect(() => { setStoryIdx(0); setProgress(0); }, [activeUserId]);
+  useEffect(() => {
+    if (activeStory) globalAudioCoordinator.claim('STORY_STATUS_VIEWER');
+    return () => { globalAudioCoordinator.release('STORY_STATUS_VIEWER'); };
+  }, [activeStory]);
   useEffect(() => {
     if (!activeStory) return;
     onMarkSeen(activeStory.id);

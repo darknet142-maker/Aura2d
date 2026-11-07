@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Compass, Heart, MessageCircle, Play, Repeat, Sparkles, ChevronRight } from 'lucide-react';
+import { Compass, Heart, MessageCircle, Play, Repeat, Radio, ChevronRight } from 'lucide-react';
 import { RankBadgeSvg } from '../../../components/ReusableAnalyticsSheets';
 import type { CommunityMemberCompleteStats, ScoutLeaderboardDimension } from '../services/community-scouts-leaderboard.service';
 
@@ -20,7 +20,7 @@ const DIMENSION_TABS: {
   { id: 'COMMENTS', label: 'Commentaires', unit: 'avis', icon: MessageCircle },
   { id: 'PLAYS', label: 'Écoutes', unit: 'écoutes', icon: Play },
   { id: 'LOOPS', label: 'Boucles', unit: 'boucles', icon: Repeat },
-  { id: 'DISCOVERIES', label: 'Découvertes', unit: 'découvertes', icon: Sparkles },
+  { id: 'DISCOVERIES', label: 'Découvertes', unit: 'découvertes', icon: Radio },
 ];
 
 export const ScoutsLeaderboardPanel: React.FC<ScoutsLeaderboardPanelProps> = ({

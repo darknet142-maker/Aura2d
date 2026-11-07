@@ -172,4 +172,48 @@ assert.equal(
 );
 console.log('✅ 10. Priorité chronologique immédiate (nouvelles recommandations en haut) validée.');
 
-console.log('🎉 TOUS LES 10 TESTS DE VERIFICATION CRITIQUES DU FIL SOCIAL & VIRAL PASSENT AVEC SUCCÈS !');
+// 11. ÉPURATION EN-TÊTE CENTRAL (ZÉRO « Catalogue & Analytics +241 »)
+const centralHubCode = fs.readFileSync('src/features/listener/central/CentralHubWorkspace.tsx', 'utf8');
+assert.equal(
+  centralHubCode.includes('Catalogue &amp; Analytics +241') || centralHubCode.includes('Catalogue & Analytics +241'),
+  false,
+  'L inscription inutile « Catalogue & Analytics +241 » doit être supprimée de l en-tête Central'
+);
+console.log('✅ 11. En-tête Central épuré de l inscription inutile.');
+
+// 12. CURSEURS INDÉPENDANTS DU TRIMMER VIDÉO
+assert.equal(
+  trimmerCode.includes('aria-label="Curseur début de l\'extrait indépendant"'),
+  true,
+  'Le curseur début doit être indépendant sur l amplitude complète'
+);
+assert.equal(
+  trimmerCode.includes('aria-label="Curseur fin de l\'extrait indépendant"'),
+  true,
+  'Le curseur fin doit être indépendant sur l amplitude complète'
+);
+console.log('✅ 12. Curseurs début et fin du trimmer vidéo 100% indépendants.');
+
+// 13. ZÉRO ICÔNE IA (SPARKLES) SUR STATUT+FIL ET DANS LES COMPOSANTS SOCIAUX
+const publishBarCode = fs.readFileSync('src/features/social-feed/components/TrendStudioModeAndPublishBar.tsx', 'utf8');
+assert.equal(
+  publishBarCode.includes('Sparkles'),
+  false,
+  'L icône IA Sparkles doit être retirée du bouton Statut+Fil et remplacée par Globe'
+);
+assert.equal(
+  publishBarCode.includes('<Globe'),
+  true,
+  'Le bouton Statut+Fil doit utiliser l icône pro Globe'
+);
+console.log('✅ 13. Éradication des icônes IA (Sparkles) remplacées par Globe et icônes pro.');
+
+// 14. MUTEX AUDIO GLOBAL ANTI-SUPERPOSITION DES CHANSONS
+const coordinatorCode = fs.readFileSync('src/services/globalAudioCoordinator.ts', 'utf8');
+const platformCtrlCode = fs.readFileSync('src/features/listener/hooks/useDropPlatformController.ts', 'utf8');
+assert.equal(coordinatorCode.includes('globalAudioCoordinator'), true, 'Le coordinateur audio doit exister');
+assert.equal(previewDropHookCode.includes('globalAudioCoordinator.claim'), true, 'La pré-écoute doit réserver le canal audio exclusif');
+assert.equal(platformCtrlCode.includes('globalAudioCoordinator.register'), true, 'Le contrôleur principal doit s enregistrer sur le canal audio');
+console.log('✅ 14. Coordinateur audio global anti-superposition des chansons vérifié et opérationnel.');
+
+console.log('🎉 TOUS LES 14 TESTS DE VERIFICATION CRITIQUES DU FIL SOCIAL & VIRAL PASSENT AVEC SUCCÈS !');

@@ -114,9 +114,6 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
           <span className="text-sm sm:text-base font-extrabold text-[#F8FAFC] tracking-tight truncate">
             Central
           </span>
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-[10px] font-mono text-[#A3A9BA]">
-            Catalogue &amp; Analytics +241
-          </span>
         </div>
 
         {/* Actions rapides épurées en haut de l'écran Central */}

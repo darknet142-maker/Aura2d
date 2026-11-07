@@ -1,5 +1,5 @@
 import React from 'react';
-import { Disc3, Infinity as InfinityIcon, Sparkles, Zap } from 'lucide-react';
+import { Disc3, Infinity as InfinityIcon, Flame, Zap } from 'lucide-react';
 import type { PlaybackChainingMode, PlaybackEnginePrefs } from '../types/audio-dsp.types';
 
 export interface EqPlaybackModeSectionProps {
@@ -69,7 +69,7 @@ export const EqPlaybackModeSection: React.FC<EqPlaybackModeSectionProps> = ({
           >
             <div className="flex items-center justify-between gap-1.5">
               <span className="text-xs font-extrabold text-amber-300 truncate">Découverte Drop (Extrait 30s)</span>
-              {!isFullNonStop && <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />}
+              {!isFullNonStop && <Flame className="w-3.5 h-3.5 text-amber-300 shrink-0" />}
             </div>
             <p className="text-[10.5px] text-[#A3A9BA] mt-1 leading-snug">
               Zapping rapide sur le refrain/hotspot de 30s. Un appui sur Play lance le titre complet.

@@ -14,6 +14,7 @@ import QRCode from 'qrcode';
 import { ArtworkType, DropOfficialLogo } from './CoverArtwork';
 import { FeaturingSplitMode } from '../utils/rankingEngine';
 import { getPersistentAudioBlobUrl } from '../services/musicService';
+import { globalAudioCoordinator } from '../services/globalAudioCoordinator';
 import {
   TrendStudioCaptureModeSelector,
   TrendStudioInAppPublishPanel,
@@ -505,6 +506,14 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
       }
       audioCtxRef.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    return globalAudioCoordinator.register('STUDIO_VIDEO_PREVIEW', () => {
+      if (previewVideoRef.current) previewVideoRef.current.pause();
+      if (blurredPreviewVideoRef.current) blurredPreviewVideoRef.current.pause();
+      setIsPreviewPlaying(false);
+    });
   }, []);
 
   // Connexion robuste à la caméra native ou web (mobile, tablette, PC) avec paliers de repli
@@ -1026,6 +1035,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const stopTrendRecording = useCallback(() => {
     // 1. Couper immédiatement l'audio du Drop dès que l'enregistrement est coupé
     stopDropAudioPlayback();
+    globalAudioCoordinator.release('STUDIO_RECORDING_DROP');
     setIsRecording(false);
 
     // 2. Arrêter les enregistreurs vidéo
@@ -1071,6 +1081,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     setRecordedSeconds(0);
     setSavedToGalleryDone(false);
     setIsPreviewPlaying(false);
+    globalAudioCoordinator.claim('STUDIO_RECORDING_DROP');
     setIsRecording(true);
     recordingStartTimeRef.current = performance.now();
 
@@ -1727,6 +1738,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                       }
                     }}
                     onPlay={() => {
+                      globalAudioCoordinator.claim('STUDIO_VIDEO_PREVIEW');
                       setIsPreviewPlaying(true);
                       blurredPreviewVideoRef.current?.play().catch(() => {});
                     }}

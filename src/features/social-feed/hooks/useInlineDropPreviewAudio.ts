@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getPersistentAudioBlobUrl } from '../../../services/musicService';
+import { globalAudioCoordinator } from '../../../services/globalAudioCoordinator';
 
 export interface InlinePreviewTrackSource {
   id: string;
@@ -28,11 +29,15 @@ export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
       audioRef.current.src = '';
       audioRef.current = null;
     }
+    globalAudioCoordinator.release('SOCIAL_INLINE_PREVIEW');
     setActivePostId(null);
     setElapsedSec(0);
   }, []);
 
-  useEffect(() => () => stopInlinePreview(), [stopInlinePreview]);
+  useEffect(() => {
+    const unreg = globalAudioCoordinator.register('SOCIAL_INLINE_PREVIEW', () => stopInlinePreview());
+    return () => { unreg(); stopInlinePreview(); };
+  }, [stopInlinePreview]);
 
   const toggleInlinePreview = useCallback(
     async (postId: string, source: InlinePreviewTrackSource, onFirstPlay?: () => void) => {
@@ -41,6 +46,7 @@ export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
         return;
       }
       stopInlinePreview();
+      globalAudioCoordinator.claim('SOCIAL_INLINE_PREVIEW');
       onPauseMainPlayer();
       onFirstPlay?.();
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Flame, Video, Shuffle, Plus, Sparkles, Trophy } from 'lucide-react';
+import { Flame, Video, Shuffle, Plus, Compass, Trophy } from 'lucide-react';
 import type { AnalyticsAlbumNode, AnalyticsTrackItem, StudioEntityRole } from '../../../components/ReusableAnalyticsSheets';
 import type { FeedLensId, SocialFeedPost, SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { buildComposerOptionsFromCatalogue } from '../services/social-target-options.service';
@@ -29,7 +29,7 @@ export interface SocialRecommendationsFeedViewProps {
 }
 
 const LENS_TABS: { id: FeedLensId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'FOR_YOU_VIRAL', label: 'Pour Vous', icon: Sparkles },
+  { id: 'FOR_YOU_VIRAL', label: 'Pour Vous', icon: Compass },
   { id: 'TRENDING_REDROPS', label: 'Tendances', icon: Flame },
   { id: 'VIDEO_OPINIONS', label: 'Vidéos 30s', icon: Video },
   { id: 'RANDOM_DISCOVERY', label: 'Découverte', icon: Shuffle },

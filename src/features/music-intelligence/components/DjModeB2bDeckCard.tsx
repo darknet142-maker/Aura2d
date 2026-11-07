@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Disc3, Play, Sparkles } from 'lucide-react';
+import { Disc3, Play, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import { formatTime } from '../../../shared/utils/mediaFormatters';
@@ -87,7 +87,7 @@ export const DjModeB2bDeckCard: React.FC<DjModeB2bDeckCardProps> = ({
 
       {lastMixBanner && (
         <div role="status" className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-[11px] font-medium text-emerald-200 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="truncate">{lastMixBanner}</span>
         </div>
       )}

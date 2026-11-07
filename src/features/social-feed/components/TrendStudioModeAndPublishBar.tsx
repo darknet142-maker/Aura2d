@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mic, Music2, Check, Sparkles, Radio } from 'lucide-react';
+import { Mic, Music2, Check, Globe, Radio } from 'lucide-react';
 import type { SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { StudioSearchableTargetDropdown } from './StudioSearchableTargetDropdown';
 
@@ -115,7 +115,7 @@ export const TrendStudioInAppPublishPanel: React.FC<TrendStudioInAppPublishPanel
           type="button" disabled={publishedKind !== 'NONE'} onClick={() => triggerPublish(true)}
           className="py-2 px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-[#080A0F] text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
         >
-          {publishedKind === 'BOTH' ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Sparkles className="w-3.5 h-3.5 shrink-0" />}
+          {publishedKind === 'BOTH' ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Globe className="w-3.5 h-3.5 shrink-0" />}
           <span className="truncate">{publishedKind === 'BOTH' ? 'Publié partout' : 'Statut + Fil'}</span>
         </button>
       </div>

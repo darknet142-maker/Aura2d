@@ -29,14 +29,18 @@ export const TrendStudioVideoTrimmer: React.FC<TrendStudioVideoTrimmerProps> = (
   const widthPct = Math.max(5, Math.min(100 - startPct, ((safeEnd - safeStart) / safeTotal) * 100));
 
   const handleStartChange = (val: number) => {
-    const nextStart = Math.min(val, safeEnd - 2);
-    onChangeTrim(nextStart, safeEnd);
+    const rawStart = Math.max(0, Math.min(safeTotal, val));
+    const nextStart = Math.round(rawStart * 10) / 10;
+    const nextEnd = nextStart >= safeEnd ? Math.min(safeTotal, Math.round((nextStart + 0.5) * 10) / 10) : safeEnd;
+    onChangeTrim(nextStart, nextEnd);
     onPreviewSeek?.(nextStart);
   };
 
   const handleEndChange = (val: number) => {
-    const nextEnd = Math.max(val, safeStart + 2);
-    onChangeTrim(safeStart, nextEnd);
+    const rawEnd = Math.max(0, Math.min(safeTotal, val));
+    const nextEnd = Math.round(rawEnd * 10) / 10;
+    const nextStart = nextEnd <= safeStart ? Math.max(0, Math.round((nextEnd - 0.5) * 10) / 10) : safeStart;
+    onChangeTrim(nextStart, nextEnd);
     onPreviewSeek?.(nextEnd);
   };
 
@@ -84,11 +88,11 @@ export const TrendStudioVideoTrimmer: React.FC<TrendStudioVideoTrimmerProps> = (
           <input
             type="range"
             min={0}
-            max={Math.max(0, safeEnd - 2)}
+            max={safeTotal}
             step={0.1}
             value={safeStart}
             onChange={(e) => handleStartChange(parseFloat(e.target.value))}
-            aria-label="Curseur début de l'extrait"
+            aria-label="Curseur début de l'extrait indépendant"
             className="w-full h-1.5 rounded-full accent-amber-400 bg-white/20 cursor-pointer"
           />
         </label>
@@ -99,12 +103,12 @@ export const TrendStudioVideoTrimmer: React.FC<TrendStudioVideoTrimmerProps> = (
           </span>
           <input
             type="range"
-            min={Math.min(safeTotal, safeStart + 2)}
+            min={0}
             max={safeTotal}
             step={0.1}
             value={safeEnd}
             onChange={(e) => handleEndChange(parseFloat(e.target.value))}
-            aria-label="Curseur fin de l'extrait"
+            aria-label="Curseur fin de l'extrait indépendant"
             className="w-full h-1.5 rounded-full accent-[#DE1B34] bg-white/20 cursor-pointer"
           />
         </label>

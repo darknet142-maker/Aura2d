@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { globalAudioCoordinator } from '../../../services/globalAudioCoordinator';
 import {
   streamTracker,
   SyncStatusSnapshot,
@@ -1874,6 +1875,26 @@ export function useDropPlatformController() {
     triggerSynthNote,
     computeTrackLoudnessGain,
   ]);
+
+  // Exclusion mutuelle audio stricte : coupe net le lecteur principal si un autre son démarre
+  useEffect(() => {
+    return globalAudioCoordinator.register('MAIN_PLAYER', () => {
+      setIsPlaying(false);
+      if (htmlAudioRef.current) {
+        try { htmlAudioRef.current.pause(); } catch {}
+      }
+      if (synthIntervalRef.current) {
+        window.clearInterval(synthIntervalRef.current);
+        synthIntervalRef.current = null;
+      }
+    });
+  }, [htmlAudioRef]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      globalAudioCoordinator.claim('MAIN_PLAYER');
+    }
+  }, [isPlaying]);
 
   const seekAllEngines = useCallback(
     (targetTime: number) => {

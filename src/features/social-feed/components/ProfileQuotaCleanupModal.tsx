@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Clock, Sparkles } from 'lucide-react';
+import { X, Trash2, Clock, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { SPRING_DRAWER } from '../../../shared/ui/springMotion';
@@ -85,7 +85,7 @@ export const ProfileQuotaCleanupModal: React.FC<ProfileQuotaCleanupModalProps> =
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[9.5px] font-bold shrink-0 inline-flex items-center gap-0.5">
-                      <Sparkles className="w-2.5 h-2.5" />Recommandation
+                      <Compass className="w-2.5 h-2.5" />Recommandation
                     </span>
                     <span className="text-xs font-bold text-[#F8FAFC] truncate">{p.target.title}</span>
                   </div>

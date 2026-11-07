@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getPersistentAudioBlobUrl } from '../../../services/musicService';
+import { globalAudioCoordinator } from '../../../services/globalAudioCoordinator';
 import type { SocialTargetSubject } from '../types/social-feed.types';
 
 export interface TargetAudioLookupItem {
@@ -22,19 +23,16 @@ export function useTargetDropAudioPreview(onPauseMainPlayer?: () => void) {
   const stopPreview = useCallback(() => {
     if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
     if (synthIntervalRef.current) { window.clearInterval(synthIntervalRef.current); synthIntervalRef.current = null; }
-    if (audioElRef.current) {
-      audioElRef.current.pause();
-      audioElRef.current.src = '';
-      audioElRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      try { void audioCtxRef.current.close(); } catch {}
-      audioCtxRef.current = null;
-    }
+    if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current.src = ''; audioElRef.current = null; }
+    if (audioCtxRef.current) { try { void audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; }
+    globalAudioCoordinator.release('DROPDOWN_DROP_PREVIEW');
     setPreviewingKey(null);
   }, []);
 
-  useEffect(() => () => stopPreview(), [stopPreview]);
+  useEffect(() => {
+    const unreg = globalAudioCoordinator.register('DROPDOWN_DROP_PREVIEW', () => stopPreview());
+    return () => { unreg(); stopPreview(); };
+  }, [stopPreview]);
 
   const togglePreview = useCallback(async (
     target: SocialTargetSubject,
@@ -49,6 +47,7 @@ export function useTargetDropAudioPreview(onPauseMainPlayer?: () => void) {
     }
 
     stopPreview();
+    globalAudioCoordinator.claim('DROPDOWN_DROP_PREVIEW');
     onPauseMainPlayer?.();
 
     const lookup = catalogueLookup.find((c) => c.id === tid);
@@ -131,3 +130,4 @@ export function useTargetDropAudioPreview(onPauseMainPlayer?: () => void) {
 
   return { previewingKey, togglePreview, stopPreview };
 }
+

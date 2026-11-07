@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Sparkles, X } from 'lucide-react';
+import { Activity, SlidersHorizontal, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import { parseMusicIntelligenceNaturalQuery } from '../services/catalogue-intelligence.service';
@@ -32,7 +32,7 @@ export const MusicIntelligenceSearchBanner: React.FC<MusicIntelligenceSearchBann
     >
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="text-[11px] font-extrabold text-[#F8FAFC] truncate">
             Recherche Music Intelligence (Genre • Tempo BPM • Camelot • Énergie)
           </span>
