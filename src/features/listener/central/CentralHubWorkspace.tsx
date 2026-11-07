@@ -74,7 +74,8 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
     onResolveCreditDispute,
     safeRankInfo,
     setActiveModal,
-    setShowTrendStudioModal,
+    openTrendStudioWithConfig,
+    socialFeedCtrl,
     hubTab,
     setHubTab,
     setCentralFullPageView,
@@ -213,7 +214,21 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
                 'Recommandé depuis la fiche analytique du titre',
                 false
               );
-              showToast('Titre recommandé dans le Fil Commun DROP !');
+              socialFeedCtrl.handleCreateFeedPost(
+                'TRACK_VINYL',
+                {
+                  kind: 'TRACK',
+                  trackId: activeTrackSheetData.track.id,
+                  entityName: activeTrackSheetData.track.artist,
+                  title: activeTrackSheetData.track.title,
+                  subtitle: activeTrackSheetData.track.artist,
+                  genre: activeTrackSheetData.track.category,
+                  cover: activeTrackSheetData.track.cover,
+                  artworkType: activeTrackSheetData.track.artworkType,
+                  bpm: activeTrackSheetData.track.bpm,
+                },
+                'Recommandé depuis la fiche Studio du titre'
+              );
             }}
             onToggleSubscribeArtist={(artName) => {
               onToggleSubscribeArtist?.(artName);
@@ -221,7 +236,20 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
             onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
             onOpenEqModal={() => setActiveModal('EQ')}
-            onOpenTrendStudio={() => setShowTrendStudioModal(true)}
+            onOpenTrendStudio={() => {
+              const sheetTrack = activeTrackSheetData.track;
+              openTrendStudioWithConfig('DROP_MUSIC_30S', {
+                kind: 'TRACK',
+                trackId: sheetTrack.id,
+                entityName: sheetTrack.artist,
+                title: sheetTrack.title,
+                subtitle: sheetTrack.artist,
+                genre: sheetTrack.category,
+                cover: sheetTrack.cover,
+                artworkType: sheetTrack.artworkType,
+                bpm: sheetTrack.bpm,
+              });
+            }}
             onConfirmCreditHandshake={onConfirmCreditHandshake}
             onOpenCreditDispute={onOpenCreditDispute}
             onResolveCreditDispute={onResolveCreditDispute}

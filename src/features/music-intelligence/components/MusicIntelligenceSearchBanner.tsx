@@ -92,3 +92,4 @@ export const MusicIntelligenceSearchBanner: React.FC<MusicIntelligenceSearchBann
     </section>
   );
 };
+

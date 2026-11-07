@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Video } from 'lucide-react';
+import { X, Video, Mic } from 'lucide-react';
 import { CoverArtwork, DropOfficialLogo } from '../../CoverArtwork';
 import { CertificationBadgeSvg } from '../../ReusableAnalyticsSheets';
 import { CertificationInfo } from '../../../utils/rankingEngine';
@@ -13,6 +13,7 @@ export interface RecommendModalProps {
   communityRecommendationsCount: number;
   onClose: () => void;
   onOpenTrendStudio: () => void;
+  onOpenVoiceOpinionStudio?: () => void;
   onPublishRecommendation: (note: string) => void;
   onViewFeed: () => void;
   onOpenTrackSheet?: () => void;
@@ -27,6 +28,7 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
   communityRecommendationsCount,
   onClose,
   onOpenTrendStudio,
+  onOpenVoiceOpinionStudio,
   onPublishRecommendation,
   onViewFeed,
   onOpenTrackSheet,
@@ -113,21 +115,33 @@ export const RecommendModal: React.FC<RecommendModalProps> = ({
           />
         </div>
 
-        {/* Bouton Rouge pour enregistrer une Vidéo Trend 30s */}
-        <button
-          type="button"
-          onClick={() => {
-            onClose();
-            onOpenTrendStudio();
-          }}
-          className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#ff3b30] via-rose-600 to-[#e11d38] hover:brightness-110 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_10px_30px_rgba(255,59,48,0.45)] transition active:scale-95"
-        >
-          <Video className="w-5 h-5 shrink-0 stroke-[2.2]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-          <span>
-            Enregistrer une Vidéo Trend (30s • REC)
-          </span>
-        </button>
+        {/* Studio Vidéo 30s 1080×1920 : Sur le Drop ou Avis Micro Sans Musique */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenTrendStudio();
+            }}
+            className="py-3 px-3.5 rounded-2xl bg-[#DE1B34] hover:bg-[#f02842] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(222,27,52,0.4)] transition active:scale-95 cursor-pointer"
+          >
+            <Video className="w-4 h-4 shrink-0" />
+            <span>Drop Vidéo (30s)</span>
+          </button>
+          {onOpenVoiceOpinionStudio && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenVoiceOpinionStudio();
+              }}
+              className="py-3 px-3.5 rounded-2xl bg-[#131722] hover:bg-white/10 border border-white/15 text-[#F8FAFC] font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+            >
+              <Mic className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Avis Micro (Sans Musique)</span>
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-2.5">
           <button

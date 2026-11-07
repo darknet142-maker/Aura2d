@@ -67,6 +67,7 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             onCycleRepeat={() => setRepeatMode((prev) => (prev + 1) % 3)}
             onToggleLike={(trackId, e) => toggleLike(trackId, e)}
             onRecommendTrack={handleRecommendTrack}
+            onApplySocialPoints={ctrl.handleApplySocialPointsDelta}
             onToggleSubscribeArtist={handleToggleSubscribeArtist}
             onRecordLyricsOpen={handleRecordLyricsOpen}
             onToggleDownload={() => handleToggleOfflineDownload()}

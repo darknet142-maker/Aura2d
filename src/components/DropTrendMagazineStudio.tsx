@@ -14,6 +14,15 @@ import QRCode from 'qrcode';
 import { ArtworkType, DropOfficialLogo } from './CoverArtwork';
 import { FeaturingSplitMode } from '../utils/rankingEngine';
 import { getPersistentAudioBlobUrl } from '../services/musicService';
+import {
+  TrendStudioCaptureModeSelector,
+  TrendStudioInAppPublishPanel,
+  buildDynamicTargetQrUrl,
+  startVoiceOpinionMicrophone,
+  type SocialTargetSubject,
+  type StudioAudioCaptureMode,
+  type VoiceMicSession,
+} from '../features/social-feed';
 
 export interface StudioTrackProp {
   id: string;
@@ -58,6 +67,18 @@ export interface DropTrendMagazineStudioProps {
   isOpen: boolean;
   onClose: () => void;
   onPauseMainPlayer: () => void;
+  initialCaptureMode?: StudioAudioCaptureMode;
+  initialTargetSubject?: SocialTargetSubject;
+  availableTargets?: SocialTargetSubject[];
+  onPublishVideoToDrop?: (payload: {
+    blob: Blob;
+    durationSec: number;
+    captureMode: StudioAudioCaptureMode;
+    target: SocialTargetSubject;
+    caption: string;
+    publishToStatus: boolean;
+    publishToFeed: boolean;
+  }) => Promise<void> | void;
 }
 
 type FullscreenStep = 'CAMERA_CAPTURE' | 'INSTANT_PREVIEW';
@@ -258,11 +279,46 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   isOpen,
   onClose,
   onPauseMainPlayer,
+  initialCaptureMode = 'DROP_MUSIC_30S',
+  initialTargetSubject,
+  availableTargets = [],
+  onPublishVideoToDrop,
 }) => {
   // Verrouillage strict sur les 30 secondes max du Drop de la chanson
   const maxAllowedDropDuration = Math.min(30, Math.max(5, track.dropDuration || 30));
   const dropStartSec = Math.max(0, track.dropStart || 0);
   const dropEndSec = dropStartSec + maxAllowedDropDuration;
+
+  const defaultTrackTarget: SocialTargetSubject = useMemo(
+    () => ({
+      kind: 'TRACK',
+      trackId: track.id,
+      entityName: track.artist,
+      title: track.title,
+      subtitle: track.artist,
+      genre: track.category,
+      cover: track.cover || '',
+      artworkType: track.artworkType,
+      bpm: track.bpm,
+    }),
+    [track]
+  );
+
+  const [captureMode, setCaptureMode] = useState<StudioAudioCaptureMode>(initialCaptureMode);
+  const [activeTarget, setActiveTarget] = useState<SocialTargetSubject>(
+    initialTargetSubject || defaultTrackTarget
+  );
+  const [micLevel01, setMicLevel01] = useState<number>(0);
+  const [statusQuickPublished, setStatusQuickPublished] = useState<boolean>(false);
+  const micSessionRef = useRef<VoiceMicSession | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCaptureMode(initialCaptureMode);
+      setActiveTarget(initialTargetSubject || defaultTrackTarget);
+      setStatusQuickPublished(false);
+    }
+  }, [isOpen, initialCaptureMode, initialTargetSubject, defaultTrackTarget]);
 
   const [step, setStep] = useState<FullscreenStep>('CAMERA_CAPTURE');
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
@@ -347,14 +403,11 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     };
   }, []);
 
-  // Lien direct vers la chanson dans le lecteur DROP pour le QR Code dynamique
-  const songDirectUrl = useMemo(() => {
-    const origin =
-      typeof window !== 'undefined' && window.location?.origin
-        ? window.location.origin
-        : 'https://drop.music.ga';
-    return `${origin}/?track=${encodeURIComponent(track.id)}`;
-  }, [track.id]);
+  // Lien direct vers le Titre, Projet ou Artiste tagué dans DROP pour le QR Code dynamique
+  const songDirectUrl = useMemo(
+    () => buildDynamicTargetQrUrl(activeTarget, track.id),
+    [activeTarget, track.id]
+  );
 
   // Génération du QR code dynamique dès le chargement du titre
   useEffect(() => {
@@ -398,8 +451,13 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     setCameraReady(false);
   }, []);
 
-  // Nettoyage immédiat de l'audio du Drop
+  // Nettoyage immédiat de l'audio du Drop et du microphone vocal
   const stopDropAudioPlayback = useCallback(() => {
+    if (micSessionRef.current) {
+      micSessionRef.current.stop();
+      micSessionRef.current = null;
+    }
+    setMicLevel01(0);
     if (synthTimerRef.current) {
       window.clearInterval(synthTimerRef.current);
       synthTimerRef.current = null;
@@ -1019,8 +1077,15 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     logoCycleIndexRef.current = 0;
     logoPosRef.current = pickRandomDropLogoPosition();
 
-    // Lancement de l'audio verrouillé sur les 30s du Drop uniquement pendant l'enregistrement
-    const audioTrack = await startDropAudioStrict();
+    // Lancement de l'audio : Mode A (Drop Musical 30s) ou Mode B (Avis Micro Sans Musique 30s)
+    let audioTrack: MediaStreamTrack | null = null;
+    if (captureMode === 'VOICE_OPINION_NO_MUSIC') {
+      const mic = await startVoiceOpinionMicrophone();
+      micSessionRef.current = mic;
+      audioTrack = mic.audioTrack;
+    } else {
+      audioTrack = await startDropAudioStrict();
+    }
 
     let chosenMime = 'video/webm;codecs=vp9,opus';
     let ext: 'mp4' | 'webm' = 'webm';
@@ -1127,11 +1192,17 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     }
   };
 
-  // Arrêt automatique à 30 secondes max (ou fin du Drop)
+  // Arrêt automatique à 30 secondes max (ou fin du Drop en mode musical)
   useEffect(() => {
     if (!isRecording) return;
-    const hardCapSec = Math.min(30, maxAllowedDropDuration);
+    const hardCapSec =
+      captureMode === 'VOICE_OPINION_NO_MUSIC'
+        ? 30
+        : Math.min(30, maxAllowedDropDuration);
     const interval = window.setInterval(() => {
+      if (captureMode === 'VOICE_OPINION_NO_MUSIC' && micSessionRef.current) {
+        setMicLevel01(micSessionRef.current.readLevel());
+      }
       const elapsed =
         (performance.now() - recordingStartTimeRef.current) / 1000;
       if (elapsed >= hardCapSec) {
@@ -1143,7 +1214,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     }, 100);
 
     return () => window.clearInterval(interval);
-  }, [isRecording, maxAllowedDropDuration, stopTrendRecording]);
+  }, [isRecording, captureMode, maxAllowedDropDuration, stopTrendRecording]);
 
   // ==========================================================================
   // LECTURE / PAUSE & BARRE DE LECTURE MANIPULABLE SUR LA PRÉVISUALISATION
@@ -1323,7 +1394,10 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
   if (!isOpen) return null;
 
-  const hardLimitSec = Math.min(30, maxAllowedDropDuration);
+  const hardLimitSec =
+    captureMode === 'VOICE_OPINION_NO_MUSIC'
+      ? 30
+      : Math.min(30, maxAllowedDropDuration);
   const progressPct = Math.min(100, (recordedSeconds / hardLimitSec) * 100);
 
   return (
@@ -1459,6 +1533,17 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 TIKTOK HD
               </span>
             </div>
+
+            {/* Sélecteur Bi-Mode : Drop Musical 30s vs Avis Micro Sans Musique 30s + Cible */}
+            <TrendStudioCaptureModeSelector
+              captureMode={captureMode}
+              onChangeCaptureMode={setCaptureMode}
+              activeTarget={activeTarget}
+              availableTargets={availableTargets}
+              onChangeTarget={setActiveTarget}
+              isRecording={isRecording}
+              micLevel01={micLevel01}
+            />
 
             {/* Zone basse du châssis vertical 9:16 : bouton rouge d'enregistrement et bascule caméra */}
             <div className="absolute inset-x-0 bottom-0 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-center z-40 pointer-events-none">
@@ -1694,11 +1779,31 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
               </div>
             </div>
 
-            {/* ZONE 2 (SÉPARÉE) : ESPACE DÉDIÉ AUX BOUTONS EN COULEURS DE PUBLICATION & ACTIONS RAPIDES */}
-            <div className="relative shrink-0 w-full bg-white/10 backdrop-blur-2xl border-t border-white/20 px-4 py-3 z-20">
-              <div className="max-w-md mx-auto space-y-2.5">
+            {/* ZONE 2 (SÉPARÉE) : PUBLICATION SUR DROP (STATUT 24H / FIL RECOS) & EXPORT HORS-PLATEFORME */}
+            <div className="relative shrink-0 w-full bg-[#0D1017]/95 backdrop-blur-2xl border-t border-white/20 px-4 py-2.5 z-20">
+              <div className="max-w-md mx-auto space-y-2">
+                {onPublishVideoToDrop && watermarkedVideoBlob && (
+                  <TrendStudioInAppPublishPanel
+                    activeTarget={activeTarget}
+                    captureMode={captureMode}
+                    durationSec={effectivePreviewDuration}
+                    onPublishToDrop={async ({ caption, publishToStatus, publishToFeed }) => {
+                      await onPublishVideoToDrop({
+                        blob: watermarkedVideoBlob,
+                        durationSec: effectivePreviewDuration,
+                        captureMode,
+                        target: activeTarget,
+                        caption,
+                        publishToStatus,
+                        publishToFeed,
+                      });
+                      setStatusQuickPublished(true);
+                    }}
+                  />
+                )}
+
                 {/* Barre de publication rapide sur les réseaux sociaux en couleurs */}
-                <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 px-3 py-2.5 shadow-lg">
+                <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 px-3 py-2 shadow-lg">
                   <div className="grid grid-cols-5 gap-1">
                     {/* WhatsApp (Vert officiel) */}
                     <button
@@ -1787,18 +1892,40 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                       </span>
                     </button>
 
-                    {/* Stories (Grisé — Fonctionnalité future) */}
+                    {/* Statut DROP 24h (Déverrouillé et actif !) */}
                     <button
                       type="button"
-                      disabled
-                      title="Fonctionnalité bientôt disponible"
-                      className="relative flex flex-col items-center gap-1 opacity-40 cursor-not-allowed select-none"
+                      disabled={!onPublishVideoToDrop || !watermarkedVideoBlob || statusQuickPublished}
+                      onClick={async () => {
+                        if (!onPublishVideoToDrop || !watermarkedVideoBlob || statusQuickPublished) return;
+                        await onPublishVideoToDrop({
+                          blob: watermarkedVideoBlob,
+                          durationSec: effectivePreviewDuration,
+                          captureMode,
+                          target: activeTarget,
+                          caption: '',
+                          publishToStatus: true,
+                          publishToFeed: false,
+                        });
+                        setStatusQuickPublished(true);
+                      }}
+                      className="relative flex flex-col items-center gap-1 group active:scale-95 transition cursor-pointer disabled:opacity-70"
                     >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-white/40 bg-white/10 text-white/60">
-                        <Plus className="w-4 h-4" />
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition ${
+                          statusQuickPublished
+                            ? 'bg-emerald-500 scale-105 shadow-emerald-500/40'
+                            : 'bg-[#DE1B34] shadow-[#DE1B34]/40 group-hover:scale-105'
+                        }`}
+                      >
+                        {statusQuickPublished ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
                       </div>
-                      <span className="text-[11px] text-white/60 font-medium">
-                        Stories
+                      <span className="text-[11px] text-white font-semibold drop-shadow">
+                        {statusQuickPublished ? 'Publié' : 'Statut 24h'}
                       </span>
                     </button>
 

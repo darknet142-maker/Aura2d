@@ -446,7 +446,50 @@ CREATE INDEX IF NOT EXISTS idx_community_recommendations_created_at
 ON public.community_recommendations (created_at DESC);
 
 -- ----------------------------------------------------------------------------
--- 7. BUCKETS SUPABASE STORAGE : 'audio_files' (Opus) & 'cover_files' (Pochettes/Bannières)
+-- 6B. TABLES SOCIALES VIRALES : public.social_posts & public.user_statuses
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.social_posts (
+    id TEXT PRIMARY KEY,
+    archetype TEXT NOT NULL CHECK (archetype IN ('TRACK_VINYL', 'SPOTLIGHT_VISUAL', 'VIDEO_OPINION', 'LYRIC_EXCERPT')),
+    capture_mode TEXT CHECK (capture_mode IN ('DROP_MUSIC_30S', 'VOICE_OPINION_NO_MUSIC')),
+    author_id TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    author_handle TEXT NOT NULL,
+    author_avatar TEXT DEFAULT '',
+    caption TEXT NOT NULL DEFAULT '',
+    target_payload JSONB NOT NULL,
+    video_storage_path TEXT,
+    video_duration_sec INTEGER CHECK (video_duration_sec IS NULL OR video_duration_sec <= 30),
+    liked_by_user_ids TEXT[] DEFAULT '{}',
+    redropped_by_user_ids TEXT[] DEFAULT '{}',
+    redrop_relays JSONB DEFAULT '[]'::jsonb,
+    comments JSONB DEFAULT '[]'::jsonb,
+    discoveries_count INTEGER NOT NULL DEFAULT 0,
+    total_points_generated NUMERIC(6,2) NOT NULL DEFAULT 0.35,
+    last_boosted_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.user_statuses (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_handle TEXT NOT NULL,
+    user_avatar TEXT DEFAULT '',
+    capture_mode TEXT NOT NULL CHECK (capture_mode IN ('DROP_MUSIC_30S', 'VOICE_OPINION_NO_MUSIC')),
+    video_storage_path TEXT,
+    caption TEXT DEFAULT '',
+    duration_sec INTEGER NOT NULL DEFAULT 15 CHECK (duration_sec <= 30),
+    target_payload JSONB NOT NULL,
+    seen_by_user_ids TEXT[] DEFAULT '{}',
+    liked_by_user_ids TEXT[] DEFAULT '{}',
+    redropped_by_user_ids TEXT[] DEFAULT '{}',
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- ----------------------------------------------------------------------------
+-- 7. BUCKETS SUPABASE STORAGE : 'audio_files', 'cover_files' & 'status_videos'
 -- ----------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES 
@@ -463,6 +506,13 @@ VALUES
         true, 
         10485760, 
         ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+    ),
+    (
+        'status_videos',
+        'status_videos',
+        true,
+        36700160,
+        ARRAY['video/mp4', 'video/webm']
     )
 ON CONFLICT (id) DO UPDATE SET 
     public = true,

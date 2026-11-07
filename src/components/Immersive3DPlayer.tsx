@@ -110,6 +110,10 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
     setActiveModal,
     showTrendStudioModal,
     setShowTrendStudioModal,
+    trendStudioLaunchConfig,
+    openTrendStudioWithConfig,
+    studioSelectableTargets,
+    socialFeedCtrl,
     setHubTab,
     toastMsg,
     toastDotColor,
@@ -254,6 +258,22 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               onOpenLyricistProfile={(lyricist) => openUserEntitySheet(lyricist, 'LYRICIST')}
               onShareExcerpt={(cleanExcerpt) => {
                 onRecommendTrack?.(currentTrack.id, cleanExcerpt, true);
+                socialFeedCtrl.handleCreateFeedPost(
+                  'LYRIC_EXCERPT',
+                  {
+                    kind: 'TRACK',
+                    trackId: currentTrack.id,
+                    entityName: currentTrack.artist,
+                    title: currentTrack.title,
+                    subtitle: currentTrack.artist,
+                    genre: currentTrack.category,
+                    cover: currentTrack.cover,
+                    artworkType: currentTrack.artworkType,
+                    bpm: currentTrack.bpm,
+                    lyricistName: currentLyricist,
+                  },
+                  cleanExcerpt
+                );
                 showToast(
                   `Extrait partagé dans le Fil DROP (+Score Parolier : ${currentLyricist})`,
                   'bg-sky-400'
@@ -309,7 +329,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               }
             }}
             onOpenPlaylistModal={() => setActiveModal('PLAYLIST')}
-            onOpenTrendStudio={() => setShowTrendStudioModal(true)}
+            onOpenTrendStudio={() => openTrendStudioWithConfig('DROP_MUSIC_30S')}
             isTrendStudioOpen={showTrendStudioModal}
             onOpenEqModal={() => setActiveModal('EQ')}
             isEqCustomOrActive={isEqCustomOrActive}
@@ -332,17 +352,35 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             currentTrack={currentTrack}
             currentTrackCert={currentTrackCert}
             currentRecsCount={currentRecsCount}
-            communityRecommendationsCount={communityRecommendations.length}
+            communityRecommendationsCount={socialFeedCtrl.posts.length}
             onClose={() => setActiveModal('NONE')}
             onOpenTrendStudio={() => {
               setActiveModal('NONE');
-              setShowTrendStudioModal(true);
+              openTrendStudioWithConfig('DROP_MUSIC_30S');
+            }}
+            onOpenVoiceOpinionStudio={() => {
+              setActiveModal('NONE');
+              openTrendStudioWithConfig('VOICE_OPINION_NO_MUSIC');
             }}
             onPublishRecommendation={(note) => {
               onRecommendTrack?.(currentTrack.id, note, false);
+              socialFeedCtrl.handleCreateFeedPost(
+                'TRACK_VINYL',
+                {
+                  kind: 'TRACK',
+                  trackId: currentTrack.id,
+                  entityName: currentTrack.artist,
+                  title: currentTrack.title,
+                  subtitle: currentTrack.artist,
+                  genre: currentTrack.category,
+                  cover: currentTrack.cover,
+                  artworkType: currentTrack.artworkType,
+                  bpm: currentTrack.bpm,
+                },
+                note
+              );
               if (!desktopSplitMode) setActiveModal('MINI');
               setHubTab('RECOS');
-              showToast('Recommandation publiée dans le Fil Commun DROP !', 'bg-amber-400');
             }}
             onViewFeed={() => {
               if (!desktopSplitMode) setActiveModal('MINI');
@@ -467,7 +505,21 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                     onToggleLike={onToggleLike}
                     onRecommendTrack={(tId) => {
                       onRecommendTrack?.(tId, 'Recommandé depuis la fiche analytique du titre', false);
-                      showToast('Titre recommandé dans le Fil Commun DROP !');
+                      socialFeedCtrl.handleCreateFeedPost(
+                        'TRACK_VINYL',
+                        {
+                          kind: 'TRACK',
+                          trackId: activeTrackSheetData.track.id,
+                          entityName: activeTrackSheetData.track.artist,
+                          title: activeTrackSheetData.track.title,
+                          subtitle: activeTrackSheetData.track.artist,
+                          genre: activeTrackSheetData.track.category,
+                          cover: activeTrackSheetData.track.cover,
+                          artworkType: activeTrackSheetData.track.artworkType,
+                          bpm: activeTrackSheetData.track.bpm,
+                        },
+                        'Recommandé depuis la fiche Studio du titre'
+                      );
                     }}
                     onToggleSubscribeArtist={(artName) => onToggleSubscribeArtist?.(artName)}
                     onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
@@ -477,8 +529,19 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                       setActiveModal('EQ');
                     }}
                     onOpenTrendStudio={() => {
+                      const sheetTrack = activeTrackSheetData.track;
                       closeAllAnalyticsSheets();
-                      setShowTrendStudioModal(true);
+                      openTrendStudioWithConfig('DROP_MUSIC_30S', {
+                        kind: 'TRACK',
+                        trackId: sheetTrack.id,
+                        entityName: sheetTrack.artist,
+                        title: sheetTrack.title,
+                        subtitle: sheetTrack.artist,
+                        genre: sheetTrack.category,
+                        cover: sheetTrack.cover,
+                        artworkType: sheetTrack.artworkType,
+                        bpm: sheetTrack.bpm,
+                      });
                     }}
                     onConfirmCreditHandshake={onConfirmCreditHandshake}
                     onOpenCreditDispute={onOpenCreditDispute}
@@ -564,53 +627,68 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
         )}
       </div>
 
-      {/* STUDIO TREND VIDÉO 30S (1080×1920 FULL HD) */}
-      <DropTrendMagazineStudio
-        track={{
-          id: currentTrack.id,
-          title: currentTrack.title,
-          artist: currentTrack.artist,
-          featuring: currentTrack.featuringArtists,
-          featuringSplitMode: currentTrack.featuringSplitMode,
-          album: currentTrack.album,
-          category: currentTrack.category,
-          labelName: currentTrack.labelName,
-          copyrightText: currentTrack.copyrightText,
-          beatmakerName: currentTrack.beatmakerName || 'Beatmaker',
-          soundEngineerName: currentTrack.soundEngineerName || 'Ingénieur du son',
-          lyricistName: currentTrack.lyricistName,
-          isInstrumental: currentTrack.isInstrumental,
-          audioCodec: currentTrack.audioCodec || 'OPUS',
-          audioUrl: currentTrack.audioUrl,
-          cover: currentTrack.cover,
-          artworkType: currentTrack.artworkType,
-          ambientPrimary: currentTrack.ambientPrimary || '#e11d38',
-          ambientSecondary: currentTrack.ambientSecondary || '#f59e0b',
-          duration: currentTrack.duration,
-          dropStart: currentTrack.dropStart,
-          dropDuration: currentTrack.dropDuration,
-          bpm: currentTrack.bpm || 124,
-          synthNotes: currentTrack.synthNotes || [110, 146.83, 164.81, 196, 220],
-          realPlays: currentTrack.realPlays,
-          lastActivityAgo: currentTrack.lastActivityAgo,
-          totalListenSeconds: currentTrack.totalListenSeconds || 0,
-          listenSessions: currentTrack.listenSessions || 0,
-          avgRetentionPct: currentTrack.avgRetentionPct || 85,
-          algoPoints: currentTrack.algoPoints || 0,
-          likesCount: currentTrack.likesCount || 0,
-          loopPlaysCount: currentTrack.loopPlaysCount || 0,
-          longevityDays: currentTrack.longevityDays || 1,
-          consecutiveLoops: currentTrack.consecutiveLoops || 0,
-          baselineRank: currentTrack.baselineRank || 1,
-        }}
-        isOpen={showTrendStudioModal}
-        onClose={() => setShowTrendStudioModal(false)}
-        onPauseMainPlayer={() => {
-          if (isPlaying) {
-            onForceStopPlay ? onForceStopPlay() : onTogglePlay();
-          }
-        }}
-      />
+      {/* STUDIO TREND VIDÉO 30S (1080×1920 FULL HD — SUR LE DROP OU AVIS MICRO SANS MUSIQUE) */}
+      {(() => {
+        const targetTrack =
+          allTracksFlat.find((m) => m.track.id === trendStudioLaunchConfig.targetSubject?.trackId)?.track ||
+          currentTrack;
+        return (
+          <DropTrendMagazineStudio
+            track={{
+              id: targetTrack.id,
+              title: targetTrack.title,
+              artist: targetTrack.artist,
+              featuring: targetTrack.featuringArtists,
+              featuringSplitMode: targetTrack.featuringSplitMode,
+              album: targetTrack.album,
+              category: targetTrack.category,
+              labelName: targetTrack.labelName,
+              copyrightText: targetTrack.copyrightText,
+              beatmakerName: targetTrack.beatmakerName || 'Beatmaker',
+              soundEngineerName: targetTrack.soundEngineerName || 'Ingénieur du son',
+              lyricistName: targetTrack.lyricistName,
+              isInstrumental: targetTrack.isInstrumental,
+              audioCodec: targetTrack.audioCodec || 'OPUS',
+              audioUrl: targetTrack.audioUrl,
+              cover: targetTrack.cover,
+              artworkType: targetTrack.artworkType,
+              ambientPrimary: targetTrack.ambientPrimary || '#e11d38',
+              ambientSecondary: targetTrack.ambientSecondary || '#f59e0b',
+              duration: targetTrack.duration,
+              dropStart: targetTrack.dropStart,
+              dropDuration: targetTrack.dropDuration,
+              bpm: targetTrack.bpm || 124,
+              synthNotes: ('synthNotes' in targetTrack && targetTrack.synthNotes) || [110, 146.83, 164.81, 196, 220],
+              realPlays: targetTrack.realPlays,
+              lastActivityAgo: targetTrack.lastActivityAgo,
+              totalListenSeconds: targetTrack.totalListenSeconds || 0,
+              listenSessions: targetTrack.listenSessions || 0,
+              avgRetentionPct: targetTrack.avgRetentionPct || 85,
+              algoPoints: targetTrack.algoPoints || 0,
+              likesCount: targetTrack.likesCount || 0,
+              loopPlaysCount: targetTrack.loopPlaysCount || 0,
+              longevityDays: targetTrack.longevityDays || 1,
+              consecutiveLoops: targetTrack.consecutiveLoops || 0,
+              baselineRank: targetTrack.baselineRank || 1,
+            }}
+            isOpen={showTrendStudioModal}
+            initialCaptureMode={trendStudioLaunchConfig.captureMode}
+            initialTargetSubject={trendStudioLaunchConfig.targetSubject}
+            availableTargets={studioSelectableTargets}
+            onPublishVideoToDrop={async (payload) => {
+              await socialFeedCtrl.handlePublishStudioVideo(payload);
+              if (!desktopSplitMode) setActiveModal('MINI');
+              setHubTab('RECOS');
+            }}
+            onClose={() => setShowTrendStudioModal(false)}
+            onPauseMainPlayer={() => {
+              if (isPlaying) {
+                onForceStopPlay ? onForceStopPlay() : onTogglePlay();
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

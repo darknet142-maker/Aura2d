@@ -45,3 +45,4 @@ workerScope.onmessage = (event: MessageEvent<WorkerAnalysisRequestMessage>) => {
     workerScope.postMessage({ id: payload.id, ok: false, errorMessage });
   }
 };
+

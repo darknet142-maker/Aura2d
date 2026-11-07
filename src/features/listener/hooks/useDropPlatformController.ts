@@ -2537,6 +2537,69 @@ export function useDropPlatformController() {
     );
   };
 
+  // --- Ventilation unifiée des points sociaux (+0,25 pt Like Reco, +0,30 pt Re-Drop, +0,50 pt Statut Vidéo, +0,10 pt Commentaire) ---
+  const handleApplySocialPointsDelta = (
+    trackId: string,
+    pointsDelta: number,
+    meta?: { recommendationsDelta?: number; entityKey?: string }
+  ) => {
+    const recDelta = meta?.recommendationsDelta ?? 0;
+    if (pointsDelta === 0 && recDelta === 0) return;
+
+    if (pointsDelta > 0) {
+      streamTracker.trackAction('recommend', trackId, {
+        userId: currentUser.id,
+        pointsDelta,
+      });
+    }
+
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) => {
+          if (t.id !== trackId) return t;
+          return {
+            ...t,
+            recommendationsCount: Math.max(0, t.recommendationsCount + recDelta),
+            algoPoints: Math.max(0, Math.round((t.algoPoints + pointsDelta) * 100) / 100),
+            lastActivityAgo: 'à l’instant',
+          };
+        }),
+      }))
+    );
+
+    if (pointsDelta !== 0) {
+      setUsers((prevUsers) =>
+        prevUsers.map((u) => {
+          if (u.id !== currentUser.id) return u;
+          const prevStat: UserTrackStat = u.trackStats[trackId] || {
+            trackId,
+            listenSeconds: 0,
+            playsCount: 0,
+            loopsCount: 0,
+            maxConsecutiveLoops: 0,
+            liked: false,
+            pointsContributed: 0,
+            lastListenedAt: 'à l’instant',
+          };
+          return {
+            ...u,
+            trackStats: {
+              ...u.trackStats,
+              [trackId]: {
+                ...prevStat,
+                pointsContributed: Math.max(
+                  0,
+                  Math.round((prevStat.pointsContributed + pointsDelta) * 100) / 100
+                ),
+              },
+            },
+          };
+        })
+      );
+    }
+  };
+
   // --- Subscribe / Unsubscribe to Artist ("+ S'abonner") ---
   const handleToggleSubscribeArtist = (artistName: string) => {
     const cleanName = artistName.trim();
@@ -2857,7 +2920,7 @@ export function useDropPlatformController() {
     seekAllEngines,
     handleSelectTrackIndex, handleSelectAlbumIndex, navigateTrack, navigateAlbum,
     handleCentralPlayToggle, toggleLike, handleToggleOfflineDownload,
-    handleRecommendTrack, handleToggleSubscribeArtist, handleRecordLyricsOpen,
+    handleRecommendTrack, handleApplySocialPointsDelta, handleToggleSubscribeArtist, handleRecordLyricsOpen,
     handleConfirmCreditHandshake, handleOpenCreditDispute, handleResolveCreditDispute,
     handleToggleInPlaylist, handleSeekFromPlayer, handleQuickEnter,
     isCurrentLiked, currentRankInfo,

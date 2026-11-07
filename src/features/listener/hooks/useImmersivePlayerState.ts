@@ -34,6 +34,13 @@ import {
   ensureTrackSurgicalAnalysis,
   parseMusicIntelligenceNaturalQuery,
 } from '../../music-intelligence';
+import {
+  buildComposerOptionsFromCatalogue,
+  useSocialFeedController,
+  type SocialTargetSubject,
+  type StudioAudioCaptureMode,
+  type StudioLaunchConfig,
+} from '../../social-feed';
 
 export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
   const {
@@ -73,6 +80,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     onCycleRepeat,
     onToggleLike,
     onRecommendTrack,
+    onApplySocialPoints,
     onToggleSubscribeArtist,
     onRecordLyricsOpen,
     onToggleDownload,
@@ -118,7 +126,18 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     'NONE' | 'PLAYLIST' | 'EQ' | 'QUEUE' | 'OPTIONS' | 'MINI' | 'RECOMMEND'
   >('NONE');
   const [showTrendStudioModal, setShowTrendStudioModal] = useState(false);
+  const [trendStudioLaunchConfig, setTrendStudioLaunchConfig] = useState<StudioLaunchConfig>({
+    captureMode: 'DROP_MUSIC_30S',
+  });
   const [recommendNote, setRecommendNote] = useState<string>('');
+
+  const openTrendStudioWithConfig = (
+    captureMode: StudioAudioCaptureMode = 'DROP_MUSIC_30S',
+    targetSubject?: SocialTargetSubject
+  ) => {
+    setTrendStudioLaunchConfig({ captureMode, targetSubject });
+    setShowTrendStudioModal(true);
+  };
 
   // In-Player Reusable Analytics Sheets State (Zero redirection to Admin!)
   const [inPlayerTrackId, setInPlayerTrackId] = useState<string | null>(null);
@@ -266,6 +285,43 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     });
     return list;
   }, [analyticsCatalogue]);
+
+  const socialFeedCatalogueRefs = useMemo(
+    () =>
+      allTracksFlat.map(({ track, album }) => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        albumId: album.id,
+        realPlays: track.realPlays,
+        category: track.category,
+        bpm: track.bpm,
+        featuringArtists: track.featuringArtists,
+        beatmakerName: track.beatmakerName,
+        soundEngineerName: track.soundEngineerName,
+        lyricistName: track.lyricistName,
+      })),
+    [allTracksFlat]
+  );
+
+  const socialFeedCtrl = useSocialFeedController({
+    actor: {
+      id: currentUser?.id || 'u-guest',
+      name: currentUser?.name || 'Auditeur DROP (+241)',
+      avatar: currentUser?.avatar || 'DR',
+    },
+    legacyRecommendations: communityRecommendations,
+    likedTrackIds,
+    catalogueTracks: socialFeedCatalogueRefs,
+    onApplySocialPoints,
+    onToast: showToast,
+  });
+
+  const studioSelectableTargets = useMemo(
+    () => buildComposerOptionsFromCatalogue(allTracksFlat).studioTargets,
+    [allTracksFlat]
+  );
 
   // Every new genre added in Admin is immediately included here
   const availableGenres = useMemo(() => {
@@ -1129,6 +1185,11 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     setActiveModal,
     showTrendStudioModal,
     setShowTrendStudioModal,
+    trendStudioLaunchConfig,
+    openTrendStudioWithConfig,
+    studioSelectableTargets,
+    socialFeedCtrl,
+    onForceStopPlay,
     recommendNote,
     setRecommendNote,
     inPlayerTrackId,

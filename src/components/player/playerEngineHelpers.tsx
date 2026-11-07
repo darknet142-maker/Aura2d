@@ -220,6 +220,11 @@ export interface Immersive3DPlayerProps {
     commentOrExcerpt?: string,
     isLyricExcerpt?: boolean
   ) => void;
+  onApplySocialPoints?: (
+    trackId: string,
+    pointsDelta: number,
+    meta?: { recommendationsDelta?: number; entityKey?: string }
+  ) => void;
   onToggleSubscribeArtist?: (artistName: string) => void;
   onRecordLyricsOpen?: (trackId: string) => void;
   onToggleDownload: (trackId: string) => void;
