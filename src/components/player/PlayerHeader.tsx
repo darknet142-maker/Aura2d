@@ -104,29 +104,6 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
           </motion.button>
         </div>
       </div>
-
-      {/* Rangée 2 : Bandeau de Télémétrie Acoustique Matérielle (Signature DROP +241) */}
-      <div className="w-full flex items-center justify-between px-2.5 py-1 rounded-xl bg-[#080A0F]/75 border border-white/[0.06] text-[9.5px] font-mono text-[#A3A9BA] tracking-wider uppercase">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-amber-400 font-bold">2D</span>
-          <span className="text-[#F8FAFC] font-bold">
-            X:{pad2(albumIdx + 1)}/{pad2(albumsTotal)}
-          </span>
-          <span className="text-white/25">·</span>
-          <span className="text-[#CBD5E1]">
-            Y:{pad2(trackIdx + 1)}/{pad2(tracksTotal)}
-          </span>
-        </div>
-
-        <div className="hidden xs:flex items-center gap-1.5 text-[#A3A9BA]">
-          <span>MASTER {lufsLevel.toFixed(1)} LUFS</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-          <span className="text-emerald-300 font-semibold">ECG +241</span>
-        </div>
-      </div>
     </header>
   );
 };

@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { SocialTargetSubject, UserStatusStory } from '../types/social-feed.types';
 import { computePostLikePointDelta, computeReDropPointDelta } from '../services/social-points-ledger.service';
 import {
-  filterActive24hStatuses,
+  deleteSocialVideoBlob,
   loadPersistedUserStatuses,
+  purgeExpiredStatusesIrreversibly,
   savePersistedUserStatuses,
 } from '../services/status-video-storage.service';
 
@@ -27,7 +28,20 @@ export function useStatusStoriesState(params: {
 
   useEffect(() => savePersistedUserStatuses(statuses), [statuses]);
 
-  const activeStatuses = useMemo(() => filterActive24hStatuses(statuses), [statuses]);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStatuses((prev) => {
+        const { active, purgedIds } = purgeExpiredStatusesIrreversibly(prev);
+        return purgedIds.length > 0 ? active : prev;
+      });
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const activeStatuses = useMemo(
+    () => purgeExpiredStatusesIrreversibly(statuses).active,
+    [statuses]
+  );
 
   const groupedStatusRings = useMemo<GroupedUserStatusRing[]>(() => {
     const map = new Map<string, UserStatusStory[]>();
@@ -51,8 +65,18 @@ export function useStatusStoriesState(params: {
   }, [activeStatuses, actorId]);
 
   const prependStatus = useCallback((story: UserStatusStory) => {
-    setStatuses((prev) => [story, ...prev]);
+    setStatuses((prev) => [story, ...purgeExpiredStatusesIrreversibly(prev).active]);
   }, []);
+
+  const handleDeleteStatus = useCallback((statusId: string) => {
+    setStatuses((prev) => {
+      const target = prev.find((st) => st.id === statusId && st.userId === actorId);
+      if (!target) return prev;
+      if (target.videoIdbKey) void deleteSocialVideoBlob(target.videoIdbKey);
+      return prev.filter((st) => st.id !== statusId);
+    });
+    onToast('Statut supprimé pour libérer de la place', 'bg-amber-400');
+  }, [actorId, onToast]);
 
   const handleMarkStatusSeen = useCallback((statusId: string) => {
     setStatuses((prev) => prev.map((st) => (
@@ -67,20 +91,19 @@ export function useStatusStoriesState(params: {
       if (st.id !== statusId) return st;
       const { nextLiked, pointsDelta } = computePostLikePointDelta(st, actorId);
       creditPointsToTarget(st.target, pointsDelta);
-      if (pointsDelta > 0) onToast(`+0,25 pt attribué à ${st.target.entityName} !`, 'bg-rose-500');
       return {
         ...st,
         likedByUserIds: nextLiked ? [...st.likedByUserIds, actorId] : st.likedByUserIds.filter((id) => id !== actorId),
       };
     }));
-  }, [actorId, creditPointsToTarget, onToast]);
+  }, [actorId, creditPointsToTarget]);
 
   const handleToggleStatusReDrop = useCallback((statusId: string) => {
     setStatuses((prev) => prev.map((st) => {
       if (st.id !== statusId) return st;
       const { nextReDropped, pointsDelta, recommendationsDelta } = computeReDropPointDelta(st, actorId);
       creditPointsToTarget(st.target, pointsDelta, recommendationsDelta);
-      if (nextReDropped) onToast(`Statut republié (+0,30 pt pour ${st.target.entityName})`, 'bg-emerald-400');
+      if (nextReDropped) onToast('Statut republié auprès de la communauté', 'bg-emerald-400');
       return {
         ...st,
         reDroppedByUserIds: nextReDropped ? [...st.reDroppedByUserIds, actorId] : st.reDroppedByUserIds.filter((id) => id !== actorId),
@@ -89,13 +112,7 @@ export function useStatusStoriesState(params: {
   }, [actorId, creditPointsToTarget, onToast]);
 
   return {
-    activeStatuses,
-    groupedStatusRings,
-    activeStatusUserId,
-    setActiveStatusUserId,
-    prependStatus,
-    handleMarkStatusSeen,
-    handleToggleStatusLike,
-    handleToggleStatusReDrop,
+    activeStatuses, groupedStatusRings, activeStatusUserId, setActiveStatusUserId,
+    prependStatus, handleDeleteStatus, handleMarkStatusSeen, handleToggleStatusLike, handleToggleStatusReDrop,
   };
 }

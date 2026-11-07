@@ -1,6 +1,6 @@
 import type { FeedCommentItem, PostArchetype, SocialFeedPost, SocialTargetSubject, StudioAudioCaptureMode, UserStatusStory } from '../types/social-feed.types';
 import { computeCommentPointDelta, computePostLikePointDelta, computeReDropPointDelta, computeVideoPublishPointDelta, roundPoints2 } from './social-points-ledger.service';
-import { toUserHandle } from './social-feed-seeds.service';
+import { toUserHandle, STATUS_MAX_LIFESPAN_MS } from './social-feed-seeds.service';
 
 export interface ActingSocialUser { id: string; name: string; avatar: string; }
 
@@ -126,7 +126,7 @@ export function createStudioVideoArtifacts(params: {
     id: `st-${now}`, userId: params.actor.id, userName: params.actor.name, userHandle: toUserHandle(params.actor.name),
     userAvatar: params.actor.avatar, captureMode: params.captureMode, videoIdbKey: params.videoIdbKey,
     caption: cleanCaption, durationSec: dur, target: params.target, createdAtIso: nowIso,
-    expiresAtIso: new Date(now + 24 * 3_600_000).toISOString(), seenByUserIds: [params.actor.id], likedByUserIds: [], reDroppedByUserIds: [],
+    expiresAtIso: new Date(now + STATUS_MAX_LIFESPAN_MS).toISOString(), seenByUserIds: [params.actor.id], likedByUserIds: [], reDroppedByUserIds: [],
   } : undefined;
   const feedPost: SocialFeedPost | undefined = params.publishToFeed ? {
     ...createManualFeedPost({ archetype: 'VIDEO_OPINION', actor: params.actor, caption: cleanCaption, target: params.target, initialPoints: pointsDelta }),

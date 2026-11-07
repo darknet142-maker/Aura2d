@@ -109,3 +109,4 @@ export function buildDynamicTargetQrUrl(
   }
   return `${origin}/?track=${encodeURIComponent(target.trackId || fallbackTrackId)}`;
 }
+

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Flame, Video, Shuffle, Plus, Sparkles } from 'lucide-react';
+import { Flame, Video, Shuffle, Plus, Sparkles, Trophy } from 'lucide-react';
 import type { AnalyticsAlbumNode, AnalyticsTrackItem, StudioEntityRole } from '../../../components/ReusableAnalyticsSheets';
 import type { FeedLensId, SocialFeedPost, SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { buildComposerOptionsFromCatalogue } from '../services/social-target-options.service';
@@ -23,20 +23,21 @@ export interface SocialRecommendationsFeedViewProps {
   onOpenTrackSheet: (trackId: string) => void;
   onOpenEntitySheet: (name: string, role?: StudioEntityRole) => void;
   onOpenUserProfile: (userId: string) => void;
+  onOpenScoutsRankings?: () => void;
   onOpenCameraStudio: (mode: StudioAudioCaptureMode, target: SocialTargetSubject) => void;
-  onToast: (msg: string, dotColor?: string) => void;
 }
 
 const LENS_TABS: { id: FeedLensId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'FOR_YOU_VIRAL', label: 'Pour Vous', icon: Sparkles },
-  { id: 'TRENDING_REDROPS', label: 'En Explosion', icon: Flame },
-  { id: 'VIDEO_OPINIONS', label: 'Avis Vidéo 30s', icon: Video },
+  { id: 'TRENDING_REDROPS', label: 'Tendances', icon: Flame },
+  { id: 'VIDEO_OPINIONS', label: 'Vidéos 30s', icon: Video },
   { id: 'RANDOM_DISCOVERY', label: 'Découverte', icon: Shuffle },
 ];
 
 export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedViewProps> = ({
   feedCtrl, currentUser, currentTrack, allTracksFlat, trackRankMap,
-  onPauseMainPlayer, onPlaySpecificTrack, onOpenTrackSheet, onOpenEntitySheet, onOpenUserProfile, onOpenCameraStudio, onToast,
+  onPauseMainPlayer, onPlaySpecificTrack, onOpenTrackSheet, onOpenEntitySheet,
+  onOpenUserProfile, onOpenScoutsRankings, onOpenCameraStudio,
 }) => {
   const inlineAudio = useInlineDropPreviewAudio(onPauseMainPlayer);
   const defaultTarget: SocialTargetSubject = useMemo(() => ({
@@ -60,11 +61,6 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
     feedCtrl.handleRecordDiscovery(post.id);
     const match = allTracksFlat.find((m) => m.track.id === post.target.trackId || m.track.artist === post.target.entityName);
     if (match) onPlaySpecificTrack(match.albumIndex, match.trackIndex);
-  };
-
-  const sharePostLink = (post: SocialFeedPost) => {
-    navigator.clipboard?.writeText(`${window.location.origin}/?track=${encodeURIComponent(post.target.trackId || post.target.entityName)}`).catch(() => {});
-    onToast('Lien de la recommandation copié dans le presse-papiers !', 'bg-emerald-400');
   };
 
   const activeCommentsPost = feedCtrl.posts.find((p) => p.id === feedCtrl.activeCommentsPostId) ?? null;
@@ -91,6 +87,14 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
               <Icon className="w-3.5 h-3.5 shrink-0" /><span>{label}</span>
             </button>
           ))}
+          {onOpenScoutsRankings && (
+            <button
+              type="button" onClick={onOpenScoutsRankings}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-amber-400/30 text-amber-300 hover:bg-amber-400/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer"
+            >
+              <Trophy className="w-3.5 h-3.5 shrink-0" /><span>Top Éclaireurs</span>
+            </button>
+          )}
         </div>
         <button type="button" onClick={() => feedCtrl.setIsComposerOpen(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#DE1B34] hover:bg-[#f02842] text-white text-xs font-bold shrink-0 shadow-md cursor-pointer">
           <Plus className="w-3.5 h-3.5 shrink-0" /><span>Publier</span>
@@ -99,7 +103,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
 
       {feedCtrl.rankedPosts.length === 0 ? (
         <div className="rounded-3xl bg-[#0D1017] border border-white/10 p-6 text-center space-y-3">
-          <p className="text-sm font-bold text-[#F8FAFC]">Aucune publication dans cette lentille</p>
+          <p className="text-sm font-bold text-[#F8FAFC]">Aucune publication dans cette sélection</p>
           <button type="button" onClick={() => feedCtrl.setActiveLens('FOR_YOU_VIRAL')} className="px-4 py-2 rounded-xl bg-amber-400 text-[#080A0F] text-xs font-bold cursor-pointer">Revenir au Fil Pour Vous</button>
         </div>
       ) : (
@@ -114,7 +118,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
               onOpenComments: () => feedCtrl.setActiveCommentsPostId(post.id),
               onToggleReDrop: (q?: string) => feedCtrl.handleTogglePostReDrop(post.id, q),
               onOpenStudioReaction: (mode: StudioAudioCaptureMode) => { inlineAudio.stopInlinePreview(); onOpenCameraStudio(mode, post.target); },
-              onSharePost: () => sharePostLink(post),
+              onDeletePost: post.authorId === currentUser.id ? () => feedCtrl.handleDeletePost(post.id) : undefined,
             };
             return post.archetype === 'SPOTLIGHT_VISUAL' || post.archetype === 'VIDEO_OPINION' ? (
               <RecoSpotlightVisualCard key={post.id} {...common} onPlayTarget={() => playPostTarget(post)} onPauseMainPlayer={() => { inlineAudio.stopInlinePreview(); onPauseMainPlayer(); }} onOpenTargetSheet={() => navigateToTarget(post.target)} />
@@ -135,8 +139,8 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
       )}
 
       <RecoCommentsDrawer post={activeCommentsPost} onClose={() => feedCtrl.setActiveCommentsPostId(null)} onSubmitComment={feedCtrl.handleAddComment} onOpenUserProfile={onOpenUserProfile} />
-      <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
-      <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />
+      <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onDeleteStatus={feedCtrl.handleDeleteStatus} onOpenUserProfile={onOpenUserProfile} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
+      <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />
     </div>
   );
 };

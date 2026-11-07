@@ -1,6 +1,9 @@
 import type { CommunityRecommendationItem } from '../../../utils/rankingEngine';
 import type { SocialFeedPost, UserStatusStory } from '../types/social-feed.types';
 
+export const STATUS_MAX_LIFESPAN_MS = 4 * 3_600_000;
+export const MAX_ACTIVE_ITEMS_PER_PROFILE = 10;
+
 export function toUserHandle(name: string): string {
   const slug = name
     .normalize('NFD')
@@ -24,7 +27,7 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
       authorHandle: '@inesmba',
       authorAvatar: 'IM',
       caption:
-        "C'est probablement le meilleur couplet rap gabonais que j'ai entendu cette année. La dynamique à -14 LUFS claque fort au casque !",
+        "C'est probablement le meilleur couplet rap gabonais que j'ai entendu cette année. Le grain vocal et les basses claquent fort au casque !",
       createdAtIso: isoAgo(4),
       createdAtLabel: '4 min',
       lastBoostedAtIso: isoAgo(2),
@@ -39,7 +42,7 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
       reDropRelays: [{ userId: 'u-2', userName: 'Marc-Arthur Obiang', userAvatar: 'MO', relayedAtIso: isoAgo(2) }],
       comments: [{
         id: 'c-seed-1', authorId: 'u-2', authorName: 'Marc-Arthur Obiang', authorHandle: '@marcarthur',
-        authorAvatar: 'MO', body: 'L’entrée de Movaizhaleine sur le Drop à 0:48 donne des frissons.',
+        authorAvatar: 'MO', body: 'L’entrée de Movaizhaleine sur le refrain à 0:48 donne des frissons.',
         createdAtLabel: '2 min', awardedPoint: true,
       }],
       discoveriesCount: 14, discovererUserIds: ['u-2', 'u-4', 'u-5'], discovererInitials: ['MO', 'SN', 'AK'],
@@ -99,7 +102,7 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
       archetype: r.isLyricExcerpt ? 'LYRIC_EXCERPT' : 'TRACK_VINYL',
       authorId: r.userId || `u-leg-${idx}`,
       authorName: r.userName, authorHandle: toUserHandle(r.userName), authorAvatar: r.userAvatar || 'DR',
-      caption: r.commentOrLyricExcerpt || 'Recommandé à la communauté DROP (+241)',
+      caption: (r.commentOrLyricExcerpt || 'Recommandé à la communauté DROP').replace(/\s*[-•]?\s*-?14(?:\.0)?\s*LUFS\s*!?/gi, ''),
       createdAtIso: isoAgo(25 + idx * 8), createdAtLabel: r.createdAt.replace(/^il y a\s+/i, ''),
       lastBoostedAtIso: isoAgo(25 + idx * 8),
       target: {
@@ -117,21 +120,21 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
 
 export function buildSeedUserStatuses(): UserStatusStory[] {
   const now = Date.now();
-  const inHours = (h: number) => new Date(now + h * 3_600_000).toISOString();
-  const agoMins = (m: number) => new Date(now - m * 60_000).toISOString();
+  const c1 = now - 14 * 60_000;
+  const c2 = now - 32 * 60_000;
   return [
     {
       id: 'st-seed-1', userId: 'u-3', userName: 'Inès Mba', userHandle: '@inesmba', userAvatar: 'IM',
-      captureMode: 'DROP_MUSIC_30S', caption: 'Écoute nocturne sur Couronne d’Okoumé — le mix est chirurgical !',
-      durationSec: 22, createdAtIso: agoMins(14), expiresAtIso: inHours(23),
+      captureMode: 'DROP_MUSIC_30S', caption: 'Écoute nocturne sur Couronne d’Okoumé — ce refrain reste en tête !',
+      durationSec: 22, createdAtIso: new Date(c1).toISOString(), expiresAtIso: new Date(c1 + STATUS_MAX_LIFESPAN_MS).toISOString(),
       target: { kind: 'TRACK', trackId: 't-301', entityName: "Ba'ponga", title: "Couronne d'Okoumé", subtitle: "Ba'ponga feat. Movaizhaleine", genre: 'Rap Gabonais', cover: '', artworkType: 'pastel_heart' },
       seenByUserIds: [], likedByUserIds: ['u-2'], reDroppedByUserIds: [],
     },
     {
       id: 'st-seed-2', userId: 'u-2', userName: 'Marc-Arthur', userHandle: '@marcarthur', userAvatar: 'MO',
-      captureMode: 'VOICE_OPINION_NO_MUSIC', caption: 'Mon verdict micro sans musique : pourquoi l’EP Ntcham change la donne à Libreville.',
-      durationSec: 28, createdAtIso: agoMins(32), expiresAtIso: inHours(22),
-      target: { kind: 'ARTIST', trackId: 't-101', entityName: "L'Oiseau Rare", title: "L'Oiseau Rare", subtitle: 'Artiste • Scène Ntcham (+241)', genre: 'Ntcham', cover: '', artworkType: 'crimson_bloom' },
+      captureMode: 'VOICE_OPINION_NO_MUSIC', caption: 'Mon avis au micro : pourquoi cet EP Ntcham change la donne à Libreville.',
+      durationSec: 28, createdAtIso: new Date(c2).toISOString(), expiresAtIso: new Date(c2 + STATUS_MAX_LIFESPAN_MS).toISOString(),
+      target: { kind: 'ARTIST', trackId: 't-101', entityName: "L'Oiseau Rare", title: "L'Oiseau Rare", subtitle: 'Artiste • Scène Ntcham', genre: 'Ntcham', cover: '', artworkType: 'crimson_bloom' },
       seenByUserIds: [], likedByUserIds: ['u-1', 'u-3'], reDroppedByUserIds: ['u-3'],
     },
   ];

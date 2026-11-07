@@ -35,8 +35,10 @@ import {
   parseMusicIntelligenceNaturalQuery,
 } from '../../music-intelligence';
 import {
+  buildCommunityLeaderboardAndProfiles,
   buildComposerOptionsFromCatalogue,
   useSocialFeedController,
+  type CommunityMemberCompleteStats,
   type SocialTargetSubject,
   type StudioAudioCaptureMode,
   type StudioLaunchConfig,
@@ -166,7 +168,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
   } | null>(null);
   const [hubGenreFilter, setHubGenreFilter] = useState<string>('ALL');
   const [hubRankDimension, setHubRankDimension] = useState<
-    'ALL' | 'ARTIST' | 'BEATMAKER' | 'ENGINEER' | 'LYRICIST' | 'LABEL' | 'CATEGORY'
+    'ECLAIREURS' | 'ALL' | 'ARTIST' | 'BEATMAKER' | 'ENGINEER' | 'LYRICIST' | 'LABEL' | 'CATEGORY'
   >('ALL');
   const [chartTimeframe, setChartTimeframe] =
     useState<ChartTimeframe>('MONTHLY_30D');
@@ -589,31 +591,67 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     subscribedArtists,
   ]);
 
-  // Compute Selected In-Player Listener Profile Sheet Data (with safe fallback)
+  const communityLeaderboard = useMemo(
+    () =>
+      buildCommunityLeaderboardAndProfiles({
+        users: users || [],
+        currentUser,
+        posts: socialFeedCtrl.posts,
+        statuses: socialFeedCtrl.activeStatuses,
+        likedTrackIds,
+        catalogueTracks: allTracksFlat.map((x) => x.track),
+      }),
+    [
+      users,
+      currentUser,
+      socialFeedCtrl.posts,
+      socialFeedCtrl.activeStatuses,
+      likedTrackIds,
+      allTracksFlat,
+    ]
+  );
+
+  const currentUserMemberStats = useMemo(
+    () =>
+      communityLeaderboard.find(
+        (m) => m.userId === (currentUser?.id || 'u-guest')
+      ) ??
+      communityLeaderboard[0] ??
+      null,
+    [communityLeaderboard, currentUser?.id]
+  );
+
+  // Compute Selected In-Player Listener Profile Sheet Data (never hijacks to currentUser)
   const activeUserSheetData = useMemo(() => {
     if (!inPlayerUserId) return null;
+    const member = communityLeaderboard.find((m) => m.userId === inPlayerUserId);
+    if (member) {
+      return {
+        user: member.user,
+        rank: member.ranks.SCOUTS,
+        memberStats: member,
+      };
+    }
     const foundUser =
-      (users || []).find((u) => u.id === inPlayerUserId) ||
-      currentUser ||
-      (users && users[0]) || {
+      (users || []).find((u) => u.id === inPlayerUserId) || {
         id: inPlayerUserId,
-        name: 'Auditeur Fidèle (+241)',
-        email: 'auditeur@drop.ga',
+        name: 'Membre DROP',
+        email: 'membre@drop.ga',
         role: 'USER' as const,
-        joinedAt: '2024',
-        avatar: 'AF',
-        totalLikes: 18,
-        totalListenSeconds: 5400,
-        totalValidatedPlays: 42,
-        totalLoops: 12,
+        joinedAt: '2025',
+        avatar: 'MD',
+        totalLikes: 12,
+        totalListenSeconds: 3600,
+        totalValidatedPlays: 24,
+        totalLoops: 8,
         trackStats: {},
       };
-    const sortedUsers = [...(users || [])].sort(
-      (a, b) => (b.totalListenSeconds || 0) - (a.totalListenSeconds || 0)
-    );
-    const rankIdx = sortedUsers.findIndex((u) => u.id === foundUser.id);
-    return { user: foundUser, rank: rankIdx >= 0 ? rankIdx + 1 : 1 };
-  }, [inPlayerUserId, users, currentUser]);
+    return {
+      user: foundUser,
+      rank: communityLeaderboard.length + 1,
+      memberStats: undefined as CommunityMemberCompleteStats | undefined,
+    };
+  }, [inPlayerUserId, communityLeaderboard, users]);
 
   // Instant Multi-Criteria Intelligent Search Results (reacts from the very 1st letter typed!)
   // Accent-insensitive, prefix-prioritized + word-boundary + fuzzy subsequence matching across:
@@ -777,7 +815,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
       {
         id: 'pl-3',
         name: 'Nuit Libreville',
-        colorTheme: '#8b5cf6',
+        colorTheme: '#0ea5e9',
         iconType: 'moon',
         trackIds: defaultIds.slice(0, 2),
         createdAt: '2025',
@@ -1248,6 +1286,8 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     activeTrackSheetData,
     activeEntitySheetData,
     activeUserSheetData,
+    communityLeaderboard,
+    currentUserMemberStats,
     instantSearchResults,
     heartAnimKey,
     setHeartAnimKey,

@@ -484,8 +484,9 @@ CREATE TABLE IF NOT EXISTS public.user_statuses (
     seen_by_user_ids TEXT[] DEFAULT '{}',
     liked_by_user_ids TEXT[] DEFAULT '{}',
     redropped_by_user_ids TEXT[] DEFAULT '{}',
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '4 hours'),
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    CONSTRAINT user_statuses_max_4h_chk CHECK (expires_at <= created_at + INTERVAL '4 hours 1 minute')
 );
 
 -- ----------------------------------------------------------------------------

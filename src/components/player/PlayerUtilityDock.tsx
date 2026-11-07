@@ -69,14 +69,14 @@ export const PlayerUtilityDock: React.FC<PlayerUtilityDockProps> = ({
         onClick={onOpenTrendStudio}
         className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#ff3b30] via-rose-600 to-[#e11d38] text-white shadow-[0_0_24px_rgba(255,59,48,0.55)] border border-rose-400/50 hover:brightness-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         aria-label="Lancer l'enregistrement d'une vidéo Trend 30s"
-        title="Lancer l'enregistrement d'une vidéo Trend 30s (Format Vertical 1080x1920)"
+        title="Créer une vidéo Trend de 30 secondes"
       >
         <span className="relative flex items-center justify-center">
           <Video className="w-5 h-5 stroke-[2.2] text-white drop-shadow" />
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-sm" />
         </span>
-        <span className="absolute -bottom-1 px-1.5 py-[1.5px] rounded-full bg-[#07090E]/85 text-amber-300 text-[8px] font-mono font-black tracking-wider leading-none border border-amber-400/40 shadow">
-          REC 9:16
+        <span className="absolute -bottom-1 px-1.5 py-[1.5px] rounded-full bg-[#07090E]/85 text-amber-300 text-[8.5px] font-mono font-bold leading-none border border-amber-400/40 shadow">
+          30s
         </span>
       </button>
 

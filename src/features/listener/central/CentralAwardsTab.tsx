@@ -113,12 +113,12 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                               {
                                 id: 'BLIND_TEST',
                                 label:
-                                  'Module « Jury à l’Aveugle » (-14 LUFS)',
+                                  'Module « Jury à l’Aveugle »',
                               },
                               {
                                 id: 'CERTIFICATIONS',
                                 label:
-                                  'Registre National ECG & QR Codes',
+                                  'Registre National & QR Codes',
                               },
                             ] as const
                           ).map((sub) => (
@@ -340,7 +340,7 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                                   Pilier IV.3 — Protocole « Jury à l&apos;Aveugle » (Anti-Copinage • Grille B 35%)
                                 </span>
                                 <h3 className="text-sm font-bold text-white">
-                                  Écoute Anonymisée de Packs de 3 Titres Normalisés à -14,0 LUFS
+                                  Écoute Anonymisée de Packs de 3 Titres Normalisés
                                 </h3>
                               </div>
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-mono text-[10.5px]">
@@ -416,7 +416,7 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                                           {dossier.anonymousCode}
                                         </span>
                                         <span className="text-[10px] font-mono text-emerald-400">
-                                          Master : {dossier.normalizedLufs.toFixed(1)} LUFS
+                                          Master : Normalisé Studio
                                         </span>
                                       </div>
                                       <p className="text-[11px] text-[#A3A9BA] font-mono">
@@ -455,7 +455,7 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                                                 <span>{tp.slotLabel} ({tp.genre})</span>
                                               </span>
                                               <span className="text-[10px] font-mono text-cyan-300">
-                                                -14 LUFS
+                                                Normalisé
                                               </span>
                                             </button>
                                           );

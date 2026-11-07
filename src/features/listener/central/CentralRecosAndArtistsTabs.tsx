@@ -56,7 +56,10 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
           onOpenEntitySheet={openUserEntitySheet}
           onOpenUserProfile={openUserListenerSheet}
           onOpenCameraStudio={(mode, target) => openTrendStudioWithConfig(mode, target)}
-          onToast={showToast}
+          onOpenScoutsRankings={() => {
+            state.setHubRankDimension('ECLAIREURS');
+            state.setHubTab('RANGS');
+          }}
         />
       )}
 
@@ -134,7 +137,7 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
                         </span>
                       </div>
                       <p className="text-[11px] text-[#A3A9BA] truncate mt-0.5 tabular-nums">
-                        {ent.primaryMetricLabel} : {ent.primaryMetricValue} • Score : {ent.decoupledScore} pts
+                        {ent.primaryMetricLabel} : {ent.primaryMetricValue}
                       </p>
                     </div>
                   </div>
@@ -178,6 +181,18 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
           onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
           onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
           onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
+          memberSocialStats={state.currentUserMemberStats}
+          maxProfileItems={socialFeedCtrl.maxProfileItems}
+          onDeleteOwnStatus={socialFeedCtrl.handleDeleteStatus}
+          onDeleteOwnPost={socialFeedCtrl.handleDeletePost}
+          onOpenSocialTarget={(target) => {
+            if (target.trackId) openUserTrackSheet(target.trackId);
+            else if (target.kind === 'ARTIST') openUserEntitySheet(target.entityName, 'ARTIST');
+          }}
+          onOpenScoutsLeaderboard={() => {
+            state.setHubRankDimension('ECLAIREURS');
+            state.setHubTab('RANGS');
+          }}
         />
       )}
     </>

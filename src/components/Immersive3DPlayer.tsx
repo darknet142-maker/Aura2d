@@ -34,6 +34,7 @@ export {
 import { useImmersivePlayerState } from '../features/listener/hooks/useImmersivePlayerState';
 import { CentralHubWorkspace } from '../features/listener/central/CentralHubWorkspace';
 import { SPRING_SNAPPY } from '../shared/ui/springMotion';
+import { ProfileQuotaCleanupModal } from '../features/social-feed';
 
 export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
   const state = useImmersivePlayerState(props);
@@ -115,6 +116,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
     studioSelectableTargets,
     socialFeedCtrl,
     setHubTab,
+    setHubRankDimension,
     toastMsg,
     toastDotColor,
     showToast,
@@ -186,7 +188,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             ) : (
               <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
             )}
-            <span>{fullBleed ? 'Format Platine 9:16' : 'Scène Plein Écran'}</span>
+            <span>{fullBleed ? 'Vue Compacte' : 'Scène Plein Écran'}</span>
           </motion.button>
         )}
       </div>
@@ -595,6 +597,22 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                     onClose={closeAllAnalyticsSheets}
                     onSelectTrackDetail={(tId) => openUserTrackSheet(tId)}
                     onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
+                    memberSocialStats={activeUserSheetData.memberStats}
+                    maxProfileItems={socialFeedCtrl.maxProfileItems}
+                    onDeleteOwnStatus={socialFeedCtrl.handleDeleteStatus}
+                    onDeleteOwnPost={socialFeedCtrl.handleDeletePost}
+                    onOpenSocialTarget={(target) => {
+                      if (target.trackId) {
+                        openUserTrackSheet(target.trackId);
+                      } else if (target.kind === 'ARTIST') {
+                        openUserEntitySheet(target.entityName, 'ARTIST');
+                      }
+                    }}
+                    onOpenScoutsLeaderboard={() => {
+                      closeAllAnalyticsSheets();
+                      setHubRankDimension('ECLAIREURS');
+                      setHubTab('RANGS');
+                    }}
                   />
                 ) : null}
               </div>
@@ -675,10 +693,19 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             initialCaptureMode={trendStudioLaunchConfig.captureMode}
             initialTargetSubject={trendStudioLaunchConfig.targetSubject}
             availableTargets={studioSelectableTargets}
+            catalogueAudioLookup={allTracksFlat.map((m) => ({
+              id: m.track.id,
+              audioUrl: m.track.audioUrl,
+              dropStart: m.track.dropStart,
+              dropDuration: m.track.dropDuration,
+              cover: m.track.cover,
+            }))}
             onPublishVideoToDrop={async (payload) => {
-              await socialFeedCtrl.handlePublishStudioVideo(payload);
-              if (!desktopSplitMode) setActiveModal('MINI');
-              setHubTab('RECOS');
+              const success = await socialFeedCtrl.handlePublishStudioVideo(payload);
+              if (success) {
+                if (!desktopSplitMode) setActiveModal('MINI');
+                setHubTab('RECOS');
+              }
             }}
             onClose={() => setShowTrendStudioModal(false)}
             onPauseMainPlayer={() => {
@@ -689,6 +716,21 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
           />
         );
       })()}
+
+      {/* Modal de nettoyage des 10 quotas de statuts/recommandations par profil */}
+      <ProfileQuotaCleanupModal
+        isOpen={socialFeedCtrl.isQuotaCleanupOpen}
+        maxItems={socialFeedCtrl.maxProfileItems}
+        ownStatuses={socialFeedCtrl.activeStatuses.filter(
+          (s) => s.userId === (currentUser?.id || 'u-guest')
+        )}
+        ownPosts={socialFeedCtrl.posts.filter(
+          (p) => p.authorId === (currentUser?.id || 'u-guest')
+        )}
+        onDeleteStatus={socialFeedCtrl.handleDeleteStatus}
+        onDeletePost={socialFeedCtrl.handleDeletePost}
+        onClose={() => socialFeedCtrl.setIsQuotaCleanupOpen(false)}
+      />
     </div>
   );
 };

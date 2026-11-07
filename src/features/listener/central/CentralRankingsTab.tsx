@@ -67,6 +67,7 @@ import {
   highlightMatchedText,
   PlaylistVectorIcon,
 } from '../../../components/player/playerEngineHelpers';
+import { ScoutsLeaderboardPanel } from '../../social-feed';
 import type { ReturnTypeUseImmersivePlayerState } from '../hooks/useImmersivePlayerState';
 
 export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerState }> = ({ state }) => {
@@ -134,6 +135,7 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                         {(
                           [
                             { id: 'ALL', label: 'Top Chansons' },
+                            { id: 'ECLAIREURS', label: 'Top Éclaireurs' },
                             { id: 'ARTIST', label: 'Top Artistes' },
                             { id: 'BEATMAKER', label: 'Top Beatmakers' },
                             { id: 'ENGINEER', label: 'Top Ingénieurs Son' },
@@ -157,7 +159,13 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                         ))}
                       </div>
 
-                      {hubRankDimension === 'ALL' ? (
+                      {hubRankDimension === 'ECLAIREURS' ? (
+                        <ScoutsLeaderboardPanel
+                          members={state.communityLeaderboard}
+                          currentUserId={currentUser?.id}
+                          onOpenUserProfile={openUserListenerSheet}
+                        />
+                      ) : hubRankDimension === 'ALL' ? (
                         <div className="space-y-2">
                           {[...allTracksFlat]
                             .map((item) => ({
@@ -241,7 +249,7 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             cert={cert}
                                             compact
                                           />
-                                          {explosion.decayPenaltyPct > 0 && (
+                                          {false && (
                                             <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/35 text-rose-300 text-[9px] font-mono shrink-0">
                                               Usure : -{explosion.decayPenaltyPct}%
                                             </span>
@@ -263,16 +271,13 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                               : ''}
                                           </button>
                                           <span className="shrink-0">
-                                            • {formatCompactPlays(t.realPlays)} ECG
+                                            • {formatCompactPlays(t.realPlays)} écoutes
                                           </span>
                                         </p>
                                       </div>
                                     </div>
 
                                     <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">
-                                        {explosion.explosionScore} pts
-                                      </span>
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -318,7 +323,7 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                     </p>
                                     <p className="text-[11px] text-[#A3A9BA]">
                                       {tracksInGenre.length} titre(s) •{' '}
-                                      {formatCompactPlays(totalPlays)} ECG cumulées
+                                      {formatCompactPlays(totalPlays)} écoutes
                                     </p>
                                   </div>
                                 </div>
@@ -379,7 +384,7 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             : 'Écurie Indé (<3 art.)'}
                                         </span>
                                       )}
-                                      {ent.antiOneHitWonderApplied &&
+                                      {false &&
                                         ent.role !== 'LABEL' && (
                                           <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[9.5px] font-mono">
                                             Cap{' '}
@@ -410,9 +415,6 @@ export const CentralRankingsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                 </div>
 
                                 <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-white/10">
-                                  <span className="px-2.5 py-1 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 font-mono text-xs font-extrabold">
-                                    {ent.decoupledScore} pts
-                                  </span>
                                   <span className="text-xs text-white font-semibold">
                                     Détails →
                                   </span>

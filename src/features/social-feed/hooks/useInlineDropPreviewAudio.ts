@@ -7,7 +7,6 @@ export interface InlinePreviewTrackSource {
   dropStart: number;
   dropDuration: number;
   bpm?: number;
-  synthNotes?: number[];
 }
 
 export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
@@ -16,20 +15,19 @@ export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
   const [maxSec, setMaxSec] = useState<number>(30);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const synthCtxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
-  const synthNoteTimerRef = useRef<number | null>(null);
   const dropStartRef = useRef<number>(0);
   const startWallMsRef = useRef<number>(0);
   const offsetSecRef = useRef<number>(0);
 
   const stopInlinePreview = useCallback(() => {
     if (timerRef.current) window.clearInterval(timerRef.current);
-    if (synthNoteTimerRef.current) window.clearInterval(synthNoteTimerRef.current);
     timerRef.current = null;
-    synthNoteTimerRef.current = null;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; audioRef.current = null; }
-    if (synthCtxRef.current) { synthCtxRef.current.close().catch(() => {}); synthCtxRef.current = null; }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
     setActivePostId(null);
     setElapsedSec(0);
   }, []);
@@ -58,39 +56,20 @@ export function useInlineDropPreviewAudio(onPauseMainPlayer: () => void) {
       const resolvedUrl = source.audioUrl || (await getPersistentAudioBlobUrl(source.id).catch(() => null)) || '';
       if (resolvedUrl) {
         const audio = new Audio(resolvedUrl);
-        audio.crossOrigin = 'anonymous';
-        audio.currentTime = dStart;
+        audio.preload = 'auto';
+        const seekAndPlay = () => {
+          try { audio.currentTime = dStart; } catch { /* wait metadata */ }
+          audio.play().catch(() => {});
+        };
+        if (audio.readyState >= 1) seekAndPlay();
+        else audio.addEventListener('loadedmetadata', seekAndPlay, { once: true });
         audioRef.current = audio;
-        audio.play().catch(() => {});
         timerRef.current = window.setInterval(() => {
           const rel = Math.max(0, audio.currentTime - dStart);
           if (rel >= clipLen || audio.ended) stopInlinePreview();
           else setElapsedSec(rel);
         }, 80);
         return;
-      }
-
-      const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (Ctor) {
-        const ctx = new Ctor();
-        synthCtxRef.current = ctx;
-        const notes = source.synthNotes?.length ? source.synthNotes : [110, 146.83, 164.81, 220];
-        let step = 0;
-        const beatMs = Math.round(60_000 / Math.max(75, Math.min(160, source.bpm || 108)));
-        const pulse = () => {
-          if (ctx.state === 'closed') return;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = notes[step++ % notes.length] * 2;
-          gain.gain.setValueAtTime(0.06, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.3);
-        };
-        pulse();
-        synthNoteTimerRef.current = window.setInterval(pulse, beatMs);
       }
 
       timerRef.current = window.setInterval(() => {

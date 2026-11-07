@@ -51,7 +51,7 @@ export const RecoCommentsDrawer: React.FC<RecoCommentsDrawerProps> = ({
               Commentaires ({post.comments.length})
             </h3>
             <p className="text-[11px] text-[#A3A9BA] truncate">
-              1er avis constructif (6+ car.) = <span className="text-amber-300 font-mono">+0,10 pt</span> pour {post.target.entityName}
+              Discussion autour de « {post.target.title} »
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Fermer" className="w-8 h-8 rounded-full bg-white/10 text-[#F8FAFC] flex items-center justify-center shrink-0 cursor-pointer">
@@ -62,19 +62,29 @@ export const RecoCommentsDrawer: React.FC<RecoCommentsDrawerProps> = ({
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           {post.comments.length === 0 ? (
             <p className="text-xs text-[#A3A9BA] text-center py-8">
-              Aucun commentaire pour le moment. Lancez la discussion autour de « {post.target.title} » !
+              Aucun commentaire pour le moment. Partagez votre ressenti sur « {post.target.title} » !
             </p>
           ) : (
             post.comments.map((c) => (
               <div key={c.id} className="flex items-start gap-2.5 p-2.5 rounded-2xl bg-[#131722] border border-white/[0.06]">
-                <button type="button" onClick={() => onOpenUserProfile(c.authorId)} className="w-8 h-8 rounded-full bg-[#080A0F] border border-white/15 text-[11px] font-bold text-[#F8FAFC] flex items-center justify-center shrink-0 cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onOpenUserProfile(c.authorId); }}
+                  className="w-8 h-8 rounded-full bg-[#080A0F] border border-white/15 hover:border-amber-400 text-[11px] font-bold text-[#F8FAFC] flex items-center justify-center shrink-0 cursor-pointer"
+                >
                   {c.authorAvatar}
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[#F8FAFC] truncate">{c.authorName}</span>
+                    <button
+                      type="button"
+                      onClick={() => { onClose(); onOpenUserProfile(c.authorId); }}
+                      className="text-xs font-bold text-[#F8FAFC] hover:text-amber-300 truncate text-left cursor-pointer"
+                    >
+                      {c.authorName}
+                    </button>
                     <span className="text-[10px] font-mono text-[#A3A9BA] shrink-0">
-                      {c.createdAtLabel}{c.awardedPoint ? ' • +0,10 pt' : ''}
+                      {c.createdAtLabel}
                     </span>
                   </div>
                   <p className="text-xs text-[#F8FAFC]/90 mt-0.5 break-words">{c.body}</p>
@@ -87,7 +97,7 @@ export const RecoCommentsDrawer: React.FC<RecoCommentsDrawerProps> = ({
         <form onSubmit={handleSend} className="p-3.5 border-t border-white/10 bg-[#080A0F] flex items-center gap-2 shrink-0">
           <input
             ref={inputRef} type="text" value={draft} onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Votre avis sur ${post.target.title}...`}
+            placeholder={`Écrire un commentaire sur ${post.target.title}...`}
             className="flex-1 min-w-0 bg-[#131722] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-[#F8FAFC] placeholder-[#A3A9BA]/60 focus:outline-none focus:border-amber-400"
           />
           <button

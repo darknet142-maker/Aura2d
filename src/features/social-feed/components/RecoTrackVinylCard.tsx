@@ -30,14 +30,14 @@ export interface RecoTrackVinylCardProps {
   onOpenComments: () => void;
   onToggleReDrop: (quote?: string) => void;
   onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
-  onSharePost: () => void;
+  onDeletePost?: () => void;
 }
 
 export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
   post, currentUserId, trackPlays = 48_500, trackRank, waveformPeaks,
   isInlinePlaying, inlineElapsedSec, inlineMaxSec, onToggleInlinePreview, onSeekInlinePreview,
   onPlayFullTrack, onOpenAuthorProfile, onOpenTrackSheet, onOpenArtistProfile, onOpenLyricistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onSharePost,
+  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onDeletePost,
 }) => {
   const bars = useMemo(
     () => (waveformPeaks && waveformPeaks.length >= 24
@@ -52,7 +52,11 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
       variants={SUBTLE_ENTRANCE_VARIANTS} initial="hidden" animate="visible"
       className="rounded-3xl bg-[#0D1017] border border-white/10 p-3.5 sm:p-4 space-y-3 shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]"
     >
-      <RecoCardHeaderAndRelay post={post} onOpenAuthorProfile={onOpenAuthorProfile} onOpenTargetSheet={onOpenTrackSheet} onOpenArtistProfile={onOpenArtistProfile} />
+      <RecoCardHeaderAndRelay
+        post={post} isOwnPost={post.authorId === currentUserId}
+        onOpenAuthorProfile={onOpenAuthorProfile} onOpenTargetSheet={onOpenTrackSheet}
+        onOpenArtistProfile={onOpenArtistProfile} onDeletePost={onDeletePost}
+      />
 
       {post.archetype === 'LYRIC_EXCERPT' && post.target.lyricistName && (
         <button type="button" onClick={() => onOpenLyricistProfile?.(post.target.lyricistName!)} className="text-[11px] font-mono text-amber-300 hover:underline text-left block truncate cursor-pointer">
@@ -87,26 +91,20 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
         </div>
 
         <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <button type="button" onClick={onOpenTrackSheet} className="text-sm font-extrabold text-[#F8FAFC] hover:text-amber-300 truncate block max-w-full text-left cursor-pointer">{post.target.title}</button>
-              <button type="button" onClick={onOpenArtistProfile} className="text-xs text-[#A3A9BA] hover:text-[#F8FAFC] truncate block max-w-full text-left cursor-pointer">{post.target.subtitle}</button>
-              <p className="text-[11px] text-[#A3A9BA]/80 truncate">
-                {post.target.genre} • <span className="font-mono text-emerald-300 tabular-nums">{formatCompactPlays(trackPlays)} ECG</span>
-                {post.target.bpm ? ` • ${post.target.bpm} BPM` : ''}
-              </p>
-            </div>
-            <button type="button" onClick={onPlayFullTrack} className="px-3 py-1.5 rounded-full bg-[#DE1B34] hover:bg-[#f02842] text-white text-xs font-bold shrink-0 shadow-[0_6px_18px_rgba(222,27,52,0.38)] active:scale-95 transition cursor-pointer">
-              Écouter
-            </button>
+          <div className="min-w-0">
+            <button type="button" onClick={onOpenTrackSheet} className="text-sm font-extrabold text-[#F8FAFC] hover:text-amber-300 truncate block max-w-full text-left cursor-pointer">{post.target.title}</button>
+            <button type="button" onClick={onOpenArtistProfile} className="text-xs text-[#A3A9BA] hover:text-[#F8FAFC] truncate block max-w-full text-left cursor-pointer">{post.target.subtitle}</button>
+            <p className="text-[11px] text-[#A3A9BA]/85 truncate">
+              {post.target.genre} • <span className="font-mono text-emerald-300 tabular-nums">{formatCompactPlays(trackPlays)} écoutes</span>
+            </p>
           </div>
 
           <div className="flex items-center gap-2 pt-0.5">
-            <button type="button" onClick={onToggleInlinePreview} aria-label={isInlinePlaying ? 'Pause' : 'Lire le Drop 30s'} className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#DE1B34] text-[#F8FAFC] flex items-center justify-center shrink-0 transition cursor-pointer">
+            <button type="button" onClick={onToggleInlinePreview} aria-label={isInlinePlaying ? 'Pause aperçu' : 'Aperçu 30s'} className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#DE1B34] text-[#F8FAFC] flex items-center justify-center shrink-0 transition cursor-pointer">
               {isInlinePlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
             </button>
             <div
-              role="slider" tabIndex={0} aria-label="Position dans le Drop 30s" aria-valuemin={0} aria-valuemax={inlineMaxSec} aria-valuenow={Math.round(inlineElapsedSec)}
+              role="slider" tabIndex={0} aria-label="Aperçu du refrain 30s" aria-valuemin={0} aria-valuemax={inlineMaxSec} aria-valuenow={Math.round(inlineElapsedSec)}
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 if (!isInlinePlaying) onToggleInlinePreview();
@@ -117,11 +115,7 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
               {bars.map((amp, idx) => {
                 const active = isInlinePlaying ? (idx + 0.5) / bars.length <= progressRatio : idx < 12;
                 return (
-                  <span
-                    key={idx}
-                    className={`flex-1 rounded-full transition-colors duration-150 ${active ? (isInlinePlaying ? 'bg-[#DE1B34]' : 'bg-[#DE1B34]/65') : 'bg-white/18'}`}
-                    style={{ height: `${Math.max(22, Math.min(100, Math.round(amp * 100)))}%` }}
-                  />
+                  <span key={idx} className={`flex-1 rounded-full transition-colors duration-150 ${active ? (isInlinePlaying ? 'bg-[#DE1B34]' : 'bg-[#DE1B34]/65') : 'bg-white/18'}`} style={{ height: `${Math.max(22, Math.min(100, Math.round(amp * 100)))}%` }} />
                 );
               })}
             </div>
@@ -132,7 +126,11 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
         </div>
       </div>
 
-      <RecoCardActionBar post={post} currentUserId={currentUserId} onToggleLike={onToggleLike} onOpenComments={onOpenComments} onToggleReDrop={onToggleReDrop} onOpenStudioReaction={onOpenStudioReaction} onSharePost={onSharePost} />
+      <RecoCardActionBar
+        post={post} currentUserId={currentUserId} onPlayPrimary={onPlayFullTrack}
+        onToggleLike={onToggleLike} onOpenComments={onOpenComments}
+        onToggleReDrop={onToggleReDrop} onOpenStudioReaction={onOpenStudioReaction}
+      />
     </motion.article>
   );
 };

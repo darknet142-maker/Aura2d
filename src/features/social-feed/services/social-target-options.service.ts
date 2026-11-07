@@ -56,3 +56,4 @@ export function buildComposerOptionsFromCatalogue(
     studioTargets: [...trackOpts, ...albumOpts, ...artistOpts].map((o) => o.target),
   };
 }
+

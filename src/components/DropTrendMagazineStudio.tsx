@@ -70,6 +70,13 @@ export interface DropTrendMagazineStudioProps {
   initialCaptureMode?: StudioAudioCaptureMode;
   initialTargetSubject?: SocialTargetSubject;
   availableTargets?: SocialTargetSubject[];
+  catalogueAudioLookup?: {
+    id: string;
+    audioUrl?: string;
+    dropStart?: number;
+    dropDuration?: number;
+    cover?: string;
+  }[];
   onPublishVideoToDrop?: (payload: {
     blob: Blob;
     durationSec: number;
@@ -78,7 +85,7 @@ export interface DropTrendMagazineStudioProps {
     caption: string;
     publishToStatus: boolean;
     publishToFeed: boolean;
-  }) => Promise<void> | void;
+  }) => Promise<boolean | void> | boolean | void;
 }
 
 type FullscreenStep = 'CAMERA_CAPTURE' | 'INSTANT_PREVIEW';
@@ -282,13 +289,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   initialCaptureMode = 'DROP_MUSIC_30S',
   initialTargetSubject,
   availableTargets = [],
+  catalogueAudioLookup = [],
   onPublishVideoToDrop,
 }) => {
-  // Verrouillage strict sur les 30 secondes max du Drop de la chanson
-  const maxAllowedDropDuration = Math.min(30, Math.max(5, track.dropDuration || 30));
-  const dropStartSec = Math.max(0, track.dropStart || 0);
-  const dropEndSec = dropStartSec + maxAllowedDropDuration;
-
   const defaultTrackTarget: SocialTargetSubject = useMemo(
     () => ({
       kind: 'TRACK',
@@ -308,6 +311,23 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const [activeTarget, setActiveTarget] = useState<SocialTargetSubject>(
     initialTargetSubject || defaultTrackTarget
   );
+
+  const resolvedSelectedAudio = useMemo(() => {
+    const tid = activeTarget.trackId || track.id;
+    const found = catalogueAudioLookup.find((item) => item.id === tid);
+    return {
+      id: tid,
+      audioUrl: found?.audioUrl ?? (tid === track.id ? track.audioUrl : undefined),
+      dropStart: Math.max(0, found?.dropStart ?? track.dropStart ?? 0),
+      dropDuration: Math.min(30, Math.max(5, found?.dropDuration ?? track.dropDuration ?? 30)),
+      cover: activeTarget.cover || found?.cover || track.cover,
+    };
+  }, [activeTarget, catalogueAudioLookup, track]);
+
+  // Verrouillage strict sur les 30 secondes max du Drop de la chanson sélectionnée
+  const maxAllowedDropDuration = resolvedSelectedAudio.dropDuration;
+  const dropStartSec = resolvedSelectedAudio.dropStart;
+  const dropEndSec = dropStartSec + maxAllowedDropDuration;
   const [micLevel01, setMicLevel01] = useState<number>(0);
   const [statusQuickPublished, setStatusQuickPublished] = useState<boolean>(false);
   const micSessionRef = useRef<VoiceMicSession | null>(null);
@@ -355,17 +375,17 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
   const officialLogoImgRef = useRef<HTMLImageElement | null>(null);
   const trackCoverImgRef = useRef<HTMLImageElement | null>(null);
 
-  // Préchargement de la pochette officielle du morceau pour le mode affiche
+  // Préchargement de la pochette officielle du morceau sélectionné pour le mode affiche
   useEffect(() => {
-    if (track.cover) {
+    if (resolvedSelectedAudio.cover) {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = track.cover;
+      img.src = resolvedSelectedAudio.cover;
       img.onload = () => {
         trackCoverImgRef.current = img;
       };
     }
-  }, [track.cover]);
+  }, [resolvedSelectedAudio.cover]);
 
   // Références vidéo, canvas et audio
   const liveViewfinderVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -391,7 +411,6 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
-  const synthTimerRef = useRef<number | null>(null);
 
   // Préchargement du logo officiel DROP ci-joint (Drop-logo-officiel.png)
   useEffect(() => {
@@ -458,10 +477,6 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
       micSessionRef.current = null;
     }
     setMicLevel01(0);
-    if (synthTimerRef.current) {
-      window.clearInterval(synthTimerRef.current);
-      synthTimerRef.current = null;
-    }
     if (htmlAudioRef.current) {
       try {
         htmlAudioRef.current.pause();
@@ -696,9 +711,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     masterGain.connect(speakerGain);
     speakerGain.connect(ctx.destination);
 
-    let resolvedUrl = track.audioUrl || '';
+    let resolvedUrl = resolvedSelectedAudio.audioUrl || '';
     try {
-      const persistedBlobUrl = await getPersistentAudioBlobUrl(track.id);
+      const persistedBlobUrl = await getPersistentAudioBlobUrl(resolvedSelectedAudio.id);
       if (persistedBlobUrl) {
         resolvedUrl = persistedBlobUrl;
       }
@@ -706,14 +721,44 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
       // Ignore
     }
 
-    let realAudioStarted = false;
     if (resolvedUrl) {
       try {
         const audioEl = new Audio();
-        audioEl.crossOrigin = 'anonymous';
-        audioEl.src = resolvedUrl;
+        if (/^https?:\/\//i.test(resolvedUrl)) {
+          audioEl.crossOrigin = 'anonymous';
+        }
         audioEl.preload = 'auto';
-        audioEl.currentTime = dropStartSec;
+        audioEl.src = resolvedUrl;
+
+        await new Promise<void>((resolve) => {
+          if (audioEl.readyState >= 1) {
+            resolve();
+            return;
+          }
+          const timer = window.setTimeout(() => resolve(), 1200);
+          audioEl.addEventListener(
+            'loadedmetadata',
+            () => {
+              window.clearTimeout(timer);
+              resolve();
+            },
+            { once: true }
+          );
+          audioEl.addEventListener(
+            'error',
+            () => {
+              window.clearTimeout(timer);
+              resolve();
+            },
+            { once: true }
+          );
+        });
+
+        try {
+          audioEl.currentTime = dropStartSec;
+        } catch {
+          // Seek fallback if stream does not support pre-play seek
+        }
 
         const mediaSource = ctx.createMediaElementSource(audioEl);
         mediaSource.connect(masterGain);
@@ -729,70 +774,16 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
         await audioEl.play();
         htmlAudioRef.current = audioEl;
-        realAudioStarted = true;
       } catch {
-        realAudioStarted = false;
+        // Zéro son artificiel ajouté : si aucun fichier audio n'est disponible, aucun bruit BPM synthétique n'est injecté.
       }
-    }
-
-    if (!realAudioStarted) {
-      const notes =
-        track.synthNotes && track.synthNotes.length > 0
-          ? track.synthNotes
-          : [110, 146.83, 164.81, 196.0, 220.0];
-      const bpm = Math.max(85, Math.min(165, track.bpm || 124));
-      const stepMs = Math.round((60 / bpm / 2) * 1000);
-      let stepCount = 0;
-
-      const playStep = () => {
-        if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
-          return;
-        }
-        const now = ctx.currentTime;
-
-        if (stepCount % 2 === 0) {
-          const kickOsc = ctx.createOscillator();
-          const kickGain = ctx.createGain();
-          kickOsc.type = 'sine';
-          kickOsc.frequency.setValueAtTime(135, now);
-          kickOsc.frequency.exponentialRampToValueAtTime(42, now + 0.14);
-          kickGain.gain.setValueAtTime(0.65, now);
-          kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-          kickOsc.connect(kickGain);
-          kickGain.connect(masterGain);
-          kickOsc.start(now);
-          kickOsc.stop(now + 0.21);
-        }
-
-        const noteFreq = notes[stepCount % notes.length];
-        const leadOsc = ctx.createOscillator();
-        const leadGain = ctx.createGain();
-        leadOsc.type = stepCount % 4 === 0 ? 'sawtooth' : 'triangle';
-        leadOsc.frequency.setValueAtTime(
-          noteFreq * (stepCount % 8 === 0 ? 2 : 1),
-          now
-        );
-        leadGain.gain.setValueAtTime(0.2, now);
-        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
-        leadOsc.connect(leadGain);
-        leadGain.connect(masterGain);
-        leadOsc.start(now);
-        leadOsc.stop(now + 0.25);
-
-        stepCount++;
-      };
-
-      playStep();
-      synthTimerRef.current = window.setInterval(playStep, stepMs);
     }
 
     const audioTracks = streamDest.stream.getAudioTracks();
     return audioTracks.length > 0 ? audioTracks[0] : null;
   }, [
-    track.id,
-    track.audioUrl,
-    track.synthNotes,
-    track.bpm,
+    resolvedSelectedAudio.id,
+    resolvedSelectedAudio.audioUrl,
     dropStartSec,
     dropEndSec,
     stopDropAudioPlayback,
@@ -1451,9 +1442,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                   <Camera className="w-7 h-7" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Caméra 9:16 en direct non détectée</p>
+                  <p className="text-sm font-bold text-white">Caméra non détectée</p>
                   <p className="text-xs text-[#A3A9BA] mt-1">
-                    Activez la caméra ou enregistrez directement votre vidéo Trend verticale 1080×1920 avec le visuel officiel.
+                    Activez votre caméra ou enregistrez directement votre vidéo avec le visuel officiel.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 w-full pt-1">
@@ -1463,7 +1454,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                     className="w-full px-4 py-2.5 rounded-full bg-white text-[#080A0F] font-semibold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95 transition"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>Activer la caméra 1080×1920</span>
+                    <span>Activer la caméra</span>
                   </button>
                   <button
                     type="button"
@@ -1521,16 +1512,13 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15">
+                <div className="flex items-center px-3.5 py-1.5 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15">
                   <DropOfficialLogo className="h-4 sm:h-5 w-auto max-w-[90px]" />
-                  <span className="text-[10px] font-mono font-bold text-amber-300">
-                    9:16 • 1080×1920
-                  </span>
                 </div>
               )}
 
-              <span className="px-2 py-1 rounded-lg bg-[#07090E]/65 backdrop-blur-md border border-white/15 text-[9px] font-mono font-bold text-[#F8FAFC]">
-                TIKTOK HD
+              <span className="px-2.5 py-1 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15 text-[10px] font-semibold text-[#F8FAFC]">
+                30s max
               </span>
             </div>
 
@@ -1788,7 +1776,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                     captureMode={captureMode}
                     durationSec={effectivePreviewDuration}
                     onPublishToDrop={async ({ caption, publishToStatus, publishToFeed }) => {
-                      await onPublishVideoToDrop({
+                      const ok = await onPublishVideoToDrop({
                         blob: watermarkedVideoBlob,
                         durationSec: effectivePreviewDuration,
                         captureMode,
@@ -1797,7 +1785,8 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                         publishToStatus,
                         publishToFeed,
                       });
-                      setStatusQuickPublished(true);
+                      if (ok !== false) setStatusQuickPublished(true);
+                      return ok;
                     }}
                   />
                 )}
@@ -1898,7 +1887,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                       disabled={!onPublishVideoToDrop || !watermarkedVideoBlob || statusQuickPublished}
                       onClick={async () => {
                         if (!onPublishVideoToDrop || !watermarkedVideoBlob || statusQuickPublished) return;
-                        await onPublishVideoToDrop({
+                        const ok = await onPublishVideoToDrop({
                           blob: watermarkedVideoBlob,
                           durationSec: effectivePreviewDuration,
                           captureMode,
@@ -1907,7 +1896,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                           publishToStatus: true,
                           publishToFeed: false,
                         });
-                        setStatusQuickPublished(true);
+                        if (ok !== false) setStatusQuickPublished(true);
                       }}
                       className="relative flex flex-col items-center gap-1 group active:scale-95 transition cursor-pointer disabled:opacity-70"
                     >
@@ -1925,7 +1914,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                         )}
                       </div>
                       <span className="text-[11px] text-white font-semibold drop-shadow">
-                        {statusQuickPublished ? 'Publié' : 'Statut 24h'}
+                        {statusQuickPublished ? 'Publié' : 'Mon Statut'}
                       </span>
                     </button>
 

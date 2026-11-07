@@ -59,6 +59,11 @@ import {
   ensureTrackSurgicalAnalysis,
   computeDjTransitionCompatibility,
 } from '../features/music-intelligence';
+import {
+  UserProfileSocialAndRanksCard,
+  type CommunityMemberCompleteStats,
+  type SocialTargetSubject,
+} from '../features/social-feed';
 
 export type StudioEntityRole =
   | 'ARTIST'
@@ -165,6 +170,8 @@ export interface AnalyticsAppUser {
   totalLoops: number;
   trackStats: Record<string, AnalyticsUserTrackStat>;
 }
+
+export type AnalyticsUserProfileItem = AnalyticsAppUser;
 
 export function formatShortTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
@@ -1359,20 +1366,22 @@ export const ReusableTrackDetailSheet: React.FC<
                 <span className="text-[11px] text-[#A3A9BA] truncate">
                   {album.albumTitle} ({album.year})
                 </span>
-                <span
-                  className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-[9.5px] font-mono font-bold"
-                  title="Identifiant acoustique unique DROP Content ID"
-                >
-                  {track.dropContentId ||
-                    generateDropContentId(
-                      track.waveformPeaks ||
-                        computeDeterministicWaveformPeaks(
-                          `${track.id}-${track.title}`
-                        ),
-                      track.duration,
-                      track.id
-                    )}
-                </span>
+                {isAdminView && (
+                  <span
+                    className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-[9.5px] font-mono font-bold"
+                    title="Identifiant acoustique unique DROP Content ID"
+                  >
+                    {track.dropContentId ||
+                      generateDropContentId(
+                        track.waveformPeaks ||
+                          computeDeterministicWaveformPeaks(
+                            `${track.id}-${track.title}`
+                          ),
+                        track.duration,
+                        track.id
+                      )}
+                  </span>
+                )}
                 <CertificationBadgeSvg
                   cert={albumCert}
                   compact
@@ -1946,7 +1955,9 @@ export const ReusableTrackDetailSheet: React.FC<
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-[#A3A9BA]">Format &amp; Volume Audio</span>
                 <span className="text-emerald-400 font-bold">
-                  {track.audioCodec || 'OPUS'} • Niveau Constant ({track.lufsMasterLevel ?? -14.0} LUFS)
+                  {isAdminView
+                    ? `${track.audioCodec || 'OPUS'} • Niveau Constant (${track.lufsMasterLevel ?? -14.0} LUFS)`
+                    : 'Audio Haute Fidélité'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
@@ -1969,7 +1980,7 @@ export const ReusableTrackDetailSheet: React.FC<
               </div>
             </div>
 
-            {/* Raccourcis Paramètres Studio (Égaliseur DSP & Studio Vidéo 9:16) */}
+            {/* Raccourcis Paramètres Studio (Égaliseur audio & Studio Vidéo) */}
             {(onOpenEqModal || onOpenTrendStudio) && (
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.08]">
                 {onOpenEqModal && (
@@ -1978,7 +1989,7 @@ export const ReusableTrackDetailSheet: React.FC<
                     onClick={onOpenEqModal}
                     className="py-2 px-2.5 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
                   >
-                    <span>Égaliseur DSP 5 Bandes</span>
+                    <span>Égaliseur audio</span>
                   </button>
                 )}
                 {onOpenTrendStudio && (
@@ -1987,7 +1998,7 @@ export const ReusableTrackDetailSheet: React.FC<
                     onClick={onOpenTrendStudio}
                     className="py-2 px-2.5 rounded-xl bg-[#DE1B34]/20 hover:bg-[#DE1B34]/30 border border-[#DE1B34]/45 text-rose-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
                   >
-                    <span>Caméra Trend 9:16</span>
+                    <span>Créer une vidéo (30s)</span>
                   </button>
                 )}
               </div>
@@ -2628,6 +2639,12 @@ export interface ReusableUserProfileSheetProps {
   onClose?: () => void;
   onSelectTrackDetail: (trackId: string) => void;
   onPlayOrToggleTrack: (albumIdx: number, trackIdx: number) => void;
+  memberSocialStats?: CommunityMemberCompleteStats;
+  maxProfileItems?: number;
+  onDeleteOwnStatus?: (id: string) => void;
+  onDeleteOwnPost?: (id: string) => void;
+  onOpenSocialTarget?: (target: SocialTargetSubject) => void;
+  onOpenScoutsLeaderboard?: () => void;
 }
 
 export const ReusableUserProfileSheet: React.FC<
@@ -2659,6 +2676,12 @@ export const ReusableUserProfileSheet: React.FC<
   onClose,
   onSelectTrackDetail,
   onPlayOrToggleTrack,
+  memberSocialStats,
+  maxProfileItems = 10,
+  onDeleteOwnStatus,
+  onDeleteOwnPost,
+  onOpenSocialTarget,
+  onOpenScoutsLeaderboard,
 }) => {
   const [profileSectionTab, setProfileSectionTab] = useState<
     'PLAYLISTS' | 'FAVORIS' | 'ECOUTES' | 'PASS'
@@ -2774,7 +2797,7 @@ export const ReusableUserProfileSheet: React.FC<
     { hex: '#e11d38', label: 'Rubis' },
     { hex: '#f59e0b', label: 'Ambre' },
     { hex: '#10b981', label: 'Émeraude' },
-    { hex: '#8b5cf6', label: 'Violet' },
+    { hex: '#0ea5e9', label: 'Azur' },
     { hex: '#06b6d4', label: 'Cyan' },
   ];
 
@@ -2847,6 +2870,19 @@ export const ReusableUserProfileSheet: React.FC<
             </div>
           </div>
         </div>
+
+        {/* Bilan Avancé d'Activité, Éclaireurs & Statuts/Recommandations Actifs */}
+        {memberSocialStats && (
+          <UserProfileSocialAndRanksCard
+            stats={memberSocialStats}
+            isOwnProfile={isOwnProfile}
+            maxProfileItems={maxProfileItems}
+            onDeleteStatus={onDeleteOwnStatus}
+            onDeletePost={onDeleteOwnPost}
+            onOpenTarget={onOpenSocialTarget}
+            onOpenScoutsLeaderboard={onOpenScoutsLeaderboard}
+          />
+        )}
 
         {/* Navigation interne de la Bibliothèque personnelle (si propre profil) */}
         {isOwnProfile && (

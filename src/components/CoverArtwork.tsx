@@ -502,7 +502,7 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
         <span className="truncate px-1.5 py-0.5 rounded bg-[#07090E]/80 border border-white/10 text-amber-300 font-bold">
           MASTER +241
         </span>
-        <span className="shrink-0 text-[7px] text-[#A3A9BA]/90 font-mono">-14 LUFS</span>
+        <span className="shrink-0 text-[7px] text-[#A3A9BA]/90 font-mono">HD</span>
       </div>
 
       {/* Monogramme & Disque Central */}
