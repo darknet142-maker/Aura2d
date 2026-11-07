@@ -37,14 +37,11 @@ export interface RecoTrackVinylCardProps {
 }
 
 export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
-  post, currentUserId, trackPlays = 48_500, trackRank, waveformPeaks,
-  isInlinePlaying, inlineElapsedSec, inlineMaxSec, onToggleInlinePreview, onSeekInlinePreview,
-  onPlayFullTrack, onOpenAuthorProfile, onOpenTrackSheet, onOpenArtistProfile, onOpenLyricistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onOpenReactionsDetail, onDeletePost, onReportPost,
+  post, currentUserId, trackPlays = 48_500, trackRank, waveformPeaks, isInlinePlaying, inlineElapsedSec, inlineMaxSec,
+  onToggleInlinePreview, onSeekInlinePreview, onPlayFullTrack, onOpenAuthorProfile, onOpenTrackSheet, onOpenArtistProfile,
+  onOpenLyricistProfile, onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onOpenReactionsDetail, onDeletePost, onReportPost,
 }) => {
-  const bars = useMemo(() => (
-    waveformPeaks && waveformPeaks.length >= 24 ? waveformPeaks.slice(0, 32) : computeDeterministicWaveformPeaks(post.target.title + post.target.entityName, 32)
-  ), [waveformPeaks, post.target.title, post.target.entityName]);
+  const bars = useMemo(() => (waveformPeaks?.length ? waveformPeaks.slice(0, 32) : computeDeterministicWaveformPeaks(post.target.title + post.target.entityName, 32)), [waveformPeaks, post.target.title, post.target.entityName]);
   const progressRatio = isInlinePlaying && inlineMaxSec > 0 ? Math.min(1, inlineElapsedSec / inlineMaxSec) : 0;
 
   return (
@@ -59,24 +56,28 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
         onReportPost={onReportPost}
       />
 
-      <div className="flex items-center justify-between gap-2 -mt-1 -mb-1">
-        {post.archetype === 'LYRIC_EXCERPT' && post.target.lyricistName ? (
+      {post.archetype === 'LYRIC_EXCERPT' && post.target.lyricistName && (
+        <div className="px-1 -mt-1">
           <button type="button" onClick={() => onOpenLyricistProfile?.(post.target.lyricistName!)} className="text-[11px] font-mono text-amber-300 hover:underline text-left block truncate cursor-pointer">
             Plume : {post.target.lyricistName}
           </button>
-        ) : <div />}
-        <RecoCardReactionsCluster
-          post={post}
-          trackPlays={trackPlays}
-          onReact={(type) => {
-            if (onOpenReactionsDetail) onOpenReactionsDetail(type);
-            else if (type === 'HEART') onToggleLike();
-            else if (type === 'REDROP') onToggleReDrop();
-          }}
-        />
-      </div>
+        </div>
+      )}
 
-      <div className="relative rounded-2xl bg-[#131722] border border-white/10 p-3 flex items-center gap-3.5 group/vinyl">
+      <div className="relative rounded-2xl bg-[#131722] border border-white/10 p-3 sm:p-3.5 flex items-center gap-3.5 group/vinyl mt-3">
+        {/* Cluster de Réactions Flottant en Applique Supérieure Droite (Style John Bloaga / Sarah Michaels) */}
+        <div className="absolute -top-3.5 sm:-top-4 right-3 sm:right-4 z-30">
+          <RecoCardReactionsCluster
+            post={post}
+            trackPlays={trackPlays}
+            onReact={(type) => {
+              if (onOpenReactionsDetail) onOpenReactionsDetail(type);
+              else if (type === 'HEART') onToggleLike();
+              else if (type === 'REDROP') onToggleReDrop();
+            }}
+          />
+        </div>
+
         <div className="relative w-[76px] sm:w-[84px] h-[76px] sm:h-[84px] shrink-0 mr-3">
           <div
             className={`absolute top-1 bottom-1 -right-4 w-[68px] sm:w-[76px] rounded-full transition-transform duration-200 ease-out pointer-events-none ${
@@ -103,7 +104,7 @@ export const RecoTrackVinylCard: React.FC<RecoTrackVinylCardProps> = ({
         </div>
 
         <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="min-w-0">
+          <div className="min-w-0 pr-24 sm:pr-32">
             <button type="button" onClick={onOpenTrackSheet} className="text-sm font-extrabold text-[#F8FAFC] hover:text-amber-300 truncate block max-w-full text-left cursor-pointer">{post.target.title}</button>
             <button type="button" onClick={onOpenArtistProfile} className="text-xs text-[#A3A9BA] hover:text-[#F8FAFC] truncate block max-w-full text-left cursor-pointer">{post.target.subtitle}</button>
             <p className="text-[11px] text-[#A3A9BA]/85 truncate">

@@ -81,15 +81,15 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = (props) => {
   const qFactors = props.eqQFactors ?? DSP_BANDS_SPEC.map((b) => props.eqQFactor ?? b.defaultQ);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Console Mastering DSP et Moteur de Lecture" onClick={onClose} className="absolute inset-0 z-40 bg-[#07090E]/90 backdrop-blur-xl flex flex-col justify-end p-2.5 sm:p-4">
+    <div role="dialog" aria-modal="true" aria-label="Drop Console" onClick={onClose} className="absolute inset-0 z-40 bg-[#07090E]/90 backdrop-blur-xl flex flex-col justify-end p-2.5 sm:p-4">
       <motion.div variants={SUBTLE_ENTRANCE_VARIANTS} initial="initial" animate="animate" onClick={(e) => e.stopPropagation()} className="w-full bg-[#0D1017] border border-white/[0.12] rounded-[26px] p-3.5 sm:p-5 space-y-3 shadow-[0_24px_70px_-12px_rgba(6,8,14,0.95)] max-h-[92dvh] overflow-y-auto">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <DropOfficialLogo className="h-4 w-auto max-w-[72px] shrink-0" />
-              <h2 className="text-sm sm:text-base font-extrabold text-[#F8FAFC] truncate">Console Mastering DSP &amp; Lecture</h2>
+              <h2 className="text-sm sm:text-base font-extrabold text-[#F8FAFC] truncate">Console</h2>
             </div>
-            <p className="text-[10px] font-mono text-[#A3A9BA] truncate">RTA Log 20Hz–20kHz • Biquad Exact • Mid/Side 3D • Non-Stop</p>
+            <p className="text-[10px] font-mono text-[#A3A9BA] truncate">RTA Log 20Hz–20kHz • Biquad Exact • Mid/Side 3D</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <motion.button type="button" whileTap={{ scale: 0.94 }} transition={SPRING_SNAPPY} onClick={() => { onToggleEqBypass?.(); onToast(!eqBypassed ? 'Bypass A/B activé (0 dB)' : 'Moteur DSP réactivé'); }} className={`px-2.5 py-1.5 rounded-xl border text-[10.5px] font-mono font-bold flex items-center gap-1 ${!eqBypassed ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300' : 'bg-white/[0.05] border-white/15 text-[#A3A9BA]'}`}>

@@ -43,7 +43,7 @@ for (const file of tsxFiles) {
 const coverArtworkTxt = fs.readFileSync('src/components/CoverArtwork.tsx', 'utf8');
 const hasLocalSvgFallback =
   coverArtworkTxt.includes('<svg') &&
-  coverArtworkTxt.includes('MASTER +241') &&
+  (coverArtworkTxt.includes('MASTER BROADCAST') || coverArtworkTxt.includes('MASTER +241')) &&
   coverArtworkTxt.includes('onError={() => setImgError(true)}');
 
 const breakUiTxt = fs.readFileSync('src/mocks/breakUiWorstCase.mock.ts', 'utf8');

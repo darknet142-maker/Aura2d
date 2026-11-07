@@ -5,13 +5,15 @@ export const STATUS_MAX_LIFESPAN_MS = 4 * 3_600_000;
 export const MAX_ACTIVE_ITEMS_PER_PROFILE = 10;
 
 export function toUserHandle(name: string): string {
-  const slug = name
+  const clean = name.replace(/\s*\(\+241\)/gi, '').replace(/\+241/g, '').trim();
+  const slug = clean
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '')
+    .replace(/241$/, '')
     .slice(0, 16);
-  return `@${slug || 'auditeur241'}`;
+  return `@${slug || 'auditeur'}`;
 }
 
 export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[]): SocialFeedPost[] {
@@ -61,7 +63,7 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
       lastBoostedAtIso: isoAgo(5),
       target: {
         kind: 'TRACK', trackId: 't-main-1', entityName: "Emma'a",
-        title: 'Lumières du Bord de Mer', subtitle: "Emma'a feat. Eboloko • Libreville (+241)",
+        title: 'Lumières du Bord de Mer', subtitle: "Emma'a feat. Eboloko • Libreville",
         genre: 'Afrobeats & Soul', cover: '', artworkType: 'creative_yellow', bpm: 102, camelotKey: '9B',
       },
       likedByUserIds: ['u-2', 'u-3', 'u-4', 'u-6'],
@@ -87,7 +89,7 @@ export function buildSeedSocialPosts(legacyRecos: CommunityRecommendationItem[])
       target: {
         kind: 'ARTIST', trackId: 't-101', entityName: "L'Oiseau Rare",
         title: "L'Oiseau Rare", subtitle: 'Scène Ntcham • Souverain du Komo',
-        genre: 'Ntcham (+241)', cover: '', artworkType: 'crimson_bloom', bpm: 126, camelotKey: '5A',
+        genre: 'Ntcham', cover: '', artworkType: 'crimson_bloom', bpm: 126, camelotKey: '5A',
       },
       likedByUserIds: ['u-1', 'u-3'], reDroppedByUserIds: ['u-1'], reDropRelays: [], comments: [],
       discoveriesCount: 9, discovererUserIds: ['u-1', 'u-3'], discovererInitials: ['CN', 'IM'],

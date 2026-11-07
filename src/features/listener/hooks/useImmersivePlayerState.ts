@@ -310,7 +310,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
   const socialFeedCtrl = useSocialFeedController({
     actor: {
       id: currentUser?.id || 'u-guest',
-      name: currentUser?.name || 'Auditeur DROP (+241)',
+      name: currentUser?.name || 'Auditeur DROP',
       avatar: currentUser?.avatar || 'DR',
     },
     legacyRecommendations: communityRecommendations,

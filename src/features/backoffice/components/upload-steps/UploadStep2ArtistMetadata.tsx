@@ -364,7 +364,13 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
                   <button
                     key={cat}
                     type="button"
-                    onClick={() => setNewCategory(cat)}
+                    onClick={() => {
+                      setNewCategory(cat);
+                      if (cat === 'Beats & Instrumentales') {
+                        setNewIsInstrumental(true);
+                        setNewIsBeatDownloadable(true);
+                      }
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-xs ${
                       newCategory === cat
                         ? 'bg-[#DE1B34] text-white font-bold'

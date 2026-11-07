@@ -145,8 +145,8 @@ const playerCode = fs.readFileSync('src/components/Immersive3DPlayer.tsx', 'utf8
 assert.equal(dropdownCode.includes('toggleDropPlay'), true, 'La liste déroulante doit comporter la fonction toggleDropPlay');
 assert.equal(dropdownCode.includes('Écouter le Drop') || dropdownCode.includes('Écouter le drop'), true, 'Le bouton play/pause doit être présent pour chaque son');
 assert.equal(dropdownCode.includes('useTargetDropAudioPreview'), true, 'StudioSearchableTargetDropdown doit intégrer useTargetDropAudioPreview');
-assert.equal(studioCode.includes('dropPreviewEngine = useTargetDropAudioPreview'), true, 'DropTrendMagazineStudio doit instancier le moteur audio de pré-écoute');
-assert.equal(studioCode.includes('onPreviewTargetDrop'), true, 'DropTrendMagazineStudio doit connecter onPreviewTargetDrop');
+assert.equal(studioCode.includes('startDropAudioStrict'), true, 'DropTrendMagazineStudio doit déclencher l audio strictement à l enregistrement');
+assert.equal(studioCode.includes('globalAudioCoordinator.forceStopAll()'), true, 'DropTrendMagazineStudio doit couper le lecteur principal au montage');
 assert.equal(previewDropHookCode.includes('togglePreview'), true, 'Le hook doit gérer la bascule de lecture audio togglePreview');
 assert.equal(playerCode.includes('notes: m.track.notes'), true, 'Immersive3DPlayer doit fournir les notes musicales pour le drop');
 console.log('✅ 8. Moteur audio de pré-écoute du drop 30s câblé et actif dans la liste déroulante trend.');
@@ -253,4 +253,45 @@ assert.equal(immersiveCode.includes('<ProFeatureGateModal'), true, 'ProFeatureGa
 assert.equal(proGateCode.includes('Airtel Money & Moov Money'), true, 'Les paiements locaux Gabon doivent être intégrés');
 console.log('✅ 19. Portes de frustration positive et conversion DROP PRO (Airtel & Moov) validées.');
 
-console.log('🎉 TOUS LES 19 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');
+// 20. STUDIO TREND : ZÉRO AUDIO À LA SÉLECTION, SILENCE DU LECTEUR PRINCIPAL
+const trendStudioFileCode = fs.readFileSync('src/components/DropTrendMagazineStudio.tsx', 'utf8');
+const searchDropdownFileCode = fs.readFileSync('src/features/social-feed/components/StudioSearchableTargetDropdown.tsx', 'utf8');
+assert.equal(trendStudioFileCode.includes('globalAudioCoordinator.forceStopAll()'), true, 'L ouverture du studio Trend doit forcer l arrêt du lecteur principal');
+assert.equal(searchDropdownFileCode.includes('fallbackPreview.stopPreview()'), true, 'La sélection d une chanson doit stopper immédiatement tout preview');
+console.log('✅ 20. Studio Trend : Silence du lecteur principal à l ouverture et zéro son en arrière-plan à la sélection.');
+
+// 21. SIMPLIFICATION DU TITRE : "CONSOLE" / "DROP CONSOLE"
+const eqModalCode = fs.readFileSync('src/components/player/modals/EqualizerModal.tsx', 'utf8');
+assert.equal(eqModalCode.includes('>Console</h2>'), true, 'Le titre de la console doit être sobrement "Console"');
+assert.equal(eqModalCode.includes('Console Mastering DSP &'), false, 'L ancien titre trop long ne doit plus exister');
+console.log('✅ 21. Simplification du nom de la Console validée.');
+
+// 22. ÉPURATION DES COPYRIGHTS : ZÉRO INJECTION (+241) / GABON ARBITRAIRE
+const playerFooterCode = fs.readFileSync('src/components/Immersive3DPlayer.tsx', 'utf8');
+const adminUploadHookCode = fs.readFileSync('src/features/backoffice/hooks/useAdminUploadController.ts', 'utf8');
+assert.equal(playerFooterCode.includes('Master Certifié BUGADA (+241)'), false, 'Le footer lecteur ne doit plus injecter de suffixe 241 hardcodé');
+assert.equal(adminUploadHookCode.includes('${labelStr} (+241)'), false, 'L upload admin ne doit plus injecter de suffixe 241 dans le copyright');
+console.log('✅ 22. Épuration des mentions arbitraires (+241) et Gabon dans les copyrights validée.');
+
+// 23. ADMIN UPLOAD : DISTINCTION INSTRUMENTAL / BEAT SANS PAROLES NI PAROLIER
+const step3Code = fs.readFileSync('src/features/backoffice/components/upload-steps/UploadStep3StudioCredits.tsx', 'utf8');
+const step2Code = fs.readFileSync('src/features/backoffice/components/upload-steps/UploadStep2ArtistMetadata.tsx', 'utf8');
+assert.equal(step3Code.includes('Format <strong>Instrumentale / Beat</strong> (sans paroles) : Aucun parolier requis'), true, 'Le beat doit explicitement dispenser de parolier');
+assert.equal(step2Code.includes("setNewIsInstrumental(true)"), true, 'Le clic sur Beats & Instrumentales doit activer isInstrumental');
+assert.equal(adminUploadHookCode.includes("isBeatOrInstru"), true, 'La validation de l étape 3 doit valider les beats sans parolier');
+console.log('✅ 23. Distinction stricte Instrumentale/Beat vs Chanson Vocale validée en Admin.');
+
+// 24. CLUSTER DE RÉACTIONS FLOTTANTES & ÉPURATION MÉTADONNÉES
+const vinylCardFileCode = fs.readFileSync('src/features/social-feed/components/RecoTrackVinylCard.tsx', 'utf8');
+const spotlightCardFileCode = fs.readFileSync('src/features/social-feed/components/RecoSpotlightVisualCard.tsx', 'utf8');
+const clusterCodeCheck = fs.readFileSync('src/features/social-feed/components/RecoCardReactionsCluster.tsx', 'utf8');
+const storageCodeCheck = fs.readFileSync('src/features/social-feed/services/status-video-storage.service.ts', 'utf8');
+
+assert.equal(vinylCardFileCode.includes('absolute -top-3.5 sm:-top-4 right-3 sm:right-4 z-30'), true, 'Le cluster de réactions doit être flottant sur la bordure supérieure de la carte vinyle');
+assert.equal(spotlightCardFileCode.includes('absolute -top-3.5 sm:-top-4 right-3 sm:right-4 z-30'), true, 'Le cluster de réactions doit être flottant sur la bordure supérieure de la carte média');
+assert.equal(clusterCodeCheck.includes('dropFlameGrad') && clusterCodeCheck.includes('dropHeartGrad'), true, 'Les pastilles de réaction doivent utiliser les dégradés riches conformes au panel 3');
+assert.equal(clusterCodeCheck.includes('-space-x-1.5 sm:-space-x-2'), true, 'Les 4 pastilles doivent se chevaucher avec -space-x');
+assert.equal(storageCodeCheck.includes('sanitizePost'), true, 'Le stockage des posts doit assainir les métadonnées pour supprimer les résidus (+241)');
+console.log('✅ 24. Cluster de réactions flottantes (Panel 1-3) & assainissement automatique validés.');
+
+console.log('🎉 TOUS LES 24 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');

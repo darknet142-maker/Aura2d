@@ -408,13 +408,13 @@ export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
                       Parolier / Auteur de l’Œuvre (Plume)
                     </span>
                     <span className="font-semibold text-sky-300 break-words block mt-0.5">
-                      {newIsInstrumental ? 'Instrumental (Sans paroles)' : newLyricistName}
+                      {newIsInstrumental || newCategory === 'Beats & Instrumentales' ? 'Instrumental (Sans paroles)' : newLyricistName}
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
                     <span className="text-[#A3A9BA] block text-[10px]">Statut Plume Externe</span>
                     <span className="font-mono font-semibold text-sky-200 block mt-0.5">
-                      {newIsInstrumental
+                      {newIsInstrumental || newCategory === 'Beats & Instrumentales'
                         ? 'Non applicable (Instrumental)'
                         : newIsExternalLyricist
                           ? 'Oui (Bonus Plume Externe x1.25 actif)'
@@ -427,7 +427,7 @@ export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
                     </span>
                     <span className="font-mono text-zinc-200 break-words block mt-0.5">
                       {newCopyrightText.trim() ||
-                        `Copyright 2026 ${newLabelName || 'Direct Prod Gabon'} (+241). Tous droits réservés • Handshake Studio Vérifié`}
+                        (newLabelName ? `© 2026 ${newLabelName}. Tous droits réservés.` : '© 2026 DROP. Tous droits réservés.')}
                     </span>
                   </div>
                 </div>

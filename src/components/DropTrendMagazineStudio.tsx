@@ -343,11 +343,13 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
   useEffect(() => {
     if (isOpen) {
+      onPauseMainPlayer?.();
+      globalAudioCoordinator.forceStopAll();
       setCaptureMode(initialCaptureMode);
       setActiveTarget(initialTargetSubject || defaultTrackTarget);
       setStatusQuickPublished(false);
     }
-  }, [isOpen, initialCaptureMode, initialTargetSubject, defaultTrackTarget]);
+  }, [isOpen, initialCaptureMode, initialTargetSubject, defaultTrackTarget, onPauseMainPlayer]);
 
   const [step, setStep] = useState<FullscreenStep>('CAMERA_CAPTURE');
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
@@ -1563,10 +1565,6 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 dropPreviewEngine.stopPreview();
                 setActiveTarget(t);
               }}
-              onPreviewTargetDrop={(t) => {
-                void dropPreviewEngine.togglePreview(t, catalogueAudioLookup);
-              }}
-              previewingKey={dropPreviewEngine.previewingKey}
               isRecording={isRecording}
               micLevel01={micLevel01}
             />

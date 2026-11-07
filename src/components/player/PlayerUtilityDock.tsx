@@ -89,8 +89,8 @@ export const PlayerUtilityDock: React.FC<PlayerUtilityDockProps> = ({
         className={`utility-pill ${
           isEqCustomOrActive ? 'active-pill' : ''
         }`}
-        aria-label="Égaliseur 5 bandes et Préréglages"
-        title="Console Égaliseur Paramétrique 5 bandes & Analyseur Spectral"
+        aria-label="Console"
+        title="Console"
       >
         <SlidersHorizontal className="w-5 h-5 stroke-[2]" />
       </button>

@@ -19,15 +19,10 @@ function openVideoIdb(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
       const req = indexedDB.open(IDB_NAME, 1);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
-      };
+      req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE); };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
+    } catch { resolve(null); }
   });
 }
 
@@ -40,9 +35,7 @@ export async function saveSocialVideoBlob(videoKey: string, blob: Blob): Promise
       tx.objectStore(IDB_STORE).put(blob, videoKey);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
-    } catch {
-      resolve(false);
-    }
+    } catch { resolve(false); }
   });
 }
 
@@ -55,9 +48,7 @@ export async function loadSocialVideoBlob(videoKey: string): Promise<Blob | null
       const req = tx.objectStore(IDB_STORE).get(videoKey);
       req.onsuccess = () => resolve(req.result instanceof Blob ? req.result : null);
       req.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
+    } catch { resolve(null); }
   });
 }
 
@@ -71,9 +62,7 @@ export async function deleteSocialVideoBlob(videoKey?: string): Promise<boolean>
       tx.objectStore(IDB_STORE).delete(videoKey);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
-    } catch {
-      resolve(false);
-    }
+    } catch { resolve(false); }
   });
 }
 
@@ -112,13 +101,24 @@ export function countUserActiveProfileItems(
   return ownPosts + ownStatuses;
 }
 
+function sanitizePost(p: SocialFeedPost): SocialFeedPost {
+  const cName = (p.authorName || '').replace(/\s*\(\+241\)/gi, '').replace(/\+241/g, '').trim();
+  const cHandle = (p.authorHandle || '').replace(/\s*\(\+241\)/gi, '').replace(/\+241/g, '').replace(/241$/, '') || '@auditeur';
+  return {
+    ...p,
+    authorName: cName || p.authorName,
+    authorHandle: cHandle.startsWith('@') ? cHandle : `@${cHandle}`,
+    target: { ...p.target, subtitle: (p.target?.subtitle || '').replace(/\s*\(\+241\)/gi, '').replace(/\+241/g, '').trim() },
+  };
+}
+
 export function loadPersistedSocialPosts(legacyRecos: CommunityRecommendationItem[]): SocialFeedPost[] {
   if (typeof localStorage === 'undefined') return buildSeedSocialPosts(legacyRecos);
   try {
     const raw = localStorage.getItem(SOCIAL_POSTS_LS_KEY);
     if (raw === null) return buildSeedSocialPosts(legacyRecos);
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return parsed as SocialFeedPost[];
+    if (Array.isArray(parsed)) return (parsed as SocialFeedPost[]).map(sanitizePost);
   } catch { /* fallback */ }
   return buildSeedSocialPosts(legacyRecos);
 }

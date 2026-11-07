@@ -333,7 +333,7 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
               className="w-full bg-[#07080C] border border-amber-500/30 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
             />
           </div>
-          {!editingTrack.track.isInstrumental && (
+          {!editingTrack.track.isInstrumental && editingTrack.track.category !== 'Beats & Instrumentales' && (
             <div>
               <label className="block text-[11px] text-sky-300 mb-1">
                 Parolier / Auteur

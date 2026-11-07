@@ -19,19 +19,11 @@ export function filterTargetsInstant(targets: SocialTargetSubject[], rawQuery: s
     if (t === q) return 100;
     if (t.startsWith(q)) return 90;
     if (t.split(/[\s\-_.,/()•]+/).some((w) => w.startsWith(q))) return 78;
-    if (t.includes(q)) return 60;
-    if (q.length >= 2) {
-      let qi = 0;
-      for (let i = 0; i < t.length && qi < q.length; i++) if (t[i] === q[qi]) qi++;
-      if (qi === q.length) return 35;
-    }
-    return 0;
+    return t.includes(q) ? 60 : 0;
   };
   return targets
     .map((item) => ({ item, score: Math.max(scoreField(item.title), scoreField(item.entityName) * 0.95, scoreField(item.subtitle) * 0.9, scoreField(item.genre) * 0.8) }))
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((x) => x.item);
+    .filter((x) => x.score > 0).sort((a, b) => b.score - a.score).map((x) => x.item);
 }
 
 export interface StudioSearchableTargetDropdownProps {
@@ -125,15 +117,17 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
                   const isSelected = key === selectedKey;
                   const isPlayingThis = activePlayKey === key;
                   return (
-                    <div key={key} onMouseEnter={() => setHighlightIdx(idx)} onClick={() => { onSelectTarget(item); setIsOpen(false); setQuery(''); }} className={`w-full flex items-center justify-between gap-2.5 p-2 rounded-xl text-left transition cursor-pointer ${isSelected ? 'bg-[#DE1B34]/18 border border-[#DE1B34]/45' : idx === highlightIdx ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'}`}>
+                    <div key={key} onMouseEnter={() => setHighlightIdx(idx)} onClick={() => { fallbackPreview.stopPreview(); onSelectTarget(item); setIsOpen(false); setQuery(''); }} className={`w-full flex items-center justify-between gap-2.5 p-2 rounded-xl text-left transition cursor-pointer ${isSelected ? 'bg-[#DE1B34]/18 border border-[#DE1B34]/45' : idx === highlightIdx ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'}`}>
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 shrink-0"><CoverArtwork artworkType={item.artworkType} coverUrl={item.cover} title={item.title} artist={item.entityName} /></div>
                         <div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#F8FAFC] truncate">{item.title}</p><p className="text-[10.5px] text-[#A3A9BA] truncate">{item.subtitle} • {item.genre}</p></div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button type="button" onClick={(e) => toggleDropPlay(e, item)} aria-label={isPlayingThis ? 'Pause' : 'Écouter le Drop'} title="Écouter le drop (30s)" className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer ${isPlayingThis ? 'bg-[#DE1B34] text-white' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'}`}>
-                          {isPlayingThis ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
-                        </button>
+                        {onPreviewTargetDrop && (
+                          <button type="button" onClick={(e) => toggleDropPlay(e, item)} aria-label={isPlayingThis ? 'Pause' : 'Écouter le Drop'} title="Écouter le drop (30s)" className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer ${isPlayingThis ? 'bg-[#DE1B34] text-white' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'}`}>
+                            {isPlayingThis ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+                          </button>
+                        )}
                         {isSelected ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-[9.5px] font-semibold text-[#A3A9BA]">{kindLabel(item.kind)}</span>}
                       </div>
                     </div>

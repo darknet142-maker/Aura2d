@@ -583,7 +583,8 @@ export function useAdminUploadController(params: {
         (newMixingEngineerName.trim() || newSoundEngineerName.trim())
     );
     if (!hasCoreStudio) return false;
-    if (newIsInstrumental) return true;
+    const isBeatOrInstru = newIsInstrumental || newCategory === 'Beats & Instrumentales';
+    if (isBeatOrInstru) return true;
     return Boolean(newLyricistName.trim());
   }, [
     waveformVerificationReport,
@@ -592,6 +593,7 @@ export function useAdminUploadController(params: {
     newMixingEngineerName,
     newSoundEngineerName,
     newIsInstrumental,
+    newCategory,
     newLyricistName,
   ]);
 
@@ -788,7 +790,7 @@ export function useAdminUploadController(params: {
       labelName: labelStr,
       copyrightText:
         newCopyrightText.trim() ||
-        `Copyright 2026 ${labelStr} (+241). Tous droits réservés`,
+        (labelStr ? `© 2026 ${labelStr}. Tous droits réservés.` : '© 2026 DROP. Tous droits réservés.'),
       beatmakerName: beatmakerClean,
       soundEngineerName: mixClean,
       recordingEngineerName: recClean,

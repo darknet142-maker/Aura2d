@@ -31,7 +31,7 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
           feedCtrl={socialFeedCtrl}
           currentUser={{
             id: currentUser?.id || 'u-guest',
-            name: currentUser?.name || 'Auditeur DROP (+241)',
+            name: currentUser?.name || 'Auditeur DROP',
             avatar: currentUser?.avatar || 'DR',
           }}
           currentTrack={{

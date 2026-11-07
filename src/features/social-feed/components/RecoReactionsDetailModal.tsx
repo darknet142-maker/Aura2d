@@ -106,15 +106,15 @@ export const RecoReactionsDetailModal: React.FC<RecoReactionsDetailModalProps> =
 
           {activeTab === 'TROPHY' && (
             <div className="p-3.5 rounded-2xl bg-[#080A0F] border border-amber-400/20 space-y-2">
-              <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Points générés pour l'artiste :</span><span className="font-mono font-bold text-amber-300">{post.totalPointsGenerated.toFixed(2)} pts</span></div>
-              <div className="space-y-1 text-[11px] text-[#A3A9BA] border-t border-white/10 pt-2"><p>• J'aime : +0.25 pt à chaque mention</p><p>• Re-drop : +0.35 pt et diffusion élargie</p><p>• Commentaire : +0.10 pt d'engagement réel</p></div>
+              <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Impact communautaire généré :</span><span className="font-mono font-bold text-amber-300">Rayonnement Éclaireur</span></div>
+              <div className="space-y-1 text-[11px] text-[#A3A9BA] border-t border-white/10 pt-2"><p>• J&apos;aime : Soutien direct au profil artiste</p><p>• Re-drop : Relais viral vers de nouveaux auditeurs</p><p>• Commentaire : Échange et valorisation de l&apos;œuvre</p></div>
             </div>
           )}
 
           {activeTab === 'FLAME' && (
             <div className="p-3.5 rounded-2xl bg-[#080A0F] border border-rose-500/20 space-y-2">
               <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Vélocité horaire :</span><span className="font-mono font-bold text-[#DE1B34]">+340 écoutes / h</span></div>
-              <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Zone N°1 :</span><span className="font-bold text-[#F8FAFC]">Libreville • Gabon (+241)</span></div>
+              <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Zone N°1 :</span><span className="font-bold text-[#F8FAFC]">Libreville</span></div>
             </div>
           )}
 
@@ -122,8 +122,8 @@ export const RecoReactionsDetailModal: React.FC<RecoReactionsDetailModalProps> =
             <div className="p-3.5 rounded-2xl bg-[#080A0F] border border-white/10 space-y-2">
               <div className="flex items-center justify-between"><span className="text-[#A3A9BA]">Portée comptes uniques :</span><span className="font-mono font-bold text-emerald-400 tabular-nums">{formatCompactPlays(uniqueViews)}</span></div>
               <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                <div className="p-2 rounded-xl bg-white/5"><span className="text-[#A3A9BA] block">Gabon (+241)</span><strong className="text-[#F8FAFC]">74%</strong></div>
-                <div className="p-2 rounded-xl bg-white/5"><span className="text-[#A3A9BA] block">Diaspora</span><strong className="text-[#F8FAFC]">26%</strong></div>
+                <div className="p-2 rounded-xl bg-white/5"><span className="text-[#A3A9BA] block">Audience Locale</span><strong className="text-[#F8FAFC]">74%</strong></div>
+                <div className="p-2 rounded-xl bg-white/5"><span className="text-[#A3A9BA] block">Diaspora &amp; International</span><strong className="text-[#F8FAFC]">26%</strong></div>
               </div>
             </div>
           )}

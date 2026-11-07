@@ -369,7 +369,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
           <footer className="relative z-20 pb-2 pt-0.5 text-center shrink-0">
             <p className="text-[9px] font-mono text-[#A3A9BA]/70 tracking-tight truncate px-4">
               {currentTrack.copyrightText ||
-                `© 2026 ${currentTrack.labelName} • Master Certifié BUGADA (+241)`}
+                (currentTrack.labelName ? `© 2026 ${currentTrack.labelName}. Tous droits réservés.` : '© DROP. Tous droits réservés.')}
             </p>
           </footer>
 

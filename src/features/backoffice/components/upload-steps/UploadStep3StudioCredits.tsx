@@ -325,15 +325,25 @@ export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
               </div>
             </div>
 
-            {/* Parolier / Auteur */}
-            {!newIsInstrumental ? (
+            {/* Parolier / Auteur du texte (Uniquement si chanson vocale) */}
+            {!(newIsInstrumental || newCategory === 'Beats & Instrumentales') ? (
               <div className="bg-[#07080C] border border-sky-500/30 rounded-xl p-3 flex flex-col gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-semibold text-sky-300 flex items-center gap-1.5">
                     <Edit3 className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Parolier / Auteur des paroles *</span>
+                    <span>Parolier / Auteur des paroles (chanson vocale) *</span>
                   </label>
                   <div className="flex items-center gap-3">
+                    {newArtist.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setNewLyricistName(newArtist.trim())}
+                        className="text-[10px] font-bold text-sky-300 hover:underline cursor-pointer"
+                        title="Remplir avec l'artiste principal"
+                      >
+                        • L'artiste ({newArtist}) a écrit les paroles
+                      </button>
+                    )}
                     <label className="flex items-center gap-1.5 text-[11px] font-mono text-sky-300 cursor-pointer">
                       <input
                         type="checkbox"
@@ -350,7 +360,7 @@ export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
                           handleRegisterEntityInDb('lyricists', newLyricistName);
                         }
                       }}
-                      className="text-[10px] font-bold text-sky-300 hover:underline"
+                      className="text-[10px] font-bold text-sky-300 hover:underline cursor-pointer"
                     >
                       + Sauver en BDD
                     </button>
@@ -385,15 +395,17 @@ export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
             ) : (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
                 <span>
-                  Mode <strong>Instrumental</strong> actif : Aucun auteur/parolier requis pour
-                  valider cette étape.
+                  Format <strong>Instrumentale / Beat</strong> (sans paroles) : Aucun parolier requis. Le Beatmaker/Compositeur est l'auteur-compositeur de l'œuvre.
                 </span>
                 <button
                   type="button"
-                  onClick={() => setNewIsInstrumental(false)}
-                  className="text-[11px] underline"
+                  onClick={() => {
+                    setNewIsInstrumental(false);
+                    if (newCategory === 'Beats & Instrumentales') setNewCategory('Afro-Pop');
+                  }}
+                  className="text-[11px] underline hover:text-white transition cursor-pointer"
                 >
-                  Rétablir paroles
+                  Changer en chanson vocale
                 </button>
               </div>
             )}

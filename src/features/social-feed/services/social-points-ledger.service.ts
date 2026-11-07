@@ -96,7 +96,7 @@ export function computeCohortTierFromEngagement(
 ): { tier: ViralCohortTier; reachMultiplier: number; label: string } {
   const effectiveScore = reDropsCount + (isVideoOpinion ? 2 : 0);
   if (effectiveScore >= 5) {
-    return { tier: 3, reachMultiplier: 3.2, label: 'Onde Virale +241' };
+    return { tier: 3, reachMultiplier: 3.2, label: 'Onde Virale Majeure' };
   }
   if (effectiveScore >= 1) {
     return { tier: 2, reachMultiplier: 1.8, label: 'Relais Communautaire' };

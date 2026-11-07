@@ -500,7 +500,7 @@ export const CoverArtwork: React.FC<CoverArtworkProps> = ({
       {/* En-tête technique Broadcast */}
       <div className="relative z-10 w-full flex items-center justify-between gap-1 text-[8px] font-mono uppercase tracking-wider text-[#A3A9BA]">
         <span className="truncate px-1.5 py-0.5 rounded bg-[#07090E]/80 border border-white/10 text-amber-300 font-bold">
-          MASTER +241
+          MASTER BROADCAST
         </span>
         <span className="shrink-0 text-[7px] text-[#A3A9BA]/90 font-mono">HD</span>
       </div>

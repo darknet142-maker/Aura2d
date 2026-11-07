@@ -45,7 +45,7 @@ export const INITIAL_COMMUNITY_RECOMMENDATIONS: CommunityRecommendationItem[] = 
     cover: '',
     artworkType: 'creative_yellow',
     userId: 'u-1',
-    userName: 'Camille Ndong (+241)',
+    userName: 'Camille Ndong',
     userAvatar: 'CN',
     commentOrLyricExcerpt:
       'Duo Co-Lead 50/50 certifié Single de Diamant (580K ECG) ! Le refrain à 1:16 est magique.',

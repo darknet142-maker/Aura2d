@@ -96,7 +96,7 @@ export function createManualFeedPost(params: {
     authorName: params.actor.name,
     authorHandle: toUserHandle(params.actor.name),
     authorAvatar: params.actor.avatar,
-    caption: params.caption.trim() || `Découvrez « ${params.target.title} » sur DROP (+241) !`,
+    caption: params.caption.trim() || `Découvrez « ${params.target.title} » sur DROP !`,
     createdAtIso: nowIso,
     createdAtLabel: 'à l’instant',
     lastBoostedAtIso: nowIso,

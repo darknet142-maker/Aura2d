@@ -3,7 +3,7 @@ import type { AppUser } from '../shared/types/domain.types';
 export const INITIAL_USERS: AppUser[] = [
   {
     id: 'u-1',
-    name: 'Camille Ndong (+241)',
+    name: 'Camille Ndong',
     email: 'camille.ndong@drop.ga',
     role: 'ADMIN',
     joinedAt: '12 Jan 2025',
