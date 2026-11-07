@@ -8,6 +8,7 @@ import type { FeaturingSplitMode } from '../../../utils/rankingEngine';
 import type { EntityDatabase } from '../../../shared/types/domain.types';
 import type { EditingTrackState } from '../backoffice.types';
 import { AnalysisReview, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
+import { formatLyricsToRawText, parseRawLyricsInput, generateStandardLyricsTemplate } from '../services/lyrics-parser.service';
 
 export interface TrackEditModalProps {
   editingTrack: EditingTrackState | null;
@@ -381,6 +382,58 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Éditeur de Paroles du morceau publié (Synchronisées ou Texte Libre) */}
+        {!editingTrack.track.isInstrumental && editingTrack.track.category !== 'Beats & Instrumentales' && (
+          <div className="bg-[#07080C] border border-sky-500/30 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-sky-300">
+                Paroles du Morceau (Synchronisées [MM:SS] ou Texte Libre)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const template = generateStandardLyricsTemplate(editingTrack.track.title, editingTrack.track.artist);
+                  const parsed = parseRawLyricsInput(template, editingTrack.track.duration);
+                  setEditingTrack({
+                    ...editingTrack,
+                    track: {
+                      ...editingTrack.track,
+                      lyrics: parsed,
+                      hasSynchronizedLyrics: true,
+                    },
+                  });
+                }}
+                className="text-[10px] font-bold text-sky-400 hover:underline cursor-pointer"
+              >
+                + Modèle structuré
+              </button>
+            </div>
+            <textarea
+              rows={4}
+              value={formatLyricsToRawText(editingTrack.track.lyrics)}
+              onChange={(e) => {
+                const parsed = parseRawLyricsInput(e.target.value, editingTrack.track.duration);
+                setEditingTrack({
+                  ...editingTrack,
+                  track: {
+                    ...editingTrack.track,
+                    lyrics: parsed,
+                    hasSynchronizedLyrics: parsed.length > 0,
+                  },
+                });
+              }}
+              placeholder="[00:15] Premier couplet...\n[00:45] [DROP] Refrain...\nOu collez le texte brut des paroles..."
+              className="w-full bg-[#0E1118] border border-white/[0.08] rounded-xl p-2.5 text-xs text-[#F8FAFC] font-mono placeholder-[#A3A9BA]/50 focus:outline-none focus:border-sky-400"
+            />
+            <div className="flex items-center justify-between text-[10px] text-[#A3A9BA]">
+              <span>Modifiez ou ajoutez les vers. Prise en compte immédiate au lecteur.</span>
+              <span className="text-emerald-400 font-mono">
+                {(editingTrack.track.lyrics || []).length} vers enregistrés
+              </span>
+            </div>
+          </div>
+        )}
 
         <AnalysisReview
           analysis={

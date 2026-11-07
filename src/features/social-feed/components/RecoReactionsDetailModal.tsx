@@ -19,7 +19,7 @@ export interface RecoReactionsDetailModalProps {
 const TABS: { id: ReactionDetailTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'HEART', label: "J'aime", icon: Heart },
   { id: 'REDROP', label: 'Re-Drops', icon: Repeat },
-  { id: 'TROPHY', label: 'Points', icon: Trophy },
+  { id: 'TROPHY', label: 'Soutiens', icon: Trophy },
   { id: 'FLAME', label: 'Vélocité', icon: Flame },
   { id: 'VIEWS', label: 'Portée', icon: Eye },
 ];
@@ -78,7 +78,7 @@ export const RecoReactionsDetailModal: React.FC<RecoReactionsDetailModalProps> =
                 post.likedByUserIds.map((uId) => (
                   <button key={uId} type="button" onClick={() => { onClose(); onOpenUserProfile(uId); }} className="w-full p-2.5 rounded-xl bg-[#080A0F] border border-white/5 flex items-center justify-between text-left hover:border-amber-400/40 cursor-pointer">
                     <span className="font-bold text-[#F8FAFC]">{uId === 'u-guest' ? 'Vous' : `Mélomane ${uId.slice(0, 6)}`}</span>
-                    <span className="text-[10px] text-emerald-400 font-mono">+0.25 pt</span>
+                    <span className="text-[10px] text-rose-400 font-bold">Coup de cœur</span>
                   </button>
                 ))
               )}
@@ -97,7 +97,7 @@ export const RecoReactionsDetailModal: React.FC<RecoReactionsDetailModalProps> =
                 post.reDroppedByUserIds.map((uId) => (
                   <button key={uId} type="button" onClick={() => { onClose(); onOpenUserProfile(uId); }} className="w-full p-2.5 rounded-xl bg-[#080A0F] border border-white/5 flex items-center justify-between text-left hover:border-emerald-400/40 cursor-pointer">
                     <span className="font-bold text-[#F8FAFC]">{uId === 'u-guest' ? 'Vous' : `Éclaireur ${uId.slice(0, 6)}`}</span>
-                    <span className="text-[10px] text-amber-300 font-mono">+0.35 pt</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">Relais Éclaireur</span>
                   </button>
                 ))
               )}

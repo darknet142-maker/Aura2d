@@ -29,9 +29,9 @@ export interface RecoSpotlightVisualCardProps {
 }
 
 export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = ({
-  post, currentUserId, trackPlays = 104_500, onPlayTarget, onPauseMainPlayer,
-  onOpenAuthorProfile, onOpenTargetSheet, onOpenArtistProfile,
-  onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction, onOpenReactionsDetail, onDeletePost, onReportPost,
+  post, currentUserId, trackPlays = 104_500, onPlayTarget, onPauseMainPlayer, onOpenAuthorProfile,
+  onOpenTargetSheet, onOpenArtistProfile, onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction,
+  onOpenReactionsDetail, onDeletePost, onReportPost,
 }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -40,11 +40,7 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
 
   useEffect(() => {
     let revoked: string | null = null;
-    if (post.videoIdbKey) {
-      loadSocialVideoBlob(post.videoIdbKey).then((blob) => {
-        if (blob) { revoked = URL.createObjectURL(blob); setVideoUrl(revoked); }
-      });
-    }
+    if (post.videoIdbKey) loadSocialVideoBlob(post.videoIdbKey).then((b) => { if (b) { revoked = URL.createObjectURL(b); setVideoUrl(revoked); } });
     return () => { if (revoked) URL.revokeObjectURL(revoked); };
   }, [post.videoIdbKey]);
 
@@ -55,8 +51,7 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
   const handleToggleEmbeddedVideo = () => {
     const vid = videoRef.current;
     if (!vid) { onPlayTarget(); return; }
-    if (vid.paused) { onPauseMainPlayer(); vid.play().then(() => setIsVideoPlaying(true)).catch(() => {}); }
-    else { vid.pause(); setIsVideoPlaying(false); }
+    if (vid.paused) { onPauseMainPlayer(); vid.play().then(() => setIsVideoPlaying(true)).catch(() => {}); } else { vid.pause(); setIsVideoPlaying(false); }
   };
 
   return (
@@ -71,7 +66,13 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
         onReportPost={onReportPost}
       />
 
-      <div className="relative w-full aspect-[4/4.3] max-h-[380px] rounded-2xl bg-[#131722] border border-white/10 mt-3">
+      <div
+        className={`relative w-full rounded-2xl bg-[#131722] border border-white/10 mt-3 ${
+          isVideoPost || videoUrl
+            ? 'max-w-[340px] sm:max-w-[360px] mx-auto aspect-[9/16] max-h-[560px]'
+            : 'aspect-[4/4.3] max-h-[380px]'
+        }`}
+      >
         {/* Cluster de Réactions Flottant en Applique Supérieure Droite (Style Sarah Michaels) */}
         <div className="absolute -top-3.5 sm:-top-4 right-3 sm:right-4 z-30">
           <RecoCardReactionsCluster

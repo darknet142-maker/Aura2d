@@ -294,4 +294,36 @@ assert.equal(clusterCodeCheck.includes('-space-x-1.5 sm:-space-x-2'), true, 'Les
 assert.equal(storageCodeCheck.includes('sanitizePost'), true, 'Le stockage des posts doit assainir les métadonnées pour supprimer les résidus (+241)');
 console.log('✅ 24. Cluster de réactions flottantes (Panel 1-3) & assainissement automatique validés.');
 
-console.log('🎉 TOUS LES 24 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');
+// 25. ADMIN : AJOUT & ÉDITION DES PAROLES (NOUVEAU TITRE & TITRE PUBLIÉ)
+const lyricsParserFile = fs.readFileSync('src/features/backoffice/services/lyrics-parser.service.ts', 'utf8');
+const step3LyricsCode = fs.readFileSync('src/features/backoffice/components/upload-steps/UploadStep3StudioCredits.tsx', 'utf8');
+const trackEditLyricsCode = fs.readFileSync('src/features/backoffice/components/TrackEditModal.tsx', 'utf8');
+assert.equal(lyricsParserFile.includes('parseRawLyricsInput') && lyricsParserFile.includes('formatLyricsToRawText'), true, 'Le service lyrics-parser doit exister et exporter les fonctions de parsing');
+assert.equal(step3LyricsCode.includes('newLyricsText') && step3LyricsCode.includes('textarea'), true, 'UploadStep3 doit inclure le textarea des paroles');
+assert.equal(trackEditLyricsCode.includes('formatLyricsToRawText') && trackEditLyricsCode.includes('textarea'), true, 'TrackEditModal doit permettre d éditer les paroles des titres publiés');
+console.log('✅ 25. Ajout et édition des paroles synchronisées et libres validés en Admin (Upload & TrackEditModal).');
+
+// 26. ÉPURATION TOTALE DES POINTS VISIBLES DES UTILISATEURS (ADMIN UNIQUEMENT)
+const modalCodeReactions = fs.readFileSync('src/features/social-feed/components/RecoReactionsDetailModal.tsx', 'utf8');
+assert.equal(modalCodeReactions.includes('+0.25 pt'), false, 'Aucun +0.25 pt ne doit être visible pour l utilisateur');
+assert.equal(modalCodeReactions.includes('+0.35 pt'), false, 'Aucun +0.35 pt ne doit être visible pour l utilisateur');
+assert.equal(modalCodeReactions.includes("label: 'Points'"), false, 'L onglet ne doit pas s appeler Points');
+assert.equal(modalCodeReactions.includes("label: 'Soutiens'"), true, 'L onglet doit s appeler Soutiens');
+console.log('✅ 26. Épuration totale des points publics validée (formule invisible aux auditeurs).');
+
+// 27. FORMAT VERTICAL 9:16 STRICT POUR LES VIDÉOS DE TREND ET D OPINION
+const spotlightCodeUpdated = fs.readFileSync('src/features/social-feed/components/RecoSpotlightVisualCard.tsx', 'utf8');
+assert.equal(spotlightCodeUpdated.includes('aspect-[9/16]'), true, 'Les vidéos doivent être lues au format vertical 9:16');
+assert.equal(spotlightCodeUpdated.includes('max-w-[340px] sm:max-w-[360px] mx-auto aspect-[9/16]'), true, 'Les vidéos doivent être cadrées verticalement avec centrage 9:16');
+console.log('✅ 27. Format vertical 9:16 strict validé pour l enregistrement et le visionnage vidéo.');
+
+// 28. MODAL DE PERSONNALISATION DES GOÛTS INSPIRÉ DE TIKTOK
+const tasteModalCode = fs.readFileSync('src/features/social-feed/components/TasteOnboardingVibesModal.tsx', 'utf8');
+const feedViewCodeCheck = fs.readFileSync('src/features/social-feed/components/SocialRecommendationsFeedView.tsx', 'utf8');
+assert.equal(tasteModalCode.includes("Qu'aimerais-tu écouter sur DROP ?") || tasteModalCode.includes("Qu&apos;aimerais-tu écouter sur DROP ?"), true, 'Le modal doit afficher le titre inspiré de TikTok');
+assert.equal(tasteModalCode.includes('selectedIds.length >= 3'), true, 'Le bouton continuer doit requérir au moins 3 styles');
+assert.equal(feedViewCodeCheck.includes('TasteOnboardingVibesModal'), true, 'Le modal de goûts doit être connecté dans SocialRecommendationsFeedView');
+assert.equal(feedViewCodeCheck.includes('Mes Goûts'), true, 'Le bouton Mes Goûts doit être accessible directement dans le fil');
+console.log('✅ 28. Écran de personnalisation des goûts musicaux inspiré de TikTok validé.');
+
+console.log('🎉 TOUS LES 28 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');

@@ -17,6 +17,7 @@ import type { AlbumNode, AppNotification, EntityDatabase, Track } from '../../..
 import { formatTime, parseDurationInput, extractExternalStreamId } from '../../../shared/utils/mediaFormatters';
 import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
 import type { TrackAnalysis } from '../../music-intelligence/types/music-analysis.types';
+import { parseRawLyricsInput } from '../services/lyrics-parser.service';
 
 export function useAdminUploadController(params: {
   allTracksFlat: Track[];
@@ -72,6 +73,7 @@ export function useAdminUploadController(params: {
   const [newMixingEngineerName, setNewMixingEngineerName] = useState<string>('');
   const [newMasteringEngineerName, setNewMasteringEngineerName] = useState<string>('');
   const [newLyricistName, setNewLyricistName] = useState<string>('');
+  const [newLyricsText, setNewLyricsText] = useState<string>('');
   const [newIsExternalLyricist, setNewIsExternalLyricist] = useState<boolean>(true);
   const [newIsInstrumental, setNewIsInstrumental] = useState<boolean>(false);
   const [newIsBeatDownloadable, setNewIsBeatDownloadable] = useState<boolean>(false);
@@ -750,6 +752,10 @@ export function useAdminUploadController(params: {
       ? 'Instrumental (Sans paroles)'
       : newLyricistName.trim() || artistClean;
 
+    const parsedLyrics = !newIsInstrumental && newLyricsText.trim()
+      ? parseRawLyricsInput(newLyricsText, parsedNewDuration)
+      : [];
+
     // Sauvegarde automatique dans la base de données pour les listes déroulantes
     handleRegisterEntityInDb('artists', artistClean, true);
     if (parsedFeaturings.length > 0) {
@@ -810,7 +816,8 @@ export function useAdminUploadController(params: {
       dropContentId: finalContentId,
       waveformPeaks: finalPeaks,
       audioCodec: newAudioCodec || 'OPUS',
-      hasSynchronizedLyrics: !newIsInstrumental,
+      lyrics: parsedLyrics,
+      hasSynchronizedLyrics: !newIsInstrumental && parsedLyrics.length > 0,
       gabonTerritoryPct: newGabonTerritoryPct,
       weeksInTop10: 1,
       lufsMasterLevel: newMeasuredLufs,
@@ -981,6 +988,7 @@ export function useAdminUploadController(params: {
     setNewTitle('');
     setNewFeaturingInput('');
     setNewLyricistName('');
+    setNewLyricsText('');
     setNewIsInstrumental(false);
     setNewAudioFileName('');
     setNewAudioUrl('');
@@ -1113,6 +1121,7 @@ export function useAdminUploadController(params: {
       drop_start: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
       bpm: track.bpm,
       track_analysis: track.trackAnalysis ?? null,
+      lyrics: track.lyrics ?? undefined,
     }).catch(() => {});
 
     pushNotification(
@@ -1133,7 +1142,7 @@ export function useAdminUploadController(params: {
     newLabelName, setNewLabelName, newBeatmakerName, setNewBeatmakerName,
     newSoundEngineerName, setNewSoundEngineerName, newRecordingEngineerName, setNewRecordingEngineerName,
     newMixingEngineerName, setNewMixingEngineerName, newMasteringEngineerName, setNewMasteringEngineerName,
-    newLyricistName, setNewLyricistName, newIsExternalLyricist, setNewIsExternalLyricist,
+    newLyricistName, setNewLyricistName, newLyricsText, setNewLyricsText, newIsExternalLyricist, setNewIsExternalLyricist,
     newIsInstrumental, setNewIsInstrumental, newIsBeatDownloadable, setNewIsBeatDownloadable,
     newBpm, setNewBpm, newMusicalKey, setNewMusicalKey, newCopyrightText,
     newAudioCodec, newGabonTerritoryPct, setNewGabonTerritoryPct,

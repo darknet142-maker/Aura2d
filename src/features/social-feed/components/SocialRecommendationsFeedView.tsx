@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Flame, Video, Shuffle, Plus, Compass, Trophy } from 'lucide-react';
+import { Flame, Video, Shuffle, Plus, Compass, Trophy, SlidersHorizontal } from 'lucide-react';
 import type { AnalyticsAlbumNode, AnalyticsTrackItem, StudioEntityRole } from '../../../components/ReusableAnalyticsSheets';
 import type { FeedLensId, SocialFeedPost, SocialTargetSubject, StudioAudioCaptureMode } from '../types/social-feed.types';
 import { buildComposerOptionsFromCatalogue } from '../services/social-target-options.service';
@@ -14,6 +14,7 @@ import { RecoCommentsDrawer } from './RecoCommentsDrawer';
 import { StatusFullscreenViewerModal } from './StatusFullscreenViewerModal';
 import { PublishRecoAndStatusModal } from './PublishRecoAndStatusModal';
 import { ReportContentModal } from './ReportContentModal';
+import { TasteOnboardingVibesModal } from './TasteOnboardingVibesModal';
 
 export interface SocialRecommendationsFeedViewProps {
   feedCtrl: ReturnType<typeof useSocialFeedController>;
@@ -21,12 +22,9 @@ export interface SocialRecommendationsFeedViewProps {
   currentTrack: { id: string; title: string; artist: string; category: string; cover: string; artworkType?: AnalyticsTrackItem['artworkType']; bpm?: number };
   allTracksFlat: { track: AnalyticsTrackItem; album: AnalyticsAlbumNode; albumIndex: number; trackIndex: number }[];
   trackRankMap: Record<string, { rank: number; delta: number }>;
-  onPauseMainPlayer: () => void;
-  onPlaySpecificTrack: (albumIdx: number, trackIdx: number) => void;
-  onOpenTrackSheet: (trackId: string) => void;
-  onOpenEntitySheet: (name: string, role?: StudioEntityRole) => void;
-  onOpenUserProfile: (userId: string) => void;
-  onOpenScoutsRankings?: () => void;
+  onPauseMainPlayer: () => void; onPlaySpecificTrack: (albumIdx: number, trackIdx: number) => void;
+  onOpenTrackSheet: (trackId: string) => void; onOpenEntitySheet: (name: string, role?: StudioEntityRole) => void;
+  onOpenUserProfile: (userId: string) => void; onOpenScoutsRankings?: () => void;
   onOpenCameraStudio: (mode: StudioAudioCaptureMode, target: SocialTargetSubject) => void;
 }
 
@@ -44,16 +42,14 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
 }) => {
   const inlineAudio = useInlineDropPreviewAudio(onPauseMainPlayer);
   const [reactionsModal, setReactionsModal] = useState<{ post: SocialFeedPost; initialTab: ReactionDetailTab } | null>(null);
+  const [isTasteModalOpen, setIsTasteModalOpen] = useState(false);
   const defaultTarget: SocialTargetSubject = useMemo(() => ({
     kind: 'TRACK', trackId: currentTrack.id, entityName: currentTrack.artist,
     title: currentTrack.title, subtitle: currentTrack.artist, genre: currentTrack.category,
     cover: currentTrack.cover, artworkType: currentTrack.artworkType, bpm: currentTrack.bpm,
   }), [currentTrack]);
 
-  const { trackOpts, albumOpts, artistOpts } = useMemo(
-    () => buildComposerOptionsFromCatalogue(allTracksFlat),
-    [allTracksFlat]
-  );
+  const { trackOpts, albumOpts, artistOpts } = useMemo(() => buildComposerOptionsFromCatalogue(allTracksFlat), [allTracksFlat]);
 
   const navigateToTarget = (target: SocialTargetSubject) => {
     if (target.kind === 'ARTIST' || !target.trackId) onOpenEntitySheet(target.entityName, 'ARTIST');
@@ -92,13 +88,13 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
             </button>
           ))}
           {onOpenScoutsRankings && (
-            <button
-              type="button" onClick={onOpenScoutsRankings}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-amber-400/30 text-amber-300 hover:bg-amber-400/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer"
-            >
+            <button type="button" onClick={onOpenScoutsRankings} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-amber-400/30 text-amber-300 hover:bg-amber-400/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer">
               <Trophy className="w-3.5 h-3.5 shrink-0" /><span>Top Éclaireurs</span>
             </button>
           )}
+          <button type="button" onClick={() => setIsTasteModalOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-rose-500/30 text-rose-300 hover:bg-rose-500/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer" title="Personnaliser mes goûts musicaux (Style TikTok)">
+            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-rose-400" /><span>Mes Goûts</span>
+          </button>
         </div>
         <button type="button" onClick={() => feedCtrl.setIsComposerOpen(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#DE1B34] hover:bg-[#f02842] text-white text-xs font-bold shrink-0 shadow-md cursor-pointer">
           <Plus className="w-3.5 h-3.5 shrink-0" /><span>Publier</span>
@@ -115,13 +111,11 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
           {feedCtrl.rankedPosts.map((post) => {
             const t = resolveTargetTrackMatch(allTracksFlat, post.target)?.track;
             const common = {
-              post, currentUserId: currentUser.id, trackPlays: t?.realPlays,
-              onOpenAuthorProfile: onOpenUserProfile,
+              post, currentUserId: currentUser.id, trackPlays: t?.realPlays, onOpenAuthorProfile: onOpenUserProfile,
               onOpenArtistProfile: () => onOpenEntitySheet(post.target.entityName, 'ARTIST'),
-              onToggleLike: () => feedCtrl.handleTogglePostLike(post.id),
-              onOpenComments: () => feedCtrl.setActiveCommentsPostId(post.id),
+              onToggleLike: () => feedCtrl.handleTogglePostLike(post.id), onOpenComments: () => feedCtrl.setActiveCommentsPostId(post.id),
               onToggleReDrop: (q?: string) => feedCtrl.handleTogglePostReDrop(post.id, q),
-              onOpenStudioReaction: (mode: StudioAudioCaptureMode) => { inlineAudio.stopInlinePreview(); onOpenCameraStudio(mode, post.target); },
+              onOpenStudioReaction: (m: StudioAudioCaptureMode) => { inlineAudio.stopInlinePreview(); onOpenCameraStudio(m, post.target); },
               onOpenReactionsDetail: (tab: ReactionDetailTab) => setReactionsModal({ post, initialTab: tab }),
               onDeletePost: post.authorId === currentUser.id ? () => feedCtrl.handleDeletePost(post.id) : undefined,
               onReportPost: (pId: string) => feedCtrl.setReportingPost(feedCtrl.posts.find((p) => p.id === pId) || null),
@@ -149,6 +143,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
       <StatusFullscreenViewerModal activeUserId={feedCtrl.activeStatusUserId} currentUserId={currentUser.id} groupedRings={feedCtrl.groupedStatusRings} onClose={() => feedCtrl.setActiveStatusUserId(null)} onSelectUser={feedCtrl.setActiveStatusUserId} onMarkSeen={feedCtrl.handleMarkStatusSeen} onToggleLike={feedCtrl.handleToggleStatusLike} onToggleReDrop={feedCtrl.handleToggleStatusReDrop} onDeleteStatus={feedCtrl.handleDeleteStatus} onOpenUserProfile={onOpenUserProfile} onOpenTarget={navigateToTarget} onReplyWithVideo={onOpenCameraStudio} />
       <PublishRecoAndStatusModal isOpen={feedCtrl.isComposerOpen} defaultTrackTarget={defaultTarget} trackOptions={trackOpts} albumOptions={albumOpts} artistOptions={artistOpts} activeCount={feedCtrl.ownActiveItemsCount} maxCount={feedCtrl.maxProfileItems} onClose={() => feedCtrl.setIsComposerOpen(false)} onPublishCard={feedCtrl.handleCreateFeedPost} onOpenCameraStudio={onOpenCameraStudio} />
       <ReportContentModal isOpen={Boolean(feedCtrl.reportingPost)} postId={feedCtrl.reportingPost?.id || ''} authorName={feedCtrl.reportingPost?.authorName || ''} onConfirmReport={feedCtrl.handleConfirmReport} onClose={() => feedCtrl.setReportingPost(null)} />
+      <TasteOnboardingVibesModal isOpen={isTasteModalOpen} onClose={() => setIsTasteModalOpen(false)} onApplyVibes={() => feedCtrl.shuffleDiscoveryFeed()} />
     </div>
   );
 };

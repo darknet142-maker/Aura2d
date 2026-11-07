@@ -52,6 +52,7 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     newRecordingEngineerName, setNewRecordingEngineerName, newMixingEngineerName,
     setNewMixingEngineerName, newSoundEngineerName, setNewSoundEngineerName,
     newMasteringEngineerName, setNewMasteringEngineerName, newLyricistName, setNewLyricistName,
+    newLyricsText, setNewLyricsText,
     newIsExternalLyricist, setNewIsExternalLyricist, newDropContentId, newAudioCodec,
     newMeasuredLufs, parsedNewDuration, toggleUploadDropPreview, isPreviewingUploadDrop,
     uploadPreviewTime, newDropStart, setNewDropStart, newDropDuration, setNewDropDuration,
@@ -367,6 +368,8 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                   setNewMasteringEngineerName={setNewMasteringEngineerName}
                   newLyricistName={newLyricistName}
                   setNewLyricistName={setNewLyricistName}
+                  newLyricsText={newLyricsText}
+                  setNewLyricsText={setNewLyricsText}
                   newIsExternalLyricist={newIsExternalLyricist}
                   setNewIsExternalLyricist={setNewIsExternalLyricist}
                   newDropContentId={newDropContentId}

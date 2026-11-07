@@ -6,6 +6,7 @@ import {
 import { CoverArtwork } from '../../../../components/CoverArtwork';
 import { formatTime } from '../../../../shared/utils/mediaFormatters';
 import type { AdminUploadWizardProps } from './uploadWizard.types';
+import { generateStandardLyricsTemplate } from '../../services/lyrics-parser.service';
 
 export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
   wizardStep,
@@ -79,6 +80,8 @@ export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
   setNewMasteringEngineerName,
   newLyricistName,
   setNewLyricistName,
+  newLyricsText,
+  setNewLyricsText,
   newIsExternalLyricist,
   setNewIsExternalLyricist,
   newDropContentId,
@@ -390,6 +393,35 @@ export const UploadStep3StudioCredits: React.FC<AdminUploadWizardProps> = ({
                     placeholder="Ou saisir un nouvel auteur..."
                     className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F5F2EB]"
                   />
+                </div>
+
+                {/* Éditeur de Paroles (Synchronisées [MM:SS] ou Texte Libre) */}
+                <div className="pt-2 border-t border-white/[0.08] flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[#F8FAFC]">
+                      Paroles du morceau (Texte libre ou synchronisé [MM:SS])
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNewLyricsText?.(generateStandardLyricsTemplate(newTitle, newArtist))}
+                      className="text-[10px] font-bold text-sky-400 hover:underline cursor-pointer"
+                    >
+                      + Insérer modèle structuré
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={newLyricsText || ''}
+                    onChange={(e) => setNewLyricsText?.(e.target.value)}
+                    placeholder="[00:15] Premier couplet...\n[00:45] [DROP] Refrain...\nOu collez le texte brut des paroles..."
+                    className="w-full bg-[#0D1017] border border-white/[0.08] rounded-xl p-2.5 text-xs text-[#F8FAFC] font-mono placeholder-[#A3A9BA]/50 focus:outline-none focus:border-sky-400"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-[#A3A9BA]">
+                    <span>Format : [MM:SS] Paroles ou texte brut ligne par ligne.</span>
+                    <span className="text-emerald-400 font-mono">
+                      {(newLyricsText || '').split('\n').filter((l) => l.trim()).length} vers saisis
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (

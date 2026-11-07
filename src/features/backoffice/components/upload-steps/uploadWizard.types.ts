@@ -90,6 +90,8 @@ export interface AdminUploadWizardProps {
   setNewMasteringEngineerName: React.Dispatch<React.SetStateAction<string>>;
   newLyricistName: string;
   setNewLyricistName: React.Dispatch<React.SetStateAction<string>>;
+  newLyricsText?: string;
+  setNewLyricsText?: React.Dispatch<React.SetStateAction<string>>;
   newIsExternalLyricist: boolean;
   setNewIsExternalLyricist: React.Dispatch<React.SetStateAction<boolean>>;
   newDropContentId: string;
