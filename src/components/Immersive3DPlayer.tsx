@@ -699,6 +699,9 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               dropStart: m.track.dropStart,
               dropDuration: m.track.dropDuration,
               cover: m.track.cover,
+              notes: m.track.notes,
+              bpm: m.track.bpm,
+              baseFreq: m.track.baseFreq,
             }))}
             onPublishVideoToDrop={async (payload) => {
               const success = await socialFeedCtrl.handlePublishStudioVideo(payload);

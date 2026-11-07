@@ -112,3 +112,4 @@ export const TrendStudioVideoTrimmer: React.FC<TrendStudioVideoTrimmerProps> = (
     </div>
   );
 };
+

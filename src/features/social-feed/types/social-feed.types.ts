@@ -8,6 +8,7 @@ export type ViralCohortTier = 1 | 2 | 3;
 
 export interface SocialTargetSubject {
   kind: SocialTargetKind;
+  id?: string;
   trackId?: string;
   albumId?: string;
   entityName: string;
@@ -17,6 +18,7 @@ export interface SocialTargetSubject {
   cover: string;
   artworkType?: ArtworkType;
   bpm?: number;
+  audioUrl?: string;
   camelotKey?: string;
   lyricistName?: string;
 }

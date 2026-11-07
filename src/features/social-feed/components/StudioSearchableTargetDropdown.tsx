@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import type { SocialTargetSubject } from '../types/social-feed.types';
+import { useTargetDropAudioPreview } from '../hooks/useTargetDropAudioPreview';
 
 function norm(s?: string): string {
   return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -44,15 +45,23 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
-  const [localPlayingKey, setLocalPlayingKey] = useState<string | null>(null);
+  const fallbackPreview = useTargetDropAudioPreview();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const filtered = useMemo(() => filterTargetsInstant(options, query), [options, query]);
   const targetKey = (t: SocialTargetSubject) => `${t.kind}:${t.trackId || t.albumId || t.entityName}:${t.title}`;
   const selectedKey = targetKey(selectedTarget);
-  const activePlayKey = previewingKey !== undefined ? previewingKey : localPlayingKey;
+  const activePlayKey = previewingKey !== undefined ? previewingKey : fallbackPreview.previewingKey;
 
-  useEffect(() => { if (isOpen) { setHighlightIdx(0); setTimeout(() => searchInputRef.current?.focus(), 40); } else { setLocalPlayingKey(null); } }, [isOpen]);
+  useEffect(() => {
+    if (isOpen) {
+      setHighlightIdx(0);
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+    } else if (!onPreviewTargetDrop) {
+      fallbackPreview.stopPreview();
+    }
+  }, [isOpen, onPreviewTargetDrop, fallbackPreview]);
+
   useEffect(() => {
     const onDocDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false); };
     document.addEventListener('mousedown', onDocDown);
@@ -64,9 +73,11 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
 
   const toggleDropPlay = (e: React.MouseEvent, item: SocialTargetSubject) => {
     e.stopPropagation();
-    const key = targetKey(item);
-    setLocalPlayingKey((prev) => (prev === key ? null : key));
-    onPreviewTargetDrop?.(item);
+    if (onPreviewTargetDrop) {
+      onPreviewTargetDrop(item);
+    } else {
+      void fallbackPreview.togglePreview(item);
+    }
   };
 
   return (

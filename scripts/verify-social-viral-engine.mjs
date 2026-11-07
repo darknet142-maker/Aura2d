@@ -137,11 +137,19 @@ assert.equal(studioCode.includes('trimEndSec'), true, 'DropTrendMagazineStudio d
 assert.equal(studioCode.includes('effectiveTrimmedDuration'), true, 'La durée rognée doit être transmise à la publication');
 console.log('✅ 7. Trimmer vidéo interactif et sélection de la portion à publier vérifiés.');
 
-// 8. BOUTON ÉCOUTER LE DROP DANS LA LISTE DÉROULANTE DES MORCEAUX
+// 8. BOUTON ÉCOUTER LE DROP DANS LA LISTE DÉROULANTE DES MORCEAUX & MOTEUR AUDIO ACTIF
 const dropdownCode = fs.readFileSync('src/features/social-feed/components/StudioSearchableTargetDropdown.tsx', 'utf8');
+const previewDropHookCode = fs.readFileSync('src/features/social-feed/hooks/useTargetDropAudioPreview.ts', 'utf8');
+const playerCode = fs.readFileSync('src/components/Immersive3DPlayer.tsx', 'utf8');
+
 assert.equal(dropdownCode.includes('toggleDropPlay'), true, 'La liste déroulante doit comporter la fonction toggleDropPlay');
 assert.equal(dropdownCode.includes('Écouter le Drop') || dropdownCode.includes('Écouter le drop'), true, 'Le bouton play/pause doit être présent pour chaque son');
-console.log('✅ 8. Bouton Play/Pause acoustique pour pré-écouter le drop dans la liste déroulante validé.');
+assert.equal(dropdownCode.includes('useTargetDropAudioPreview'), true, 'StudioSearchableTargetDropdown doit intégrer useTargetDropAudioPreview');
+assert.equal(studioCode.includes('dropPreviewEngine = useTargetDropAudioPreview'), true, 'DropTrendMagazineStudio doit instancier le moteur audio de pré-écoute');
+assert.equal(studioCode.includes('onPreviewTargetDrop'), true, 'DropTrendMagazineStudio doit connecter onPreviewTargetDrop');
+assert.equal(previewDropHookCode.includes('togglePreview'), true, 'Le hook doit gérer la bascule de lecture audio togglePreview');
+assert.equal(playerCode.includes('notes: m.track.notes'), true, 'Immersive3DPlayer doit fournir les notes musicales pour le drop');
+console.log('✅ 8. Moteur audio de pré-écoute du drop 30s câblé et actif dans la liste déroulante trend.');
 
 // 9. SYMÉTRIE ABSOLUE DU LOGO DROP AU CENTRE DE L INTERFACE
 assert.equal(

@@ -8,6 +8,7 @@ export * from './services/social-feed-mutations.service';
 export * from './services/social-target-options.service';
 export * from './services/community-scouts-leaderboard.service';
 export * from './hooks/useInlineDropPreviewAudio';
+export * from './hooks/useTargetDropAudioPreview';
 export * from './hooks/useStatusStoriesState';
 export * from './hooks/useSocialFeedController';
 export * from './components/WhatsAppStyleStatusRail';

@@ -20,6 +20,7 @@ import {
   TrendStudioVideoTrimmer,
   buildDynamicTargetQrUrl,
   startVoiceOpinionMicrophone,
+  useTargetDropAudioPreview,
   type SocialTargetSubject,
   type StudioAudioCaptureMode,
   type VoiceMicSession,
@@ -77,6 +78,9 @@ export interface DropTrendMagazineStudioProps {
     dropStart?: number;
     dropDuration?: number;
     cover?: string;
+    notes?: number[];
+    bpm?: number;
+    baseFreq?: number;
   }[];
   onPublishVideoToDrop?: (payload: {
     blob: Blob;
@@ -313,6 +317,9 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
     initialTargetSubject || defaultTrackTarget
   );
 
+  // Moteur de pré-écoute acoustique du Drop dans la liste déroulante des morceaux
+  const dropPreviewEngine = useTargetDropAudioPreview(onPauseMainPlayer);
+
   const resolvedSelectedAudio = useMemo(() => {
     const tid = activeTarget.trackId || track.id;
     const found = catalogueAudioLookup.find((item) => item.id === tid);
@@ -475,6 +482,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
 
   // Nettoyage immédiat de l'audio du Drop et du microphone vocal
   const stopDropAudioPlayback = useCallback(() => {
+    dropPreviewEngine.stopPreview();
     if (micSessionRef.current) {
       micSessionRef.current.stop();
       micSessionRef.current = null;
@@ -1501,6 +1509,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 type="button"
                 onClick={() => {
                   stopTrendRecording();
+                  dropPreviewEngine.stopPreview();
                   onClose();
                 }}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#07090E]/65 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white active:scale-95 transition"
@@ -1533,10 +1542,20 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
             {/* Sélecteur Bi-Mode : Drop Musical 30s vs Avis Micro Sans Musique 30s + Cible */}
             <TrendStudioCaptureModeSelector
               captureMode={captureMode}
-              onChangeCaptureMode={setCaptureMode}
+              onChangeCaptureMode={(m) => {
+                dropPreviewEngine.stopPreview();
+                setCaptureMode(m);
+              }}
               activeTarget={activeTarget}
               availableTargets={availableTargets}
-              onChangeTarget={setActiveTarget}
+              onChangeTarget={(t) => {
+                dropPreviewEngine.stopPreview();
+                setActiveTarget(t);
+              }}
+              onPreviewTargetDrop={(t) => {
+                void dropPreviewEngine.togglePreview(t, catalogueAudioLookup);
+              }}
+              previewingKey={dropPreviewEngine.previewingKey}
               isRecording={isRecording}
               micLevel01={micLevel01}
             />
@@ -1550,6 +1569,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 <button
                   type="button"
                   onClick={() => {
+                    dropPreviewEngine.stopPreview();
                     if (isRecording) {
                       stopTrendRecording();
                     } else {

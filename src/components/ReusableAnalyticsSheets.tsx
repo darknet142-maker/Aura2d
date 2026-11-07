@@ -133,6 +133,8 @@ export interface AnalyticsTrackItem {
   waveformPeaks?: number[];
   isBeatDownloadable?: boolean;
   musicalKey?: string;
+  notes?: number[];
+  baseFreq?: number;
   audioUrl?: string;
   trackAnalysis?: TrackAnalysis;
 }
