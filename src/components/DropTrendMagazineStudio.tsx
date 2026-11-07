@@ -1972,7 +1972,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                           target: activeTarget,
                           caption: '',
                           publishToStatus: true,
-                          publishToFeed: false,
+                          publishToFeed: true,
                         });
                         if (ok !== false) setStatusQuickPublished(true);
                       }}

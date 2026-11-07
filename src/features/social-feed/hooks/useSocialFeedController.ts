@@ -40,8 +40,12 @@ export function useSocialFeedController({ actor, legacyRecommendations, likedTra
   const rankedPosts = useMemo(() => {
     const raw = rankSocialFeedPosts(visiblePosts, { lens: activeLens, likedTrackIds, tracksById, randomSeed });
     const now = Date.now();
-    const fresh = raw.filter((p) => (now - Date.parse(p.createdAtIso)) < 15 * 60_000 || p.authorId === actor.id);
-    return [...fresh, ...raw.filter((p) => !fresh.some((f) => f.id === p.id))];
+    const fresh = visiblePosts.filter((p) => {
+      const match = p.authorId === actor.id || (now - Date.parse(p.createdAtIso)) < 24 * 3600_000;
+      return activeLens === 'VIDEO_OPINIONS' ? match && p.archetype === 'VIDEO_OPINION' : match;
+    }).sort((a, b) => Date.parse(b.createdAtIso) - Date.parse(a.createdAtIso));
+    const freshIds = new Set(fresh.map((p) => p.id));
+    return [...fresh, ...raw.filter((p) => !freshIds.has(p.id))];
   }, [visiblePosts, activeLens, likedTrackIds, tracksById, randomSeed, actor.id]);
 
   const handleTogglePostLike = useCallback((pId: string) => {

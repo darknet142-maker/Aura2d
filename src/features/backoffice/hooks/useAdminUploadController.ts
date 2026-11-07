@@ -138,6 +138,18 @@ export function useAdminUploadController(params: {
       setNewTitle(baseTrackName);
     }
 
+    const probeAudio = new Audio(objectUrl);
+    probeAudio.addEventListener('loadedmetadata', () => {
+      if (Number.isFinite(probeAudio.duration) && probeAudio.duration > 0) {
+        const exactSec = Math.max(5, Math.round(probeAudio.duration));
+        setNewDurationFormatted(formatTime(exactSec));
+        const safeStart = Math.min(newDropStart, Math.max(0, exactSec - 15));
+        const safeDuration = Math.min(newDropDuration, Math.max(5, exactSec - safeStart));
+        setNewDropStart(safeStart);
+        setNewDropDuration(safeDuration);
+      }
+    });
+
     setIsUploadingFile(true);
     setUploadProgress(8);
     const progInterval = window.setInterval(() => {
@@ -194,8 +206,12 @@ export function useAdminUploadController(params: {
       const tempCtx = new AudioCtx();
       const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
 
-      const durSec = Math.max(30, Math.round(audioBuffer.duration));
+      const durSec = Math.max(5, Math.round(audioBuffer.duration));
       setNewDurationFormatted(formatTime(durSec));
+      const safeStart = Math.min(newDropStart, Math.max(0, durSec - 15));
+      const safeDuration = Math.min(newDropDuration, Math.max(5, durSec - safeStart));
+      setNewDropStart(safeStart);
+      setNewDropDuration(safeDuration);
 
       const rawData = audioBuffer.getChannelData(0);
       const bucketsCount = 64;
@@ -844,8 +860,8 @@ export function useAdminUploadController(params: {
       ambientPrimary: 'rgba(245, 166, 15, 0.52)',
       ambientSecondary: 'rgba(135, 78, 12, 0.42)',
       duration: parsedNewDuration,
-      dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 15)),
-      dropDuration: Math.min(newDropDuration, parsedNewDuration),
+      dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 10)),
+      dropDuration: Math.min(newDropDuration, Math.max(5, parsedNewDuration - Math.min(newDropStart, Math.max(0, parsedNewDuration - 10)))),
       baseFreq: 110 + Math.floor(Math.random() * 50),
       bpm:
         newBpm ??
@@ -1102,6 +1118,7 @@ export function useAdminUploadController(params: {
                   copyrightText: `Copyright 2026 ${track.labelName}. Tous droits réservés`,
                   duration: updatedDuration,
                   dropStart: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
+                  dropDuration: Math.min(track.dropDuration, Math.max(5, updatedDuration - Math.min(track.dropStart, Math.max(0, updatedDuration - 10)))),
                 }
               : t
           ),
@@ -1126,6 +1143,7 @@ export function useAdminUploadController(params: {
       cover_url: track.cover || null,
       duration: updatedDuration,
       drop_start: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
+      drop_duration: Math.min(track.dropDuration, Math.max(5, updatedDuration - Math.min(track.dropStart, Math.max(0, updatedDuration - 10)))),
       bpm: track.bpm,
       track_analysis: track.trackAnalysis ?? null,
       lyrics: track.lyrics ?? undefined,

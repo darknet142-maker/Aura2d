@@ -1793,6 +1793,73 @@ export function useDropPlatformController() {
       htmlAudioRef.current.pause();
     }
 
+    // --- Calibrage Chirurgical Matériel : Synchronisation exacte de la durée et du temps réel ---
+    const activeAudioEl = htmlAudioRef.current;
+    if (activeAudioEl && currentTrack.audioUrl) {
+      const syncMetadata = () => {
+        const rawDuration = activeAudioEl.duration;
+        if (Number.isFinite(rawDuration) && rawDuration > 0) {
+          const exactDuration = Math.round(rawDuration);
+          const safeDropStart = Math.min(
+            currentTrack.dropStart,
+            Math.max(0, exactDuration - 10)
+          );
+          const safeDropDuration = Math.min(
+            currentTrack.dropDuration,
+            Math.max(5, exactDuration - safeDropStart)
+          );
+
+          if (
+            currentTrack.duration !== exactDuration ||
+            currentTrack.dropStart !== safeDropStart ||
+            currentTrack.dropDuration !== safeDropDuration
+          ) {
+            setCatalogue((prev) =>
+              prev.map((alb, aIdx) =>
+                aIdx === safeAlbumIdx
+                  ? {
+                      ...alb,
+                      tracks: alb.tracks.map((t, tIdx) =>
+                        tIdx === safeTrackIdx
+                          ? {
+                              ...t,
+                              duration: exactDuration,
+                              dropStart: safeDropStart,
+                              dropDuration: safeDropDuration,
+                            }
+                          : t
+                      ),
+                    }
+                  : alb
+              )
+            );
+          }
+        }
+      };
+
+      const handleEnded = () => {
+        if (isRepeat) {
+          const targetStart = isDropMode ? currentTrack.dropStart : 0;
+          activeAudioEl.currentTime = targetStart;
+          setCurrentTime(targetStart);
+          activeAudioEl.play().catch(() => {});
+        } else {
+          navigateTrack(1);
+        }
+      };
+
+      activeAudioEl.addEventListener('loadedmetadata', syncMetadata);
+      activeAudioEl.addEventListener('durationchange', syncMetadata);
+      activeAudioEl.addEventListener('ended', handleEnded);
+
+      // Cleanup
+      return () => {
+        activeAudioEl.removeEventListener('loadedmetadata', syncMetadata);
+        activeAudioEl.removeEventListener('durationchange', syncMetadata);
+        activeAudioEl.removeEventListener('ended', handleEnded);
+      };
+    }
+
     if (hasExternalStream) {
       const streamId = currentTrack.externalStreamId!;
       const normFactor = Math.min(
@@ -2167,21 +2234,29 @@ export function useDropPlatformController() {
       }
 
       setCurrentTime((prev) => {
+        const audio = htmlAudioRef.current;
+        const hasActiveAudio = Boolean(currentTrack.audioUrl && audio);
+        const actualCur = audio && currentTrack.audioUrl && Number.isFinite(audio.currentTime) ? audio.currentTime : prev;
+        const actualDur = audio && currentTrack.audioUrl && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : currentTrack.duration;
+
         const dropEnd = Math.min(
-          currentTrack.duration,
+          actualDur,
           currentTrack.dropStart + currentTrack.dropDuration
         );
-        if (isDropMode && prev + 1 >= dropEnd) {
+        if (isDropMode && (actualCur >= dropEnd || prev + 1 >= dropEnd)) {
           seekAllEngines(currentTrack.dropStart);
           return currentTrack.dropStart;
         }
 
         const effectiveDuration =
-          playbackPrefs.autoTrimSilence && currentTrack.duration > 15
-            ? currentTrack.duration - 1
-            : currentTrack.duration;
+          playbackPrefs.autoTrimSilence && actualDur > 15
+            ? actualDur - 1
+            : actualDur;
 
-        if (prev + 1 >= effectiveDuration) {
+        if (
+          (audio && currentTrack.audioUrl && (audio.ended || actualCur >= effectiveDuration)) ||
+          (!hasActiveAudio && prev + 1 >= effectiveDuration)
+        ) {
           const trackId = currentTrack.id;
           const session = manualSessionRef.current;
 
@@ -2276,7 +2351,7 @@ export function useDropPlatformController() {
           navigateTrack(1);
           return 0;
         }
-        return prev + 1;
+        return hasActiveAudio ? Math.floor(actualCur) : prev + 1;
       });
     }, 1000);
     return () => clearInterval(timer);

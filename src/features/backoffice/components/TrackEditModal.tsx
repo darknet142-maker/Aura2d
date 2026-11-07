@@ -203,6 +203,45 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
               className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#F59E0B]"
             />
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] text-[#A3A9BA] mb-1">
+                Début Drop (sec)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={editingTrack.track.dropStart || 0}
+                onChange={(e) => {
+                  const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                  setEditingTrack({
+                    ...editingTrack,
+                    track: { ...editingTrack.track, dropStart: val },
+                  });
+                }}
+                className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#F59E0B]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-[#A3A9BA] mb-1">
+                Durée Drop (sec)
+              </label>
+              <input
+                type="number"
+                min={5}
+                max={30}
+                value={editingTrack.track.dropDuration || 30}
+                onChange={(e) => {
+                  const val = Math.min(30, Math.max(5, parseInt(e.target.value, 10) || 30));
+                  setEditingTrack({
+                    ...editingTrack,
+                    track: { ...editingTrack.track, dropDuration: val },
+                  });
+                }}
+                className="w-full bg-[#07080C] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#F59E0B]"
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-[11px] text-[#A3A9BA] mb-1">
               Label

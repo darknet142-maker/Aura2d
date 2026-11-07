@@ -735,6 +735,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               if (success) {
                 if (!desktopSplitMode) setActiveModal('MINI');
                 setHubTab('RECOS');
+                setShowTrendStudioModal(false);
               }
             }}
             onClose={() => setShowTrendStudioModal(false)}
