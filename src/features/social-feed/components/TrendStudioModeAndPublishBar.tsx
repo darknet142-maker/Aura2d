@@ -91,12 +91,24 @@ export const TrendStudioInAppPublishPanel: React.FC<TrendStudioInAppPublishPanel
   activeTarget, captureMode, onPublishToDrop,
 }) => {
   const [caption, setCaption] = useState('');
-  const [publishedKind, setPublishedKind] = useState<'NONE' | 'STATUS' | 'BOTH'>('NONE');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publishedToStatus, setPublishedToStatus] = useState(false);
+  const [publishedToFeed, setPublishedToFeed] = useState(false);
 
   const triggerPublish = async (toFeed: boolean) => {
-    if (publishedKind !== 'NONE') return;
-    const ok = await onPublishToDrop({ caption, publishToStatus: true, publishToFeed: toFeed });
-    if (ok !== false) setPublishedKind(toFeed ? 'BOTH' : 'STATUS');
+    if (isSubmitting) return;
+    if (toFeed && publishedToFeed) return;
+    if (!toFeed && publishedToStatus) return;
+    setIsSubmitting(true);
+    try {
+      const ok = await onPublishToDrop({ caption, publishToStatus: true, publishToFeed: toFeed });
+      if (ok !== false) {
+        setPublishedToStatus(true);
+        if (toFeed) setPublishedToFeed(true);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -108,18 +120,18 @@ export const TrendStudioInAppPublishPanel: React.FC<TrendStudioInAppPublishPanel
       />
       <div className="grid grid-cols-2 gap-2">
         <button
-          type="button" disabled={publishedKind !== 'NONE'} onClick={() => triggerPublish(false)}
+          type="button" disabled={isSubmitting || publishedToStatus} onClick={() => triggerPublish(false)}
           className="py-2 px-2.5 rounded-xl bg-[#DE1B34] hover:bg-[#f02842] disabled:opacity-60 text-white text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
         >
-          {publishedKind === 'STATUS' ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Radio className="w-3.5 h-3.5 shrink-0" />}
-          <span className="truncate">{publishedKind === 'STATUS' ? 'Publié en statut' : 'Publier en statut'}</span>
+          {publishedToStatus ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Radio className="w-3.5 h-3.5 shrink-0" />}
+          <span className="truncate">{publishedToStatus ? 'Publié en statut' : 'Publier en statut'}</span>
         </button>
         <button
-          type="button" disabled={publishedKind !== 'NONE'} onClick={() => triggerPublish(true)}
+          type="button" disabled={isSubmitting || publishedToFeed} onClick={() => triggerPublish(true)}
           className="py-2 px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-[#080A0F] text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
         >
-          {publishedKind === 'BOTH' ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Globe className="w-3.5 h-3.5 shrink-0" />}
-          <span className="truncate">{publishedKind === 'BOTH' ? 'Publié partout' : 'Statut + Fil'}</span>
+          {publishedToFeed ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Globe className="w-3.5 h-3.5 shrink-0" />}
+          <span className="truncate">{publishedToFeed ? 'Publié partout' : 'Statut + Fil'}</span>
         </button>
       </div>
     </div>

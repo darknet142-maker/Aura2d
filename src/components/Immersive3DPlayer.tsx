@@ -734,6 +734,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
               const success = await socialFeedCtrl.handlePublishStudioVideo(payload);
               if (success) {
                 if (!desktopSplitMode) setActiveModal('MINI');
+                if (payload.publishToFeed) socialFeedCtrl.setActiveLens('FOR_YOU_VIRAL');
                 setHubTab('RECOS');
                 setShowTrendStudioModal(false);
               }

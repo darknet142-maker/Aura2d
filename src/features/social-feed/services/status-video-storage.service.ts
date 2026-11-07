@@ -13,6 +13,7 @@ const SOCIAL_POSTS_LS_KEY = 'drop_social_feed_posts_v1';
 const USER_STATUSES_LS_KEY = 'drop_user_statuses_v1';
 const IDB_NAME = 'drop_social_videos_idb_v1';
 const IDB_STORE = 'status_video_blobs';
+const inMemoryBlobCache = new Map<string, Blob>();
 
 function openVideoIdb(): Promise<IDBDatabase | null> {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null);
@@ -26,27 +27,34 @@ function openVideoIdb(): Promise<IDBDatabase | null> {
   });
 }
 
+export function getCachedSocialVideoBlob(videoKey?: string): Blob | null {
+  return videoKey ? inMemoryBlobCache.get(videoKey) ?? null : null;
+}
+
 export async function saveSocialVideoBlob(videoKey: string, blob: Blob): Promise<boolean> {
+  inMemoryBlobCache.set(videoKey, blob);
   const db = await openVideoIdb();
-  if (!db) return false;
+  if (!db) return true;
   return new Promise((resolve) => {
     try {
       const tx = db.transaction(IDB_STORE, 'readwrite');
       tx.objectStore(IDB_STORE).put(blob, videoKey);
       tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
-    } catch { resolve(false); }
+      tx.onerror = () => resolve(true);
+    } catch { resolve(true); }
   });
 }
 
 export async function loadSocialVideoBlob(videoKey: string): Promise<Blob | null> {
+  const cached = inMemoryBlobCache.get(videoKey);
+  if (cached) return cached;
   const db = await openVideoIdb();
   if (!db) return null;
   return new Promise((resolve) => {
     try {
       const tx = db.transaction(IDB_STORE, 'readonly');
       const req = tx.objectStore(IDB_STORE).get(videoKey);
-      req.onsuccess = () => resolve(req.result instanceof Blob ? req.result : null);
+      req.onsuccess = () => { const res = req.result instanceof Blob ? req.result : null; if (res) inMemoryBlobCache.set(videoKey, res); resolve(res); };
       req.onerror = () => resolve(null);
     } catch { resolve(null); }
   });
@@ -54,6 +62,7 @@ export async function loadSocialVideoBlob(videoKey: string): Promise<Blob | null
 
 export async function deleteSocialVideoBlob(videoKey?: string): Promise<boolean> {
   if (!videoKey) return false;
+  inMemoryBlobCache.delete(videoKey);
   const db = await openVideoIdb();
   if (!db) return false;
   return new Promise((resolve) => {
@@ -67,38 +76,23 @@ export async function deleteSocialVideoBlob(videoKey?: string): Promise<boolean>
 }
 
 export function isStatusActive4h(st: UserStatusStory, nowMs = Date.now()): boolean {
-  const createdMs = Date.parse(st.createdAtIso);
   const expMs = Date.parse(st.expiresAtIso);
-  if (!Number.isFinite(expMs) || expMs <= nowMs) return false;
-  if (Number.isFinite(createdMs) && nowMs - createdMs > STATUS_MAX_LIFESPAN_MS) return false;
-  return true;
+  const createdMs = Date.parse(st.createdAtIso);
+  return Number.isFinite(expMs) && expMs > nowMs && (!Number.isFinite(createdMs) || nowMs - createdMs <= STATUS_MAX_LIFESPAN_MS);
 }
 
-export function purgeExpiredStatusesIrreversibly(
-  statuses: UserStatusStory[],
-  nowMs = Date.now()
-): { active: UserStatusStory[]; purgedIds: string[] } {
+export function purgeExpiredStatusesIrreversibly(statuses: UserStatusStory[], nowMs = Date.now()): { active: UserStatusStory[]; purgedIds: string[] } {
   const active: UserStatusStory[] = [];
   const purgedIds: string[] = [];
   for (const st of statuses) {
     if (isStatusActive4h(st, nowMs)) active.push(st);
-    else {
-      purgedIds.push(st.id);
-      if (st.videoIdbKey) void deleteSocialVideoBlob(st.videoIdbKey);
-    }
+    else { purgedIds.push(st.id); if (st.videoIdbKey) void deleteSocialVideoBlob(st.videoIdbKey); }
   }
   return { active, purgedIds };
 }
 
-export function countUserActiveProfileItems(
-  userId: string,
-  posts: SocialFeedPost[],
-  statuses: UserStatusStory[],
-  nowMs = Date.now()
-): number {
-  const ownPosts = posts.filter((p) => p.authorId === userId).length;
-  const ownStatuses = statuses.filter((s) => s.userId === userId && isStatusActive4h(s, nowMs)).length;
-  return ownPosts + ownStatuses;
+export function countUserActiveProfileItems(userId: string, posts: SocialFeedPost[], statuses: UserStatusStory[], nowMs = Date.now()): number {
+  return posts.filter((p) => p.authorId === userId).length + statuses.filter((s) => s.userId === userId && isStatusActive4h(s, nowMs)).length;
 }
 
 function sanitizePost(p: SocialFeedPost): SocialFeedPost {

@@ -93,7 +93,7 @@ export const SocialRecommendationsFeedView: React.FC<SocialRecommendationsFeedVi
               <Trophy className="w-3.5 h-3.5 shrink-0" /><span>Top Éclaireurs</span>
             </button>
           )}
-          <button type="button" onClick={() => setIsTasteModalOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-rose-500/30 text-rose-300 hover:bg-rose-500/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer" title="Personnaliser mes goûts musicaux (Style TikTok)">
+          <button type="button" onClick={() => setIsTasteModalOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D1017] border border-rose-500/30 text-rose-300 hover:bg-rose-500/15 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer" title="Personnaliser mes goûts musicaux & profil d'écoute DROP">
             <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-rose-400" /><span>Mes Goûts</span>
           </button>
         </div>

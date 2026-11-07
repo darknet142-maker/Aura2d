@@ -317,14 +317,14 @@ assert.equal(spotlightCodeUpdated.includes('aspect-[9/16]'), true, 'Les vidéos 
 assert.equal(spotlightCodeUpdated.includes('max-w-[340px] sm:max-w-[360px] mx-auto aspect-[9/16]'), true, 'Les vidéos doivent être cadrées verticalement avec centrage 9:16');
 console.log('✅ 27. Format vertical 9:16 strict validé pour l enregistrement et le visionnage vidéo.');
 
-// 28. MODAL DE PERSONNALISATION DES GOÛTS INSPIRÉ DE TIKTOK
+// 28. MODAL DE PERSONNALISATION DES GOÛTS STUDIO DROP NATIF
 const tasteModalCode = fs.readFileSync('src/features/social-feed/components/TasteOnboardingVibesModal.tsx', 'utf8');
 const feedViewCodeCheck = fs.readFileSync('src/features/social-feed/components/SocialRecommendationsFeedView.tsx', 'utf8');
 assert.equal(tasteModalCode.includes("Qu'aimerais-tu écouter sur DROP ?") || tasteModalCode.includes("Qu&apos;aimerais-tu écouter sur DROP ?"), true, 'Le modal doit afficher le titre inspiré de TikTok');
 assert.equal(tasteModalCode.includes('selectedIds.length >= 3'), true, 'Le bouton continuer doit requérir au moins 3 styles');
 assert.equal(feedViewCodeCheck.includes('TasteOnboardingVibesModal'), true, 'Le modal de goûts doit être connecté dans SocialRecommendationsFeedView');
 assert.equal(feedViewCodeCheck.includes('Mes Goûts'), true, 'Le bouton Mes Goûts doit être accessible directement dans le fil');
-console.log('✅ 28. Écran de personnalisation des goûts musicaux inspiré de TikTok validé.');
+console.log('✅ 28. Écran de personnalisation des goûts musicaux Studio DROP natif validé.');
 
 // 29. BOUTON PLAY INCONDITIONNEL DANS LA LISTE DÉROULANTE STUDIO SANS DÉPENDANCE
 const studioDropdownFresh = fs.readFileSync('src/features/social-feed/components/StudioSearchableTargetDropdown.tsx', 'utf8');

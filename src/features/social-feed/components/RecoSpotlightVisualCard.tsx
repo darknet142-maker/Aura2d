@@ -5,27 +5,18 @@ import { CoverArtwork } from '../../../components/CoverArtwork';
 import { formatCompactPlays } from '../../../components/player/playerEngineHelpers';
 import { SUBTLE_ENTRANCE_VARIANTS } from '../../../shared/ui/springMotion';
 import type { SocialFeedPost, StudioAudioCaptureMode } from '../types/social-feed.types';
-import { loadSocialVideoBlob } from '../services/status-video-storage.service';
+import { loadSocialVideoBlob, getCachedSocialVideoBlob } from '../services/status-video-storage.service';
 import { RecoCardHeaderAndRelay } from './RecoCardHeaderAndRelay';
 import { RecoCardActionBar } from './RecoCardActionBar';
 import { RecoCardReactionsCluster } from './RecoCardReactionsCluster';
 
 export interface RecoSpotlightVisualCardProps {
-  post: SocialFeedPost;
-  currentUserId: string;
-  trackPlays?: number;
-  onPlayTarget: () => void;
-  onPauseMainPlayer: () => void;
-  onOpenAuthorProfile: (userId: string) => void;
-  onOpenTargetSheet: () => void;
-  onOpenArtistProfile: () => void;
-  onToggleLike: () => void;
-  onOpenComments: () => void;
-  onToggleReDrop: (quote?: string) => void;
-  onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
+  post: SocialFeedPost; currentUserId: string; trackPlays?: number;
+  onPlayTarget: () => void; onPauseMainPlayer: () => void; onOpenAuthorProfile: (userId: string) => void;
+  onOpenTargetSheet: () => void; onOpenArtistProfile: () => void; onToggleLike: () => void;
+  onOpenComments: () => void; onToggleReDrop: (quote?: string) => void; onOpenStudioReaction: (mode: StudioAudioCaptureMode) => void;
   onOpenReactionsDetail?: (type: 'TROPHY' | 'FLAME' | 'HEART' | 'REDROP' | 'VIEWS') => void;
-  onDeletePost?: () => void;
-  onReportPost?: (postId: string) => void;
+  onDeletePost?: () => void; onReportPost?: (postId: string) => void;
 }
 
 export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = ({
@@ -33,16 +24,21 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
   onOpenTargetSheet, onOpenArtistProfile, onToggleLike, onOpenComments, onToggleReDrop, onOpenStudioReaction,
   onOpenReactionsDetail, onDeletePost, onReportPost,
 }) => {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(() => {
+    const b = post.videoIdbKey ? getCachedSocialVideoBlob(post.videoIdbKey) : null;
+    return b ? URL.createObjectURL(b) : null;
+  });
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     let revoked: string | null = null;
-    if (post.videoIdbKey) loadSocialVideoBlob(post.videoIdbKey).then((b) => { if (b) { revoked = URL.createObjectURL(b); setVideoUrl(revoked); } });
+    if (post.videoIdbKey && !videoUrl) {
+      loadSocialVideoBlob(post.videoIdbKey).then((b) => { if (b) { revoked = URL.createObjectURL(b); setVideoUrl(revoked); } });
+    }
     return () => { if (revoked) URL.revokeObjectURL(revoked); };
-  }, [post.videoIdbKey]);
+  }, [post.videoIdbKey, videoUrl]);
 
   const isVideoPost = post.archetype === 'VIDEO_OPINION';
   const isVoiceOnly = post.captureMode === 'VOICE_OPINION_NO_MUSIC';
@@ -73,11 +69,10 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
             : 'aspect-[4/4.3] max-h-[380px]'
         }`}
       >
-        {/* Cluster de Réactions Flottant en Applique Supérieure Droite (Style Sarah Michaels) */}
+        {/* Cluster de Réactions Flottant en Applique Supérieure Droite */}
         <div className="absolute -top-3.5 sm:-top-4 right-3 sm:right-4 z-30">
           <RecoCardReactionsCluster
-            post={post}
-            trackPlays={trackPlays}
+            post={post} trackPlays={trackPlays}
             onReact={(type) => {
               if (onOpenReactionsDetail) onOpenReactionsDetail(type);
               else if (type === 'HEART') onToggleLike();
@@ -129,9 +124,7 @@ export const RecoSpotlightVisualCard: React.FC<RecoSpotlightVisualCardProps> = (
               </div>
             )}
             <p className="text-[11px] text-[#A3A9BA] truncate tabular-nums">
-              {post.discoveriesCount > 0
-                ? `${post.discoveriesCount} personne${post.discoveriesCount > 1 ? 's ont' : ' a'} découvert ce son grâce à ${firstAuthorName}`
-                : `Soyez le premier à découvrir cette sélection de ${firstAuthorName}`}
+              {post.discoveriesCount > 0 ? `${post.discoveriesCount} personne${post.discoveriesCount > 1 ? 's ont' : ' a'} découvert grâce à ${firstAuthorName}` : `Découvrez cette sélection de ${firstAuthorName}`}
             </p>
           </div>
         </div>
