@@ -6,10 +6,7 @@ import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import type { SocialTargetSubject } from '../types/social-feed.types';
 import { useTargetDropAudioPreview } from '../hooks/useTargetDropAudioPreview';
 
-function norm(s?: string): string {
-  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-}
-
+function norm(s?: string): string { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
 export function filterTargetsInstant(targets: SocialTargetSubject[], rawQuery: string): SocialTargetSubject[] {
   const q = norm(rawQuery);
   if (!q) return targets;
@@ -46,12 +43,8 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
   const activePlayKey = previewingKey !== undefined ? previewingKey : fallbackPreview.previewingKey;
 
   useEffect(() => {
-    if (isOpen) {
-      setHighlightIdx(0);
-      setTimeout(() => searchInputRef.current?.focus(), 40);
-    } else if (!onPreviewTargetDrop) {
-      fallbackPreview.stopPreview();
-    }
+    if (isOpen) { setHighlightIdx(0); setTimeout(() => searchInputRef.current?.focus(), 40); }
+    else if (!onPreviewTargetDrop) { fallbackPreview.stopPreview(); }
   }, [isOpen, onPreviewTargetDrop, fallbackPreview]);
 
   useEffect(() => {
@@ -62,14 +55,10 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
 
   const kindLabel = (k: SocialTargetSubject['kind']) => (k === 'ARTIST' ? 'Artiste' : k === 'ALBUM' ? 'Projet' : 'Chanson');
   const KindIcon = selectedTarget.kind === 'ARTIST' ? UserRound : selectedTarget.kind === 'ALBUM' ? Disc3 : Music2;
-
   const toggleDropPlay = (e: React.MouseEvent, item: SocialTargetSubject) => {
     e.stopPropagation();
-    if (onPreviewTargetDrop) {
-      onPreviewTargetDrop(item);
-    } else {
-      void fallbackPreview.togglePreview(item);
-    }
+    if (onPreviewTargetDrop) onPreviewTargetDrop(item);
+    else void fallbackPreview.togglePreview(item);
   };
 
   return (
@@ -123,8 +112,22 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
                         <div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#F8FAFC] truncate">{item.title}</p><p className="text-[10.5px] text-[#A3A9BA] truncate">{item.subtitle} • {item.genre}</p></div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button type="button" onClick={(e) => toggleDropPlay(e, item)} aria-label={isPlayingThis ? 'Pause' : 'Écouter le Drop'} title="Écouter le drop (30s)" className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer ${isPlayingThis ? 'bg-[#DE1B34] text-white' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'}`}>
-                          {isPlayingThis ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+                        <button
+                          type="button" onClick={(e) => toggleDropPlay(e, item)}
+                          aria-label={isPlayingThis ? `Pause ${item.title}` : `Écouter l'extrait de ${item.title}`}
+                          title={`Écouter le Drop (30s) : ${item.title}`}
+                          className={`h-6 px-2 rounded-full flex items-center gap-1 text-[10.5px] font-bold transition cursor-pointer ${
+                            isPlayingThis ? 'bg-[#DE1B34] text-white shadow-[0_0_12px_rgba(222,27,52,0.6)]' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC] border border-white/10 hover:border-amber-400/40'
+                          }`}
+                        >
+                          {isPlayingThis ? (
+                            <span className="flex items-center gap-1">
+                              <span className="flex items-end gap-[1.5px] h-2.5 mr-0.5"><span className="w-[2px] h-2.5 bg-white rounded-full animate-pulse" /><span className="w-[2px] h-1.5 bg-white rounded-full animate-ping" /><span className="w-[2px] h-2 bg-white rounded-full animate-pulse" /></span>
+                              <Pause className="w-2.5 h-2.5 fill-current" />
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1"><Play className="w-2.5 h-2.5 fill-current ml-0.5" /><span className="text-[9.5px] font-mono font-extrabold text-amber-300">Drop</span></span>
+                          )}
                         </button>
                         {isSelected ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-[9.5px] font-semibold text-[#A3A9BA]">{kindLabel(item.kind)}</span>}
                       </div>

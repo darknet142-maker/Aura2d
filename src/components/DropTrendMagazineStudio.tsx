@@ -1566,7 +1566,7 @@ export const DropTrendMagazineStudio: React.FC<DropTrendMagazineStudioProps> = (
                 setActiveTarget(t);
               }}
               onPreviewTargetDrop={(t) => {
-                void dropPreviewEngine.togglePreview(t);
+                void dropPreviewEngine.togglePreview(t, catalogueAudioLookup);
               }}
               previewingKey={dropPreviewEngine.previewingKey}
               isRecording={isRecording}

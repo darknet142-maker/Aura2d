@@ -346,6 +346,16 @@ const fullscreenLyricsFresh = fs.readFileSync('src/components/player/modals/Full
 assert.equal(fullscreenLyricsFresh.includes('scrollIntoView'), false, 'Le défilement forcé automatique doit être supprimé pour permettre le scroll manuel');
 assert.equal(fullscreenLyricsFresh.includes('fontSizeLevel') && fullscreenLyricsFresh.includes('A+'), true, 'Le modal doit comporter le réglage de taille de texte A- / A+');
 assert.equal(fullscreenLyricsFresh.includes('blackOpacityPct') && fullscreenLyricsFresh.includes('Fond noir :'), true, 'Le modal doit comporter le réglage d opacité du fond noir');
-console.log('✅ 31. Lecteur de paroles manuel avec ajustement de police et opacité de fond noir validé.');
+assert.equal(fullscreenLyricsFresh.includes('onClick={() => onSeek(line.time)}'), false, 'Le conteneur de phrase ne doit pas avoir de onClick seek qui perturbe le scroll tactile');
+assert.equal(fullscreenLyricsFresh.includes('Défilement 100% Manuel'), true, 'Le modal doit indiquer le mode 100% manuel');
+console.log('✅ 31. Lecteur de paroles manuel avec liberté totale de scroll et absence de saut intempestif validé.');
 
-console.log('🎉 TOUS LES 31 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');
+// 32. SUPPRESSION TOTALE DU SON SYNTHÉTIQUE PAR DÉFAUT & BOUTON INTELLIGENT AVEC ÉGALISEUR
+const audioHookFresh = fs.readFileSync('src/features/social-feed/hooks/useTargetDropAudioPreview.ts', 'utf8');
+assert.equal(audioHookFresh.includes('startMelodicDrop'), false, 'Aucun son synthétique ou oscillateur de substitution ne doit exister');
+assert.equal(audioHookFresh.includes('AudioContext'), false, 'Le hook ne doit pas fabriquer de son WebAudio artificiel');
+assert.equal(audioHookFresh.includes('sawtooth'), false, 'Zéro onde en dents de scie ou note arbitraire');
+assert.equal(studioDropdownFresh.includes('animate-pulse') && studioDropdownFresh.includes('Drop'), true, 'Le bouton reconstruit doit comporter l égaliseur dynamique et le badge Drop');
+console.log('✅ 32. Éradication absolue du son par défaut et nouveau bouton Play intelligent opérationnel.');
+
+console.log('🎉 TOUS LES 32 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');

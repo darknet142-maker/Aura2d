@@ -23,6 +23,7 @@ export function buildComposerOptionsFromCatalogue(
         kind: 'TRACK', trackId: track.id, entityName: track.artist,
         title: track.title, subtitle: track.artist, genre: track.category,
         cover: track.cover, artworkType: track.artworkType, bpm: track.bpm,
+        audioUrl: track.audioUrl, dropStart: track.dropStart, dropDuration: track.dropDuration,
       },
     });
     if (!seenAlb.has(album.id)) {

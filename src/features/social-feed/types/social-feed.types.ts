@@ -19,6 +19,8 @@ export interface SocialTargetSubject {
   artworkType?: ArtworkType;
   bpm?: number;
   audioUrl?: string;
+  dropStart?: number;
+  dropDuration?: number;
   camelotKey?: string;
   lyricistName?: string;
 }
