@@ -87,6 +87,8 @@ export interface Track {
   waveformPeaks?: number[];
   isBeatDownloadable?: boolean;
   musicalKey?: string;
+  acousticEnergy?: number;
+  grooveScore?: number;
   trackAnalysis?: TrackAnalysis;
 }
 

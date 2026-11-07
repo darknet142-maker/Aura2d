@@ -109,7 +109,7 @@ export const CentralAwardsTab: React.FC<{ state: ReturnTypeUseImmersivePlayerSta
                               {
                                 id: 'PALMARES',
                                 label:
-                                  '10 Catégories & Vote Public (+241)',
+                                  '10 Catégories & Vote Public',
                               },
                               {
                                 id: 'BLIND_TEST',

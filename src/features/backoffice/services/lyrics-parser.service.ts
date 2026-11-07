@@ -70,3 +70,4 @@ export function generateStandardLyricsTemplate(title?: string, artist?: string):
     '[02:10] (Outro : Fading vocal et résonance finale)',
   ].join('\n');
 }
+

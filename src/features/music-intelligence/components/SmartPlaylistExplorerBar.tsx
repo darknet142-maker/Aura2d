@@ -98,7 +98,7 @@ export const SmartPlaylistExplorerBar: React.FC<SmartPlaylistExplorerBarProps> =
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Disc3 className="w-4 h-4 text-amber-400 shrink-0" />
-          <h3 className="text-xs sm:text-sm font-extrabold text-[#F8FAFC] truncate">Smart Playlists &amp; Transitions DJ (+241)</h3>
+          <h3 className="text-xs sm:text-sm font-extrabold text-[#F8FAFC] truncate">Smart Playlists &amp; Transitions DJ</h3>
         </div>
         {activeMode !== 'NONE' && (
           <button type="button" onClick={() => setActiveMode('NONE')} className="text-[10.5px] font-semibold text-[#A3A9BA] hover:text-[#F8FAFC] shrink-0">Fermer</button>

@@ -49,7 +49,7 @@ export const PublicCertificationDossierModal: React.FC<PublicCertificationDossie
               <Award className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">Registre Public Officiel • Gabon (+241)</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">Registre Public Officiel • Certification DROP</span>
               <h2 className="text-base sm:text-lg font-extrabold truncate">{tierColors.badge}</h2>
             </div>
           </div>
@@ -83,7 +83,7 @@ export const PublicCertificationDossierModal: React.FC<PublicCertificationDossie
               <strong className="text-sm font-bold text-amber-300 font-mono">{plays.toLocaleString('fr-FR')}</strong>
             </div>
             <div className="p-3 rounded-xl bg-[#080A0F] border border-white/5 space-y-0.5">
-              <span className="text-[10px] text-[#A3A9BA] block">Territoire Gabon (+241)</span>
+              <span className="text-[10px] text-[#A3A9BA] block">Territoire Certifié</span>
               <strong className="text-sm font-bold text-emerald-400 font-mono">≥ 74% Validé</strong>
             </div>
           </div>

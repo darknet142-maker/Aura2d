@@ -79,6 +79,8 @@ export function useAdminUploadController(params: {
   const [newIsBeatDownloadable, setNewIsBeatDownloadable] = useState<boolean>(false);
   const [newBpm, setNewBpm] = useState<number | null>(null);
   const [newMusicalKey, setNewMusicalKey] = useState<string>('');
+  const [newAcousticEnergy, setNewAcousticEnergy] = useState<number>(76);
+  const [newGroove, setNewGroove] = useState<number>(84);
   const [newCopyrightText, setNewCopyrightText] = useState<string>('');
   const [newAudioCodec, setNewAudioCodec] = useState<'OPUS' | 'AAC' | 'WAV'>('OPUS');
   const [newGabonTerritoryPct, setNewGabonTerritoryPct] = useState<number>(88);
@@ -732,7 +734,7 @@ export function useAdminUploadController(params: {
     const streamId =
       uploadSourceType === 'STREAM' ? extractExternalStreamId(newExternalUrl) : undefined;
     const albumName = newAlbum.trim() || `${newArtist.trim()} — Studio Session`;
-    const labelStr = newLabelName.trim() || 'Direct Prod Gabon';
+    const labelStr = newLabelName.trim() || 'Direct Prod';
     const parsedFeaturings = newFeaturingInput
       .split(',')
       .map((s) => s.trim())
@@ -813,6 +815,8 @@ export function useAdminUploadController(params: {
         newIsBeatDownloadable ||
         newCategory === 'Beats & Instrumentales',
       musicalKey: newMusicalKey.trim() || 'Do Mineur (Cm)',
+      acousticEnergy: newAcousticEnergy,
+      grooveScore: newGroove,
       dropContentId: finalContentId,
       waveformPeaks: finalPeaks,
       audioCodec: newAudioCodec || 'OPUS',
@@ -833,7 +837,7 @@ export function useAdminUploadController(params: {
         escrowFrozen: false,
         audit72hCompleted: true,
         dawAuditRequired: dawAuditFlag,
-        qrCertificateHash: `GABON-ECG-SHA256-${Date.now().toString(16).toUpperCase()}`,
+        qrCertificateHash: `DROP-ECG-SHA256-${Date.now().toString(16).toUpperCase()}`,
       },
       cover: newCoverFileUrl.trim(),
       artworkType: 'creative_yellow',
@@ -848,17 +852,20 @@ export function useAdminUploadController(params: {
         currentTrackAnalysis?.confirmedBpm ??
         currentTrackAnalysis?.detectedBpm ??
         100,
-      trackAnalysis:
-        currentTrackAnalysis ||
-        ensureTrackSurgicalAnalysis({
-          id: `t-${Date.now()}`,
-          title: newTitle.trim(),
-          category: newCategory,
-          bpm: newBpm ?? 100,
-          musicalKey: newMusicalKey.trim() || 'A minor (8A)',
-          duration: parsedNewDuration,
-          waveformPeaks: finalPeaks,
-        }),
+      trackAnalysis: {
+        ...(currentTrackAnalysis ||
+          ensureTrackSurgicalAnalysis({
+            id: `t-${Date.now()}`,
+            title: newTitle.trim(),
+            category: newCategory,
+            bpm: newBpm ?? 100,
+            musicalKey: newMusicalKey.trim() || 'A minor (8A)',
+            duration: parsedNewDuration,
+            waveformPeaks: finalPeaks,
+          })),
+        energy: Math.min(1, Math.max(0, Math.round(newAcousticEnergy) / 100)),
+        danceability: Math.min(1, Math.max(0, Math.round(newGroove) / 100)),
+      },
       audioUrl: uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined,
       externalStreamId: streamId || undefined,
       realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
@@ -1144,7 +1151,9 @@ export function useAdminUploadController(params: {
     newMixingEngineerName, setNewMixingEngineerName, newMasteringEngineerName, setNewMasteringEngineerName,
     newLyricistName, setNewLyricistName, newLyricsText, setNewLyricsText, newIsExternalLyricist, setNewIsExternalLyricist,
     newIsInstrumental, setNewIsInstrumental, newIsBeatDownloadable, setNewIsBeatDownloadable,
-    newBpm, setNewBpm, newMusicalKey, setNewMusicalKey, newCopyrightText,
+    newBpm, setNewBpm, newMusicalKey, setNewMusicalKey,
+    newAcousticEnergy, setNewAcousticEnergy, newGroove, setNewGroove,
+    newCopyrightText,
     newAudioCodec, newGabonTerritoryPct, setNewGabonTerritoryPct,
     newCoverFileUrl, newCoverFileName, newDurationFormatted, setNewDurationFormatted,
     newDropStart, setNewDropStart, newDropDuration, setNewDropDuration,

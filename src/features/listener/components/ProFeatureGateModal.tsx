@@ -38,7 +38,7 @@ export const ProFeatureGateModal: React.FC<ProFeatureGateModalProps> = ({
               <Crown className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">Exclusivité DROP PRO (+241)</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">Exclusivité DROP PRO</span>
               <h3 className="text-base font-extrabold">{featureTitle}</h3>
             </div>
           </div>
@@ -73,7 +73,7 @@ export const ProFeatureGateModal: React.FC<ProFeatureGateModalProps> = ({
             </span>
             <strong className="text-amber-300 font-mono">2 500 FCFA / mois</strong>
           </div>
-          <p className="text-[10px] text-[#A3A9BA]">Sans engagement. Activation immédiate via votre numéro Gabon (+241).</p>
+          <p className="text-[10px] text-[#A3A9BA]">Sans engagement. Activation immédiate.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-1">

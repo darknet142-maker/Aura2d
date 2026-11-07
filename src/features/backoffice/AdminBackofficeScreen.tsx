@@ -47,7 +47,7 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     entityDb, handleRegisterEntityInDb, newFeaturingInput, setNewFeaturingInput,
     newFeaturingSplitMode, setNewFeaturingSplitMode, newDurationFormatted, setNewDurationFormatted,
     newGabonTerritoryPct, setNewGabonTerritoryPct, newAlbum, setNewAlbum, newBpm, setNewBpm,
-    newMusicalKey, setNewMusicalKey, categories, customCategoryInput, setCustomCategoryInput,
+    newMusicalKey, setNewMusicalKey, newAcousticEnergy, setNewAcousticEnergy, newGroove, setNewGroove, categories, customCategoryInput, setCustomCategoryInput,
     handleAddCategory, newLabelName, setNewLabelName, newBeatmakerName, setNewBeatmakerName,
     newRecordingEngineerName, setNewRecordingEngineerName, newMixingEngineerName,
     setNewMixingEngineerName, newSoundEngineerName, setNewSoundEngineerName,
@@ -350,6 +350,10 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                   setNewBpm={setNewBpm}
                   newMusicalKey={newMusicalKey}
                   setNewMusicalKey={setNewMusicalKey}
+                  newAcousticEnergy={newAcousticEnergy}
+                  setNewAcousticEnergy={setNewAcousticEnergy}
+                  newGroove={newGroove}
+                  setNewGroove={setNewGroove}
                   categories={categories}
                   customCategoryInput={customCategoryInput}
                   setCustomCategoryInput={setCustomCategoryInput}

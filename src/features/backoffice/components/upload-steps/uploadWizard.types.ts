@@ -72,6 +72,10 @@ export interface AdminUploadWizardProps {
   setNewBpm: React.Dispatch<React.SetStateAction<number | null>>;
   newMusicalKey: string;
   setNewMusicalKey: React.Dispatch<React.SetStateAction<string>>;
+  newAcousticEnergy: number;
+  setNewAcousticEnergy: React.Dispatch<React.SetStateAction<number>>;
+  newGroove: number;
+  setNewGroove: React.Dispatch<React.SetStateAction<number>>;
   categories: string[];
   customCategoryInput: string;
   setCustomCategoryInput: React.Dispatch<React.SetStateAction<string>>;

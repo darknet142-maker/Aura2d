@@ -131,3 +131,4 @@ export const TasteOnboardingVibesModal: React.FC<TasteOnboardingVibesModalProps>
     </div>
   );
 };
+

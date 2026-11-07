@@ -326,4 +326,26 @@ assert.equal(feedViewCodeCheck.includes('TasteOnboardingVibesModal'), true, 'Le 
 assert.equal(feedViewCodeCheck.includes('Mes Goûts'), true, 'Le bouton Mes Goûts doit être accessible directement dans le fil');
 console.log('✅ 28. Écran de personnalisation des goûts musicaux inspiré de TikTok validé.');
 
-console.log('🎉 TOUS LES 28 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');
+// 29. BOUTON PLAY INCONDITIONNEL DANS LA LISTE DÉROULANTE STUDIO SANS DÉPENDANCE
+const studioDropdownFresh = fs.readFileSync('src/features/social-feed/components/StudioSearchableTargetDropdown.tsx', 'utf8');
+assert.equal(studioDropdownFresh.includes('toggleDropPlay(e, item)'), true, 'Le clic play doit déclencher toggleDropPlay');
+assert.equal(!studioDropdownFresh.includes('{onPreviewTargetDrop && ('), true, 'Le bouton play doit être rendu inconditionnellement sur chaque ligne');
+console.log('✅ 29. Bouton Play / préécoute inconditionnel présent sur chaque titre de la liste déroulante.');
+
+// 30. SAISIE MANUELLE ÉNERGIE ACOUSTIQUE & GROOVE DANS ADMIN
+const step2AdminCode = fs.readFileSync('src/features/backoffice/components/upload-steps/UploadStep2ArtistMetadata.tsx', 'utf8');
+const adminCtrlCode = fs.readFileSync('src/features/backoffice/hooks/useAdminUploadController.ts', 'utf8');
+assert.equal(step2AdminCode.includes('Énergie acoustique') && step2AdminCode.includes('newAcousticEnergy'), true, 'UploadStep2 doit comporter la saisie de l énergie acoustique');
+assert.equal(step2AdminCode.includes('Indice Groove') && step2AdminCode.includes('newGroove'), true, 'UploadStep2 doit comporter la saisie du groove');
+assert.equal(adminCtrlCode.includes('newAcousticEnergy') && adminCtrlCode.includes('newGroove'), true, 'Le contrôleur Admin doit gérer newAcousticEnergy et newGroove');
+assert.equal(adminCtrlCode.includes('acousticEnergy: newAcousticEnergy') && adminCtrlCode.includes('grooveScore: newGroove'), true, 'Le titre publié doit enregistrer l énergie acoustique et le score de groove');
+console.log('✅ 30. Saisie manuelle de l énergie acoustique et du groove opérationnelle en Admin.');
+
+// 31. LECTEUR DE PAROLES MANUEL AVEC CONTRÔLES POLICE & OPACITÉ DU FOND NOIR
+const fullscreenLyricsFresh = fs.readFileSync('src/components/player/modals/FullscreenLyricsModal.tsx', 'utf8');
+assert.equal(fullscreenLyricsFresh.includes('scrollIntoView'), false, 'Le défilement forcé automatique doit être supprimé pour permettre le scroll manuel');
+assert.equal(fullscreenLyricsFresh.includes('fontSizeLevel') && fullscreenLyricsFresh.includes('A+'), true, 'Le modal doit comporter le réglage de taille de texte A- / A+');
+assert.equal(fullscreenLyricsFresh.includes('blackOpacityPct') && fullscreenLyricsFresh.includes('Fond noir :'), true, 'Le modal doit comporter le réglage d opacité du fond noir');
+console.log('✅ 31. Lecteur de paroles manuel avec ajustement de police et opacité de fond noir validé.');
+
+console.log('🎉 TOUS LES 31 TESTS DE VERIFICATION CRITIQUES PASSENT AVEC SUCCÈS !');

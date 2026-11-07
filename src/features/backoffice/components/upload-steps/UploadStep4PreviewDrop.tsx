@@ -327,7 +327,7 @@ export const UploadStep4PreviewDrop: React.FC<AdminUploadWizardProps> = ({
                   </div>
                   <div className="p-2 rounded-lg bg-[#0B0E16] border border-white/[0.05]">
                     <span className="text-[#A3A9BA] block text-[10px]">
-                      Quota Écoutes Territoire Gabon (+241)
+                      Quota Écoutes Territoire
                     </span>
                     <span className="font-mono font-bold text-emerald-400 block mt-0.5">
                       {newGabonTerritoryPct}% (Éligible Certifications Nationales ≥ 70%)

@@ -123,11 +123,9 @@ export const StudioSearchableTargetDropdown: React.FC<StudioSearchableTargetDrop
                         <div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#F8FAFC] truncate">{item.title}</p><p className="text-[10.5px] text-[#A3A9BA] truncate">{item.subtitle} • {item.genre}</p></div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {onPreviewTargetDrop && (
-                          <button type="button" onClick={(e) => toggleDropPlay(e, item)} aria-label={isPlayingThis ? 'Pause' : 'Écouter le Drop'} title="Écouter le drop (30s)" className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer ${isPlayingThis ? 'bg-[#DE1B34] text-white' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'}`}>
-                            {isPlayingThis ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
-                          </button>
-                        )}
+                        <button type="button" onClick={(e) => toggleDropPlay(e, item)} aria-label={isPlayingThis ? 'Pause' : 'Écouter le Drop'} title="Écouter le drop (30s)" className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer ${isPlayingThis ? 'bg-[#DE1B34] text-white' : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'}`}>
+                          {isPlayingThis ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+                        </button>
                         {isSelected ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-[9.5px] font-semibold text-[#A3A9BA]">{kindLabel(item.kind)}</span>}
                       </div>
                     </div>

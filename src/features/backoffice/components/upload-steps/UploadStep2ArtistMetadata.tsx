@@ -62,6 +62,10 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
   setNewBpm,
   newMusicalKey,
   setNewMusicalKey,
+  newAcousticEnergy,
+  setNewAcousticEnergy,
+  newGroove,
+  setNewGroove,
   categories,
   customCategoryInput,
   setCustomCategoryInput,
@@ -309,7 +313,7 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
               </div>
               <div>
                 <label className="block text-[11px] text-emerald-300 mb-1">
-                  Quota Écoutes Territoire Gabon (+241) : {newGabonTerritoryPct}%
+                  Quota Écoutes Territoire : {newGabonTerritoryPct}%
                 </label>
                 <input
                   type="range"
@@ -355,9 +359,95 @@ export const UploadStep2ArtistMetadata: React.FC<AdminUploadWizardProps> = ({
               }}
             />
 
+            {/* MODULE DE SAISIE MANUELLE : ÉNERGIE ACOUSTIQUE & GROOVE */}
+            <div className="rounded-2xl bg-[#0D1017] border border-amber-400/25 p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-[#F8FAFC]">
+                  Dynamique Acoustique &amp; Groove (Saisie Manuelle)
+                </span>
+                <span className="text-[10px] font-mono text-[#A3A9BA]">
+                  Calibrage direct (0 – 100%)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* ÉNERGIE ACOUSTIQUE */}
+                <div className="p-3 rounded-xl bg-[#07090E] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-[#DE1B34] flex items-center gap-1.5">
+                      <span>Énergie acoustique</span>
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={newAcousticEnergy}
+                        onChange={(e) => {
+                          const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                          setNewAcousticEnergy(v);
+                        }}
+                        className="w-14 bg-white/5 border border-white/15 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-[#F8FAFC]"
+                      />
+                      <span className="text-xs text-[#A3A9BA] font-mono">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={newAcousticEnergy}
+                    onChange={(e) => setNewAcousticEnergy(Number(e.target.value))}
+                    className="w-full accent-[#DE1B34] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9.5px] font-mono text-[#A3A9BA]">
+                    <span>0% Doux / Intimiste</span>
+                    <span className="text-[#DE1B34] font-semibold">{newAcousticEnergy}%</span>
+                    <span>100% Impact Massif</span>
+                  </div>
+                </div>
+
+                {/* INDICE DE GROOVE */}
+                <div className="p-3 rounded-xl bg-[#07090E] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                      <span>Indice Groove</span>
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={newGroove}
+                        onChange={(e) => {
+                          const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                          setNewGroove(v);
+                        }}
+                        className="w-14 bg-white/5 border border-white/15 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-[#F8FAFC]"
+                      />
+                      <span className="text-xs text-[#A3A9BA] font-mono">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={newGroove}
+                    onChange={(e) => setNewGroove(Number(e.target.value))}
+                    className="w-full accent-amber-400 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9.5px] font-mono text-[#A3A9BA]">
+                    <span>0% Rigide / Linéaire</span>
+                    <span className="text-amber-400 font-semibold">{newGroove}%</span>
+                    <span>100% Bounce &amp; Danse</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-[#07080C] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-2">
               <span className="text-[11px] text-[#A3A9BA]">
-                Genre / Identité Musicale Gabonaise *
+                Genre / Style Musical *
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {categories.map((cat) => (
