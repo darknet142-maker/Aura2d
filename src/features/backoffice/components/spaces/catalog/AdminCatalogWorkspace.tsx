@@ -10,6 +10,8 @@ import type { Track } from '../../../../../shared/types/domain.types';
 export interface AdminCatalogWorkspaceProps {
   ctrl: ReturnTypeUseDropPlatformController;
   onNavigateToSpace: (spaceId: any) => void;
+  onSelectTrack?: (trackId: string) => void;
+  onSelectArtist?: (artistName: string) => void;
 }
 
 const formatDuration = (sec: number) => {
@@ -18,7 +20,12 @@ const formatDuration = (sec: number) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({ ctrl, onNavigateToSpace }) => {
+export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({
+  ctrl,
+  onNavigateToSpace,
+  onSelectTrack,
+  onSelectArtist,
+}) => {
   const [subTab, setSubTab] = useState<'RELEASES' | 'ALGO' | 'INTEL'>('RELEASES');
   const [activeFilter, setActiveFilter] = useState<CatalogFilterTab>('ALL');
   const [viewMode, setViewMode] = useState<CatalogViewMode>('GRID');
@@ -108,7 +115,7 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({ ct
             <ReleaseCardGrid
               tracks={filteredTracks}
               trackRankMap={ctrl.trackRankMap}
-              onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)}
+              onSelectTrack={(tid: string) => (onSelectTrack ? onSelectTrack(tid) : ctrl.setSelectedTrackId(tid))}
               onEditTrack={handleEditTrack}
               onResetFilters={() => {
                 setActiveFilter('ALL');
@@ -119,7 +126,7 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({ ct
             <ReleaseTableView
               tracks={filteredTracks}
               trackRankMap={ctrl.trackRankMap}
-              onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)}
+              onSelectTrack={(tid: string) => (onSelectTrack ? onSelectTrack(tid) : ctrl.setSelectedTrackId(tid))}
               onEditTrack={handleEditTrack}
             />
           )}
@@ -132,16 +139,16 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({ ct
           algoFilterValue={ctrl.algoFilterValue} setAlgoFilterValue={ctrl.setAlgoFilterValue}
           algoFilterOptions={ctrl.algoFilterOptions} dropAwardsList={ctrl.dropAwardsList}
           groupedDimensionRankings={ctrl.groupedDimensionRankings} rankedFilteredTracks={ctrl.rankedFilteredTracks}
-          trackRankMap={ctrl.trackRankMap} onSelectArtist={(name: string) => ctrl.setSelectedArtistName(name)}
-          onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)} onSaveAndSyncAll={ctrl.handleSaveAndSyncAllAdmin}
+          trackRankMap={ctrl.trackRankMap} onSelectArtist={(name: string) => (onSelectArtist ? onSelectArtist(name) : ctrl.setSelectedArtistName(name))}
+          onSelectTrack={(tid: string) => (onSelectTrack ? onSelectTrack(tid) : ctrl.setSelectedTrackId(tid))} onSaveAndSyncAll={ctrl.handleSaveAndSyncAllAdmin}
         />
       )}
 
       {subTab === 'INTEL' && (
         <CatalogueMusicAnalyticsPanel
           tracks={ctrl.allTracksFlat}
-          onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)}
-          onSelectArtist={(name: string) => ctrl.setSelectedArtistName(name)}
+          onSelectTrack={(tid: string) => (onSelectTrack ? onSelectTrack(tid) : ctrl.setSelectedTrackId(tid))}
+          onSelectArtist={(name: string) => (onSelectArtist ? onSelectArtist(name) : ctrl.setSelectedArtistName(name))}
         />
       )}
     </div>

@@ -5,9 +5,10 @@ import type { ReturnTypeUseDropPlatformController } from '../../../../listener/h
 
 export interface AdminListenersWorkspaceProps {
   ctrl: ReturnTypeUseDropPlatformController;
+  onSelectUser?: (userId: string) => void;
 }
 
-export const AdminListenersWorkspace: React.FC<AdminListenersWorkspaceProps> = ({ ctrl }) => {
+export const AdminListenersWorkspace: React.FC<AdminListenersWorkspaceProps> = ({ ctrl, onSelectUser }) => {
   const usersCount = ctrl.users.length;
   const totalListenedSec = ctrl.users.reduce(
     (acc: number, u: any) => acc + Object.values(u.trackStats).reduce((sum: number, st: any) => sum + (st.listenSeconds || 0), 0),
@@ -68,7 +69,10 @@ export const AdminListenersWorkspace: React.FC<AdminListenersWorkspaceProps> = (
 
       <AdminUsersDirectory
         users={ctrl.users}
-        onSelectUser={(uid: string) => ctrl.setSelectedConsumerUserId(uid)}
+        onSelectUser={(uid: string) => {
+          if (onSelectUser) onSelectUser(uid);
+          else ctrl.setSelectedConsumerUserId(uid);
+        }}
         onSaveAndSyncAll={ctrl.handleSaveAndSyncAllAdmin}
       />
     </div>

@@ -15,12 +15,18 @@ export interface AdminSpaceContentRouterProps {
   currentSpaceId: AdminSpaceId;
   ctrl: ReturnTypeUseDropPlatformController;
   onNavigateToSpace: (spaceId: AdminSpaceId) => void;
+  onSelectTrack?: (trackId: string) => void;
+  onSelectArtist?: (artistName: string) => void;
+  onSelectUser?: (userId: string) => void;
 }
 
 export const AdminSpaceContentRouter: React.FC<AdminSpaceContentRouterProps> = ({
   currentSpaceId,
   ctrl,
   onNavigateToSpace,
+  onSelectTrack,
+  onSelectArtist,
+  onSelectUser,
 }) => {
   switch (currentSpaceId) {
     case '00_OVERVIEW':
@@ -38,6 +44,8 @@ export const AdminSpaceContentRouter: React.FC<AdminSpaceContentRouterProps> = (
         <AdminCatalogWorkspace
           ctrl={ctrl}
           onNavigateToSpace={onNavigateToSpace}
+          onSelectTrack={onSelectTrack}
+          onSelectArtist={onSelectArtist}
         />
       );
 
@@ -45,13 +53,13 @@ export const AdminSpaceContentRouter: React.FC<AdminSpaceContentRouterProps> = (
       return <AdminStudioWorkspace ctrl={ctrl} />;
 
     case '03_LISTENERS':
-      return <AdminListenersWorkspace ctrl={ctrl} />;
+      return <AdminListenersWorkspace ctrl={ctrl} onSelectUser={onSelectUser} />;
 
     case '04_PARTNERS':
       return <AdminPartnersWorkspace ctrl={ctrl} />;
 
     case '05_FINANCE':
-      return <AdminFinanceWorkspace ctrl={ctrl} />;
+      return <AdminFinanceWorkspace ctrl={ctrl} onSelectTrack={onSelectTrack} />;
 
     case '06_ADS':
       return <AdminAdsWorkspace ctrl={ctrl} />;

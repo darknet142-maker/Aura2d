@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { SUBTLE_ENTRANCE_VARIANTS } from '../../shared/ui/springMotion';
 import {
@@ -12,13 +12,15 @@ import type { ReturnTypeUseDropPlatformController } from '../listener/hooks/useD
 export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
   const [adminLayoutMode, setAdminLayoutMode] = useState<'SAAS_2' | 'CLASSIC'>('SAAS_2');
   const nav = useAdminNavigationHistory('00_OVERVIEW');
+  const isNavigatingRef = useRef(false);
 
-  // Synchronisation descendante : quand la navigation de l'historique change, refléter sur le contrôleur
+  // Synchronisation descendante : l'historique dicte l'état actif sur le contrôleur
   useEffect(() => {
+    isNavigatingRef.current = true;
     if (nav.current.type === 'SPACE') {
-      if (ctrl.selectedTrackDetail) ctrl.setSelectedTrackId(null);
-      if (ctrl.selectedArtistAnalytics) ctrl.setSelectedArtistName(null);
-      if (ctrl.selectedConsumerUser) ctrl.setSelectedConsumerUserId(null);
+      ctrl.setSelectedTrackId(null);
+      ctrl.setSelectedArtistName(null);
+      ctrl.setSelectedConsumerUserId(null);
     } else if (nav.current.type === 'TRACK_DRILLDOWN') {
       if (ctrl.selectedTrackDetail?.track.id !== nav.current.trackId) {
         ctrl.setSelectedTrackId(nav.current.trackId);
@@ -32,36 +34,43 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
         ctrl.setSelectedConsumerUserId(nav.current.userId);
       }
     }
+    const timer = setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 50);
+    return () => clearTimeout(timer);
   }, [nav.current]);
 
-  // Synchronisation ascendante : quand un clic profond active un drilldown depuis une vue imbriquée
+  // Synchronisation ascendante sécurisée : protégée contre les rebonds
   useEffect(() => {
+    if (isNavigatingRef.current) return;
     if (ctrl.selectedTrackDetail && nav.current.type !== 'TRACK_DRILLDOWN') {
-      nav.navigate({
-        type: 'TRACK_DRILLDOWN',
-        trackId: ctrl.selectedTrackDetail.track.id,
-        label: ctrl.selectedTrackDetail.track.title,
-      });
+      nav.navigateToTrack(
+        ctrl.selectedTrackDetail.track.id,
+        ctrl.selectedTrackDetail.track.title,
+        nav.activeSpaceId
+      );
     }
   }, [ctrl.selectedTrackDetail]);
 
   useEffect(() => {
+    if (isNavigatingRef.current) return;
     if (ctrl.selectedArtistAnalytics && nav.current.type !== 'ARTIST_DRILLDOWN') {
-      nav.navigate({
-        type: 'ARTIST_DRILLDOWN',
-        artistName: ctrl.selectedArtistAnalytics.artistName,
-        label: ctrl.selectedArtistAnalytics.artistName,
-      });
+      nav.navigateToArtist(
+        ctrl.selectedArtistAnalytics.artistName,
+        ctrl.selectedArtistAnalytics.artistName,
+        nav.activeSpaceId
+      );
     }
   }, [ctrl.selectedArtistAnalytics]);
 
   useEffect(() => {
+    if (isNavigatingRef.current) return;
     if (ctrl.selectedConsumerUser && nav.current.type !== 'USER_DRILLDOWN') {
-      nav.navigate({
-        type: 'USER_DRILLDOWN',
-        userId: ctrl.selectedConsumerUser.id,
-        label: ctrl.selectedConsumerUser.name,
-      });
+      nav.navigateToUser(
+        ctrl.selectedConsumerUser.id,
+        ctrl.selectedConsumerUser.name,
+        nav.activeSpaceId
+      );
     }
   }, [ctrl.selectedConsumerUser]);
 

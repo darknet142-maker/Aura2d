@@ -70,7 +70,7 @@ export const EntityFinancialExplorer: React.FC<EntityFinancialExplorerProps> = (
             type="button"
             onClick={() => { setScope('ALBUM'); setSelectedEntityName(''); }}
             className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer transition ${
-              scope === 'ALGBUM' as any ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+              scope === 'ALBUM' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             <Disc className="w-3.5 h-3.5" />

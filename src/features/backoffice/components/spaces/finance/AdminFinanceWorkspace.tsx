@@ -9,9 +9,10 @@ import { DollarSign, UserCheck, ShieldCheck } from 'lucide-react';
 
 export interface AdminFinanceWorkspaceProps {
   ctrl: ReturnTypeUseDropPlatformController;
+  onSelectTrack?: (trackId: string) => void;
 }
 
-export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ctrl }) => {
+export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ctrl, onSelectTrack }) => {
   const [activeTab, setActiveTab] = useState<'ANALYTICS' | 'INDIVIDUAL' | 'BUGADA_PANEL'>('ANALYTICS');
 
   return (
@@ -97,7 +98,10 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
       {activeTab === 'INDIVIDUAL' && (
         <EntityFinancialExplorer
           tracks={ctrl.allTracksFlat}
-          onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)}
+          onSelectTrack={(tid: string) => {
+            if (onSelectTrack) onSelectTrack(tid);
+            else ctrl.setSelectedTrackId(tid);
+          }}
           onToast={(msg) => ctrl.pushNotification('Royalties & Finance', msg, 'DATABASE')}
         />
       )}

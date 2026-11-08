@@ -21,30 +21,20 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const currentSpaceId: AdminSpaceId =
-    nav.current.type === 'SPACE' ? nav.current.spaceId : '01_CATALOGUE';
+  const currentSpaceId: AdminSpaceId = nav.activeSpaceId;
   const currentSpace =
     ADMIN_SPACES_REGISTRY.find((s) => s.id === currentSpaceId) || ADMIN_SPACES_REGISTRY[0];
 
   const handleSelectTrack = (tid: string) => {
-    ctrl.setSelectedArtistName(null);
-    ctrl.setSelectedConsumerUserId(null);
-    ctrl.setSelectedTrackId(tid);
-    nav.navigate({ type: 'TRACK_DRILLDOWN', trackId: tid, label: tid });
+    nav.navigateToTrack(tid, tid, nav.activeSpaceId);
   };
 
   const handleSelectArtist = (artistName: string) => {
-    ctrl.setSelectedTrackId(null);
-    ctrl.setSelectedConsumerUserId(null);
-    ctrl.setSelectedArtistName(artistName);
-    nav.navigate({ type: 'ARTIST_DRILLDOWN', artistName, label: artistName });
+    nav.navigateToArtist(artistName, artistName, nav.activeSpaceId);
   };
 
   const handleSelectUser = (uid: string) => {
-    ctrl.setSelectedTrackId(null);
-    ctrl.setSelectedArtistName(null);
-    ctrl.setSelectedConsumerUserId(uid);
-    nav.navigate({ type: 'USER_DRILLDOWN', userId: uid, label: uid });
+    nav.navigateToUser(uid, uid, nav.activeSpaceId);
   };
 
   return (
@@ -76,6 +66,9 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
           canGoBack={nav.canGoBack}
           previousLabel={nav.previousLabel}
           onGoBack={() => {
+            ctrl.setSelectedTrackId(null);
+            ctrl.setSelectedArtistName(null);
+            ctrl.setSelectedConsumerUserId(null);
             nav.goBack();
           }}
         />
@@ -84,7 +77,10 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
           {nav.current.type === 'TRACK_DRILLDOWN' && ctrl.selectedTrackDetail ? (
             <AdminTrackDrilldownView
               selectedTrackDetail={ctrl.selectedTrackDetail}
-              onClose={nav.goBack}
+              onClose={() => {
+                ctrl.setSelectedTrackId(null);
+                nav.goBack();
+              }}
               onSelectArtist={handleSelectArtist}
               onPlayTrackInPlayer={(detail) => {
                 ctrl.finalizeListeningSessionOnZap();
@@ -107,7 +103,10 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
               royaltyLedger={ctrl.royaltyLedger}
               royaltySettings={ctrl.royaltyLedgerState.settings}
               trackRankMap={ctrl.trackRankMap}
-              onClose={nav.goBack}
+              onClose={() => {
+                ctrl.setSelectedArtistName(null);
+                nav.goBack();
+              }}
               onSelectTrack={handleSelectTrack}
               onSelectConsumerUser={handleSelectUser}
             />
@@ -117,7 +116,10 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
               consumerAnalytics={ctrl.consumerAnalytics}
               users={ctrl.users}
               trackRankMap={ctrl.trackRankMap}
-              onClose={nav.goBack}
+              onClose={() => {
+                ctrl.setSelectedConsumerUserId(null);
+                nav.goBack();
+              }}
               onSelectTrack={handleSelectTrack}
             />
           ) : (
@@ -128,8 +130,11 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
                 ctrl.setSelectedTrackId(null);
                 ctrl.setSelectedArtistName(null);
                 ctrl.setSelectedConsumerUserId(null);
-                nav.navigate({ type: 'SPACE', spaceId: s });
+                nav.navigateToSpace(s);
               }}
+              onSelectTrack={handleSelectTrack}
+              onSelectArtist={handleSelectArtist}
+              onSelectUser={handleSelectUser}
             />
           )}
         </main>
