@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   X,
@@ -9,6 +9,7 @@ import {
   UserRound,
   Bell,
   Shield,
+  Coins,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DropOfficialLogo } from '../../../components/CoverArtwork';
@@ -25,6 +26,7 @@ import { CentralExplorerTab } from './CentralExplorerTab';
 import { CentralRankingsTab } from './CentralRankingsTab';
 import { CentralAwardsTab } from './CentralAwardsTab';
 import { CentralRecosAndArtistsTabs } from './CentralRecosAndArtistsTabs';
+import { UserTokenWalletModal, getOrCreateUserWallet } from '../../tokens';
 
 export interface CentralHubWorkspaceProps {
   state: ReturnTypeUseImmersivePlayerState;
@@ -96,6 +98,8 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
     enableAwardsCeremony,
   } = state;
 
+  const [isTokenWalletOpen, setIsTokenWalletOpen] = useState(false);
+
   return (
     <motion.div
       variants={SUBTLE_ENTRANCE_VARIANTS}
@@ -136,6 +140,19 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
               )}
             </motion.button>
           )}
+
+          <motion.button
+            type="button"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={SPRING_SNAPPY}
+            onClick={() => setIsTokenWalletOpen(true)}
+            className="px-2.5 py-1.5 rounded-full bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/35 text-amber-300 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+            title="Mon Portefeuille de Jetons Sponsorisés"
+          >
+            <Coins className="w-3.5 h-3.5 shrink-0" />
+            <span className="font-mono">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
+          </motion.button>
 
           <motion.button
             type="button"
@@ -440,6 +457,17 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
           })}
         </nav>
       </div>
+
+      <UserTokenWalletModal
+        isOpen={isTokenWalletOpen}
+        onClose={() => setIsTokenWalletOpen(false)}
+        userId={currentUser?.id || 'usr-default'}
+        currentActivePass={subscriptionPass}
+        onPassRedeemed={(newPass) => {
+          if (onChangeSubscriptionPass) onChangeSubscriptionPass(newPass);
+        }}
+        onToast={showToast}
+      />
     </motion.div>
   );
 };
