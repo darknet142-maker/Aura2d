@@ -2,6 +2,14 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  applyTokenTransaction,
+  getOrCreateUserWallet,
+  getOrCreateSponsorWallet,
+  getLedgerHistory,
+  getUserLedgerHistory,
+  getSponsorLedgerHistory,
+} from './src/features/tokens';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -163,6 +171,54 @@ async function startServer() {
       recentEvents,
       tracks: Array.from(serverTrackMetrics.values()),
     });
+  });
+
+  // ============================================================================
+  // ÉCONOMIE DES JETONS SPONSORISÉS — API REST & JOURNAL COMPTABLE SERVEUR
+  // ============================================================================
+
+  app.get('/api/tokens/wallet/:userId', (req, res) => {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ status: 'error', message: 'userId manquant' });
+    const wallet = getOrCreateUserWallet(userId);
+    const history = getUserLedgerHistory(userId);
+    return res.status(200).json({ status: 'ok', wallet, history });
+  });
+
+  app.get('/api/tokens/sponsor-wallet/:sponsorId', (req, res) => {
+    const { sponsorId } = req.params;
+    if (!sponsorId) return res.status(400).json({ status: 'error', message: 'sponsorId manquant' });
+    const wallet = getOrCreateSponsorWallet(sponsorId);
+    const history = getSponsorLedgerHistory(sponsorId);
+    return res.status(200).json({ status: 'ok', wallet, history });
+  });
+
+  app.get('/api/tokens/ledger', (req, res) => {
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+    return res.status(200).json({
+      status: 'ok',
+      count: getLedgerHistory(limit).length,
+      ledger: getLedgerHistory(limit),
+    });
+  });
+
+  app.post('/api/tokens/transaction', (req, res) => {
+    try {
+      const result = applyTokenTransaction(req.body);
+      if (!result.success) {
+        return res.status(400).json({ status: 'error', message: result.error });
+      }
+      return res.status(200).json({
+        status: 'ok',
+        isDuplicate: Boolean(result.isDuplicate),
+        entry: result.entry,
+        userWallet: result.userWallet,
+        sponsorWallet: result.sponsorWallet,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur interne de transaction';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
   });
 
   if (process.env.NODE_ENV !== 'production') {
