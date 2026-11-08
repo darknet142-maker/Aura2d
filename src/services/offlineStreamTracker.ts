@@ -36,6 +36,9 @@ export interface OfflineStreamEvent {
   verifiedPhoneGabon?: string;
   networkOperator?: GabonNetworkOperator;
   offlineCacheAgeDays?: number;
+  // Séparation Fiscale & Juridique : Organique vs Sponsorisé (Campagnes de Jetons)
+  streamCategory?: 'ORGANIC_STREAM' | 'SPONSORED_STREAM';
+  campaignId?: string;
 }
 
 export interface SyncStatusSnapshot {
@@ -236,6 +239,7 @@ export class OfflineStreamTracker {
       deviceHardwareId: extraData.deviceHardwareId || 'DEV-GA-8492-X9',
       verifiedPhoneGabon: extraData.verifiedPhoneGabon || '+241 074 82 91 04',
       networkOperator: extraData.networkOperator || 'AIRTEL_CGNAT',
+      streamCategory: extraData.streamCategory || 'ORGANIC_STREAM',
       ...extraData,
     };
 

@@ -1,32 +1,23 @@
 import {
-  LISTENER_OFFERS,
-  type ListenerPlanId,
-  type PaymentChannel,
-  type RightsHolderTaxStatus,
-  type RoyaltySettings,
+  LISTENER_OFFERS, type ListenerPlanId, type PaymentChannel,
+  type RightsHolderTaxStatus, type RoyaltySettings,
 } from '../economics/economicConfig';
 import { computeNetBase, sumNetBases, EMPTY_NET_BASE, type NetBaseBreakdown } from '../economics/fiscalEngine';
 import {
-  computeUserCentricRoyalties,
-  type FreeListenerInput,
-  type ListeningEntry,
-  type PayingListenerInput,
-  type UserCentricResult,
+  computeUserCentricRoyalties, type FreeListenerInput, type ListeningEntry,
+  type PayingListenerInput, type UserCentricResult,
 } from '../economics/userCentricEngine';
 import { splitAllRights, type RightsLine, type TrackRightsMeta } from '../economics/rightsSplitEngine';
 import {
-  buildBugadaRemittance,
-  buildPayoutStatements,
-  totalWithholdingDue,
-  type BugadaRemittance,
-  type PayoutStatement,
+  buildBugadaRemittance, buildPayoutStatements, totalWithholdingDue,
+  type BugadaRemittance, type PayoutStatement,
 } from '../economics/payoutEngine';
 import type { StatsBaseline } from './royaltyLedgerStore';
 
 export interface ListenerBilling {
   plan: ListenerPlanId;
   channel: PaymentChannel;
-  /** Nombre de Pass 7 jours achetés sur la période (Pass hebdomadaire uniquement). */
+  /** Nombre de Pass 7 jours achetés sur la période. */
   passesPurchased?: number;
 }
 
@@ -39,7 +30,13 @@ export interface LedgerListener {
   id: string;
   name: string;
   billing?: ListenerBilling;
-  trackStats: Record<string, { trackId: string; listenSeconds: number; playsCount: number }>;
+  trackStats: Record<string, {
+    trackId: string;
+    listenSeconds: number;
+    playsCount: number;
+    organicPlaysCount?: number;
+    sponsoredPlaysCount?: number;
+  }>;
 }
 
 export interface RoyaltyLedger {
@@ -62,14 +59,23 @@ export function periodGrossForBilling(billing: ListenerBilling): number {
   return offer.priceTtc;
 }
 
-/** Écoutes de la période = cumul actuel − instantané pris à la dernière clôture. */
+/** Écoutes de la période = cumul actuel − instantané à la dernière clôture.
+ * Règle d'or DROP : Seuls les ORGANIC_STREAM rentrent dans le pool BUGADA.
+ * Les streams sponsorisés de campagnes sont exclus du calcul des droits d'auteur.
+ */
 function periodEntries(listener: LedgerListener, baseline: StatsBaseline): ListeningEntry[] {
   const base = baseline[listener.id] ?? {};
-  return Object.values(listener.trackStats).map((stat) => ({
-    trackId: stat.trackId,
-    validStreams: Math.max(0, stat.playsCount - (base[stat.trackId]?.plays ?? 0)),
-    listenSeconds: Math.max(0, stat.listenSeconds - (base[stat.trackId]?.seconds ?? 0)),
-  }));
+  return Object.values(listener.trackStats).map((stat) => {
+    const effectiveOrganic = typeof stat.organicPlaysCount === 'number'
+      ? stat.organicPlaysCount
+      : Math.max(0, stat.playsCount - (stat.sponsoredPlaysCount ?? 0));
+
+    return {
+      trackId: stat.trackId,
+      validStreams: Math.max(0, effectiveOrganic - (base[stat.trackId]?.plays ?? 0)),
+      listenSeconds: Math.max(0, stat.listenSeconds - (base[stat.trackId]?.seconds ?? 0)),
+    };
+  });
 }
 
 export function buildRoyaltyLedger(params: {
@@ -99,46 +105,22 @@ export function buildRoyaltyLedger(params: {
     payingListeners.push({ listenerId: listener.id, rightsPool: net.rightsHoldersPool, entries });
   });
 
-  const adGross =
-    ((planCounts.FREE * settings.adImpressionsPerFreeUser * settings.adFillRate) / 1000) *
-    settings.adCpm;
+  const adGross = ((planCounts.FREE * settings.adImpressionsPerFreeUser * settings.adFillRate) / 1000) * settings.adCpm;
   const ads = adGross > 0 ? computeNetBase(adGross, 'MOBILE_MONEY', settings) : EMPTY_NET_BASE;
   const subscriptions = sumNetBases(subscriptionBases);
 
   const userCentric = computeUserCentricRoyalties({
-    payingListeners,
-    freeListeners,
-    adRightsPool: ads.rightsHoldersPool,
-    tracks: tracks.map((t) => ({
-      trackId: t.id,
-      artist: t.artist,
-      isNational: (t.gabonTerritoryPct ?? 100) >= 70,
-    })),
+    payingListeners, freeListeners, adRightsPool: ads.rightsHoldersPool,
+    tracks: tracks.map((t) => ({ trackId: t.id, artist: t.artist, isNational: (t.gabonTerritoryPct ?? 100) >= 70 })),
     settings,
   });
 
-  const rightsLines = splitAllRights(
-    userCentric.allocations,
-    tracks.map((t) => ({ ...t, trackId: t.id })),
-    settings
-  );
-  const statements = buildPayoutStatements({
-    lines: rightsLines,
-    settings,
-    previousBalances,
-    taxStatusOverrides,
-  });
+  const rightsLines = splitAllRights(userCentric.allocations, tracks.map((t) => ({ ...t, trackId: t.id })), settings);
+  const statements = buildPayoutStatements({ lines: rightsLines, settings, previousBalances, taxStatusOverrides });
 
   return {
-    subscriptions,
-    ads,
-    total: sumNetBases([subscriptions, ads]),
-    planCounts,
-    userCentric,
-    rightsLines,
-    statements,
-    bugada: buildBugadaRemittance(rightsLines),
-    withholdingDue: totalWithholdingDue(statements),
+    subscriptions, ads, total: sumNetBases([subscriptions, ads]),
+    planCounts, userCentric, rightsLines, statements,
+    bugada: buildBugadaRemittance(rightsLines), withholdingDue: totalWithholdingDue(statements),
   };
 }
-

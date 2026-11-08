@@ -17,6 +17,8 @@ import {
   getUserCompletedMissions,
   hasUserCompletedCampaign,
 } from '../src/features/tokens/index.js';
+import { buildRoyaltyLedger } from '../src/features/royalties/royaltyLedger.js';
+import { DEFAULT_ROYALTY_SETTINGS } from '../src/features/economics/economicConfig.js';
 
 console.log('🧪 Démarrage des tests du Journal Comptable des Jetons (Phase 1)...');
 
@@ -232,4 +234,49 @@ assert.ok(mTooShort.error?.includes('30 secondes'), 'Le message doit exiger 30s'
 assert.equal(getOrCreateUserWallet('usr_gamma').availableBalanceTokens, 0, 'usr_gamma doit rester à 0 jeton');
 console.log('✅ 13. Phase 3 : Rejet d écoute trop courte (< 30s) validé.');
 
-console.log('🎉 TOUS LES 13 TESTS DES PHASES 1, 2 ET 3 SONT VALIDÉS À 100 % !');
+// 14. Phase 5 : Séparation hermétique des streams sponsorisés vs redevances BUGADA
+const testTrack = {
+  id: 'tr_hermetic_01',
+  artist: 'Vicky R',
+  title: 'Titre Test Hermétique',
+  album: 'Album Test',
+  labelName: 'Sony Music Africa',
+  beatmakerName: 'Owono Beats',
+  lyricistName: 'Vicky R',
+  gabonTerritoryPct: 100,
+  splitMode: 'STANDARD_70_30',
+  nationalSharePct: 100,
+  masterHolders: [{ name: 'Vicky R', percentage: 100, role: 'PRIMARY_ARTIST' }],
+  authorshipHolders: [{ name: 'Vicky R', percentage: 100, role: 'PRIMARY_ARTIST' }],
+};
+
+const listenerWithSponsored = {
+  id: 'usr_hermetic_listener',
+  name: 'Auditeur Test',
+  billing: { plan: 'PREMIUM_MENSUEL', channel: 'MOBILE_MONEY' },
+  trackStats: {
+    tr_hermetic_01: {
+      trackId: 'tr_hermetic_01',
+      listenSeconds: 3000,
+      playsCount: 100, // 100 écoutes brutes au total
+      organicPlaysCount: 80, // mais seulement 80 organiques
+      sponsoredPlaysCount: 20, // et 20 sponsorisées via campagne
+    },
+  },
+};
+
+const ledgerResult = buildRoyaltyLedger({
+  tracks: [testTrack],
+  listeners: [listenerWithSponsored],
+  settings: DEFAULT_ROYALTY_SETTINGS,
+  baseline: {},
+  previousBalances: {},
+  taxStatusOverrides: {},
+});
+
+const alloc = ledgerResult.userCentric.allocations.find((a) => a.trackId === 'tr_hermetic_01');
+assert.ok(alloc, 'L allocation pour le titre doit exister');
+assert.equal(alloc.validStreams, 80, 'Seuls les 80 streams organiques doivent être comptabilisés dans le pool BUGADA (zéro stream sponsorisé)');
+console.log('✅ 14. Phase 5 : Séparation hermétique des streams sponsorisés (exclus de la BUGADA) validée.');
+
+console.log('🎉 TOUS LES 14 TESTS DES PHASES 1, 2, 3 ET 5 SONT VALIDÉS À 100 % !');

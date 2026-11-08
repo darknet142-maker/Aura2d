@@ -100,6 +100,9 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
             <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold">
               CONVENTION OFFICIELLE BUGADA × MINISTÈRE DE LA CULTURE
             </span>
+            <span className="px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/35 text-amber-300 font-mono text-[10px] font-bold">
+              SÉPARATION HERMÉTIQUE : STREAMS SPONSORISÉS EXCLUS
+            </span>
             <span className="text-[10px] font-mono text-amber-300">
               Ordonnance n°0011/PR/2024 • Décret n°0282/PR/MCJSA
             </span>

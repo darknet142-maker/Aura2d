@@ -26,6 +26,8 @@ interface StreamEventPayload {
   loopCount?: number;
   pointsDelta?: number;
   retentionPct?: number;
+  streamCategory?: 'ORGANIC_STREAM' | 'SPONSORED_STREAM';
+  campaignId?: string;
 }
 
 interface ProcessedEventRecord extends StreamEventPayload {
@@ -35,6 +37,8 @@ interface ProcessedEventRecord extends StreamEventPayload {
 interface ServerTrackMetrics {
   trackId: string;
   playCount: number;
+  organicPlays: number;
+  sponsoredPlays: number;
   loopCount: number;
   likeCount: number;
   totalListenSeconds: number;
@@ -54,6 +58,8 @@ function getOrCreateTrackMetric(trackId: string): ServerTrackMetrics {
   const fresh: ServerTrackMetrics = {
     trackId,
     playCount: 0,
+    organicPlays: 0,
+    sponsoredPlays: 0,
     loopCount: 0,
     likeCount: 0,
     totalListenSeconds: 0,
@@ -99,6 +105,11 @@ async function startServer() {
         // 2. Appliquer la mise à jour selon le type d'action
         if (event.action === 'play') {
           metric.playCount += 1;
+          if (event.streamCategory === 'SPONSORED_STREAM') {
+            metric.sponsoredPlays += 1;
+          } else {
+            metric.organicPlays += 1;
+          }
           if (typeof event.durationPlayedSeconds === 'number' && event.durationPlayedSeconds > 0) {
             metric.totalListenSeconds += event.durationPlayedSeconds;
           }

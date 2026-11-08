@@ -105,6 +105,8 @@ export interface UserTrackStat {
   trackId: string;
   listenSeconds: number;
   playsCount: number;
+  organicPlaysCount?: number;
+  sponsoredPlaysCount?: number;
   loopsCount: number;
   maxConsecutiveLoops: number;
   liked: boolean;
@@ -122,6 +124,8 @@ export interface AppUser {
   totalLikes: number;
   totalListenSeconds: number;
   totalValidatedPlays: number;
+  totalOrganicPlays?: number;
+  totalSponsoredPlays?: number;
   totalLoops: number;
   trackStats: Record<string, UserTrackStat>;
 }
