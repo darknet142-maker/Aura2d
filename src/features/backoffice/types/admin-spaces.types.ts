@@ -29,3 +29,4 @@ export const ADMIN_SPACES_REGISTRY: AdminSpaceDef[] = [
   { id: '07_INFRASTRUCTURE', code: '07', name: 'Infrastructure', subtitle: 'Supabase, SQL & Offline sync', iconName: 'Cpu' },
   { id: '08_SECURITY', code: '08', name: 'Sécurité & DRM', subtitle: 'Chiffrement AES-256 & QR mobile', iconName: 'ShieldCheck' },
 ];
+

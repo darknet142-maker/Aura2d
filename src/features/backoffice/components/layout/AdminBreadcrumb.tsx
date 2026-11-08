@@ -28,3 +28,4 @@ export const AdminBreadcrumb: React.FC<AdminBreadcrumbProps> = ({ currentSpace, 
     </nav>
   );
 };
+
