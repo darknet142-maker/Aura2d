@@ -1,125 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { SUBTLE_ENTRANCE_VARIANTS } from '../../shared/ui/springMotion';
 import {
   AdminStudio2Layout,
   AdminClassicBackofficeView,
   TrackEditModal,
-  AdminTrackDrilldownView,
-  AdminArtistDrilldownView,
-  AdminConsumerUserDrilldownView,
 } from './index';
+import { useAdminNavigationHistory } from './hooks/useAdminNavigationHistory';
 import type { ReturnTypeUseDropPlatformController } from '../listener/hooks/useDropPlatformController';
 
 export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
   const [adminLayoutMode, setAdminLayoutMode] = useState<'SAAS_2' | 'CLASSIC'>('SAAS_2');
+  const nav = useAdminNavigationHistory('00_OVERVIEW');
 
-  const {
-    selectedTrackDetail, setSelectedTrackId, setSelectedArtistName, finalizeListeningSessionOnZap,
-    setAlbumIdx, setTrackIdx, setIsDropMode, seekAllEngines, manualSessionRef, setIsPlaying,
-    setAppView, setEditingTrack, handleDeleteTrack, selectedArtistAnalytics, artistSubscribers,
-    subscribedArtists, handleToggleSubscribeArtist, royaltyLedger, royaltyLedgerState,
-    trackRankMap, setSelectedConsumerUserId, selectedConsumerUser, consumerAnalytics, users,
-    editingTrack, handleSaveEditedTrack, entityDb, categories,
-  } = ctrl;
+  // Synchronisation descendante : quand la navigation de l'historique change, refléter sur le contrôleur
+  useEffect(() => {
+    if (nav.current.type === 'SPACE') {
+      if (ctrl.selectedTrackDetail) ctrl.setSelectedTrackId(null);
+      if (ctrl.selectedArtistAnalytics) ctrl.setSelectedArtistName(null);
+      if (ctrl.selectedConsumerUser) ctrl.setSelectedConsumerUserId(null);
+    } else if (nav.current.type === 'TRACK_DRILLDOWN') {
+      if (ctrl.selectedTrackDetail?.track.id !== nav.current.trackId) {
+        ctrl.setSelectedTrackId(nav.current.trackId);
+      }
+    } else if (nav.current.type === 'ARTIST_DRILLDOWN') {
+      if (ctrl.selectedArtistAnalytics?.artistName !== nav.current.artistName) {
+        ctrl.setSelectedArtistName(nav.current.artistName);
+      }
+    } else if (nav.current.type === 'USER_DRILLDOWN') {
+      if (ctrl.selectedConsumerUser?.id !== nav.current.userId) {
+        ctrl.setSelectedConsumerUserId(nav.current.userId);
+      }
+    }
+  }, [nav.current]);
 
-  if (selectedTrackDetail) {
-    return (
-      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 overflow-y-auto">
-        <AdminTrackDrilldownView
-          selectedTrackDetail={selectedTrackDetail}
-          onClose={() => setSelectedTrackId(null)}
-          onSelectArtist={(artist) => {
-            setSelectedTrackId(null);
-            setSelectedArtistName(artist);
-          }}
-          onPlayTrackInPlayer={(detail) => {
-            finalizeListeningSessionOnZap();
-            setAlbumIdx(detail.albumIndex);
-            setTrackIdx(detail.trackIndex);
-            setIsDropMode(false);
-            seekAllEngines(0);
-            manualSessionRef.current = {
-              trackId: detail.track.id,
-              active: true,
-              listenedSeconds: 0,
-              playCountedAtOneSec: false,
-              ecgValidatedAt30Sec: false,
-              sessionPointsEarned: 0,
-            };
-            setIsPlaying(true);
-            setAppView('PLAYER');
-          }}
-          onEditTrack={(editing) => setEditingTrack(editing)}
-          onDeleteTrack={handleDeleteTrack}
-        />
-        <TrackEditModal
-          editingTrack={editingTrack}
-          setEditingTrack={setEditingTrack}
-          entityDb={entityDb}
-          categories={categories}
-          onSaveEditedTrack={handleSaveEditedTrack}
-        />
-      </div>
-    );
-  }
+  // Synchronisation ascendante : quand un clic profond active un drilldown depuis une vue imbriquée
+  useEffect(() => {
+    if (ctrl.selectedTrackDetail && nav.current.type !== 'TRACK_DRILLDOWN') {
+      nav.navigate({
+        type: 'TRACK_DRILLDOWN',
+        trackId: ctrl.selectedTrackDetail.track.id,
+        label: ctrl.selectedTrackDetail.track.title,
+      });
+    }
+  }, [ctrl.selectedTrackDetail]);
 
-  if (selectedArtistAnalytics) {
-    return (
-      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 overflow-y-auto">
-        <AdminArtistDrilldownView
-          selectedArtistAnalytics={selectedArtistAnalytics}
-          artistSubscribers={artistSubscribers}
-          subscribedArtists={subscribedArtists}
-          onToggleSubscribeArtist={handleToggleSubscribeArtist}
-          royaltyLedger={royaltyLedger}
-          royaltySettings={royaltyLedgerState.settings}
-          trackRankMap={trackRankMap}
-          onClose={() => setSelectedArtistName(null)}
-          onSelectTrack={(tid) => {
-            setSelectedArtistName(null);
-            setSelectedTrackId(tid);
-          }}
-          onSelectConsumerUser={(uid) => {
-            setSelectedArtistName(null);
-            setSelectedConsumerUserId(uid);
-          }}
-        />
-        <TrackEditModal
-          editingTrack={editingTrack}
-          setEditingTrack={setEditingTrack}
-          entityDb={entityDb}
-          categories={categories}
-          onSaveEditedTrack={handleSaveEditedTrack}
-        />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (ctrl.selectedArtistAnalytics && nav.current.type !== 'ARTIST_DRILLDOWN') {
+      nav.navigate({
+        type: 'ARTIST_DRILLDOWN',
+        artistName: ctrl.selectedArtistAnalytics.artistName,
+        label: ctrl.selectedArtistAnalytics.artistName,
+      });
+    }
+  }, [ctrl.selectedArtistAnalytics]);
 
-  if (selectedConsumerUser && consumerAnalytics) {
-    return (
-      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 overflow-y-auto">
-        <AdminConsumerUserDrilldownView
-          selectedConsumerUser={selectedConsumerUser}
-          consumerAnalytics={consumerAnalytics}
-          users={users}
-          trackRankMap={trackRankMap}
-          onClose={() => setSelectedConsumerUserId(null)}
-          onSelectTrack={(tid) => {
-            setSelectedConsumerUserId(null);
-            setSelectedTrackId(tid);
-          }}
-        />
-        <TrackEditModal
-          editingTrack={editingTrack}
-          setEditingTrack={setEditingTrack}
-          entityDb={entityDb}
-          categories={categories}
-          onSaveEditedTrack={handleSaveEditedTrack}
-        />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (ctrl.selectedConsumerUser && nav.current.type !== 'USER_DRILLDOWN') {
+      nav.navigate({
+        type: 'USER_DRILLDOWN',
+        userId: ctrl.selectedConsumerUser.id,
+        label: ctrl.selectedConsumerUser.name,
+      });
+    }
+  }, [ctrl.selectedConsumerUser]);
 
   return (
     <>
@@ -128,6 +72,7 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
           ctrl={ctrl}
           adminLayoutMode={adminLayoutMode}
           onToggleLayoutMode={() => setAdminLayoutMode('CLASSIC')}
+          nav={nav}
         />
       ) : (
         <motion.main
@@ -144,11 +89,11 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
       )}
 
       <TrackEditModal
-        editingTrack={editingTrack}
-        setEditingTrack={setEditingTrack}
-        entityDb={entityDb}
-        categories={categories}
-        onSaveEditedTrack={handleSaveEditedTrack}
+        editingTrack={ctrl.editingTrack}
+        setEditingTrack={ctrl.setEditingTrack}
+        entityDb={ctrl.entityDb}
+        categories={ctrl.categories}
+        onSaveEditedTrack={ctrl.handleSaveEditedTrack}
       />
     </>
   );

@@ -71,3 +71,4 @@ export const RoyaltyStackedChartCard: React.FC = () => {
     </div>
   );
 };
+

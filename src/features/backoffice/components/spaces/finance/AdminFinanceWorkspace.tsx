@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { RoyaltyStackedChartCard } from './RoyaltyStackedChartCard';
 import { StoresBreakdownCard } from './StoresBreakdownCard';
+import { EntityFinancialExplorer } from './EntityFinancialExplorer';
 import { BugadaRoyaltiesAdminPanel } from '../../../../royalties/BugadaRoyaltiesAdminPanel';
 import type { ReturnTypeUseDropPlatformController } from '../../../../listener/hooks/useDropPlatformController';
 import type { StatsBaseline } from '../../../../royalties/royaltyLedgerStore';
-import { TrendingUp, ShieldCheck, DollarSign } from 'lucide-react';
+import { DollarSign, UserCheck, ShieldCheck } from 'lucide-react';
 
 export interface AdminFinanceWorkspaceProps {
   ctrl: ReturnTypeUseDropPlatformController;
 }
 
 export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ctrl }) => {
-  const [activeTab, setActiveTab] = useState<'ANALYTICS' | 'BUGADA_PANEL'>('ANALYTICS');
+  const [activeTab, setActiveTab] = useState<'ANALYTICS' | 'INDIVIDUAL' | 'BUGADA_PANEL'>('ANALYTICS');
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -24,7 +25,16 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
               activeTab === 'ANALYTICS' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
-            Vue d&apos;Ensemble &amp; Canaux (Anthology Finance)
+            Vue d&apos;Ensemble &amp; Canaux
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('INDIVIDUAL')}
+            className={`px-3.5 py-1.5 rounded-lg font-bold cursor-pointer transition ${
+              activeTab === 'INDIVIDUAL' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-[#A3A9BA] hover:text-white'
+            }`}
+          >
+            Suivi Individuel (Artiste / Label / Projet)
           </button>
           <button
             type="button"
@@ -33,12 +43,12 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
               activeTab === 'BUGADA_PANEL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
-            Clôture BUGADA 12% &amp; Bordereaux Fiscaux DGI
+            Clôture BUGADA 12% &amp; Fisc DGI
           </button>
         </div>
       </div>
 
-      {activeTab === 'ANALYTICS' ? (
+      {activeTab === 'ANALYTICS' && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-7">
@@ -66,7 +76,7 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
               <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +198%</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Partenaires Sponsors</span>
+              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Sponsors JTN</span>
               <span className="text-sm font-mono font-extrabold text-amber-300">19 300 F</span>
               <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +143%</span>
             </div>
@@ -82,7 +92,17 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'INDIVIDUAL' && (
+        <EntityFinancialExplorer
+          tracks={ctrl.allTracksFlat}
+          onSelectTrack={(tid: string) => ctrl.setSelectedTrackId(tid)}
+          onToast={(msg) => ctrl.pushNotification('Royalties & Finance', msg, 'DATABASE')}
+        />
+      )}
+
+      {activeTab === 'BUGADA_PANEL' && (
         <BugadaRoyaltiesAdminPanel
           ledger={ctrl.royaltyLedger}
           settings={ctrl.royaltyLedgerState.settings}

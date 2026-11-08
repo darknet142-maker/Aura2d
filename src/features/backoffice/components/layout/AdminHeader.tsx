@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, Radio, ArrowLeft, LayoutGrid, Menu, CheckCircle2 } from 'lucide-react';
+import { Save, Radio, ArrowLeft, LayoutGrid, Menu, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SPRING_SNAPPY } from '../../../../shared/ui/springMotion';
 import { AdminBreadcrumb } from './AdminBreadcrumb';
@@ -16,16 +16,19 @@ export interface AdminHeaderProps {
   onToggleLayoutMode: () => void;
   onExitToPlayer: () => void;
   onToggleMobileSidebar?: () => void;
+  canGoBack?: boolean;
+  previousLabel?: string;
+  onGoBack?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   currentSpace, subSection, isRealtimeConnected, lastAdminSavedAt,
   isSavingAdmin, onSaveAndSyncAll, adminLayoutMode, onToggleLayoutMode,
-  onExitToPlayer, onToggleMobileSidebar,
+  onExitToPlayer, onToggleMobileSidebar, canGoBack = false, previousLabel = 'Précédent', onGoBack,
 }) => {
   return (
     <header className="h-14 px-4 bg-[#0D1017] border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         {onToggleMobileSidebar && (
           <button
             type="button"
@@ -36,6 +39,22 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             <Menu className="w-4 h-4" />
           </button>
         )}
+
+        {canGoBack && onGoBack && (
+          <motion.button
+            type="button"
+            whileHover={{ x: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={SPRING_SNAPPY}
+            onClick={onGoBack}
+            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+            title={`Revenir en arrière : ${previousLabel}`}
+          >
+            <ChevronLeft className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline truncate max-w-[140px]">{previousLabel}</span>
+          </motion.button>
+        )}
+
         <AdminBreadcrumb currentSpace={currentSpace} subSection={subSection} />
       </div>
 

@@ -67,3 +67,4 @@ export const FortanixKeyInsightCard: React.FC<FortanixKeyInsightCardProps> = ({
     </div>
   );
 };
+

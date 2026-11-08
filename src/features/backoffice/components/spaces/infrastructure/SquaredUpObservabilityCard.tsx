@@ -65,3 +65,4 @@ export const SquaredUpObservabilityCard: React.FC<SquaredUpObservabilityCardProp
     </div>
   );
 };
+
