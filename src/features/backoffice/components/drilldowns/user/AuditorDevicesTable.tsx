@@ -106,3 +106,4 @@ export const AuditorDevicesTable: React.FC<AuditorDevicesTableProps> = ({ user, 
     </div>
   );
 };
+

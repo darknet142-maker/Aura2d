@@ -113,3 +113,4 @@ export const OverviewTelemetryKpiBar: React.FC<OverviewTelemetryKpiBarProps> = (
     </div>
   );
 };
+

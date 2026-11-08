@@ -55,3 +55,4 @@ export const CampaignParticipantsList: React.FC<CampaignParticipantsListProps> =
     </div>
   );
 };
+
