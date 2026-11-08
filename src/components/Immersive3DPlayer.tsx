@@ -233,15 +233,6 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onOpenOptions={() => setActiveModal('OPTIONS')}
             onOpenNotifications={onOpenNotifications}
             unreadNotificationsCount={unreadNotificationsCount}
-            onOpenMissions={() => {
-              setActiveModal('MINI');
-              setHubTab('MISSIONS');
-            }}
-            availableMissionsCount={
-              getSponsorCampaigns('ACTIVE').filter(
-                (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
-              ).length
-            }
             albumIdx={albumIdx}
             albumsTotal={catalogue.length}
             trackIdx={trackIdx}
@@ -500,6 +491,15 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onOpenAdminStudio={onOpenAdminStudio}
             onNotifyProRequired={notifyProRequired}
             onToast={showToast}
+            onOpenMissions={() => {
+              setActiveModal('MINI');
+              setHubTab('MISSIONS');
+            }}
+            availableMissionsCount={
+              getSponsorCampaigns('ACTIVE').filter(
+                (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
+              ).length
+            }
           />
 
           {/* TIROIR CENTRAL SUR MOBILE / TABLETTE (OU DESKTOP HORS MODE SPLIT) */}

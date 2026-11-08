@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Bell, Ellipsis, Compass, Zap } from 'lucide-react';
+import { ChevronDown, Bell, Ellipsis, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DropOfficialLogo } from '../CoverArtwork';
 import { SPRING_SNAPPY } from '../../shared/ui/springMotion';
@@ -10,8 +10,6 @@ export interface PlayerHeaderProps {
   onOpenOptions: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationsCount?: number;
-  onOpenMissions?: () => void;
-  availableMissionsCount?: number;
   albumIdx?: number;
   albumsTotal?: number;
   trackIdx?: number;
@@ -25,8 +23,6 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
   onOpenOptions,
   onOpenNotifications,
   unreadNotificationsCount = 0,
-  onOpenMissions,
-  availableMissionsCount = 0,
   albumIdx = 0,
   albumsTotal = 1,
   trackIdx = 0,
@@ -39,8 +35,8 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
     <header className="relative z-20 w-full px-4 sm:px-5 pt-2.5 sm:pt-3.5 pb-1 shrink-0 flex flex-col gap-1.5">
       {/* Rangée 1 : Barre de commande symétrique Studio */}
       <div className="relative w-full flex items-center justify-between">
-        {/* 1. Bloc gauche : Bouton d'accès à Central & Missions */}
-        <div className="flex items-center justify-start z-10 w-36 gap-1.5">
+        {/* 1. Bloc gauche : Bouton d'accès à Central */}
+        <div className="flex items-center justify-start z-10 w-28">
           <motion.button
             type="button"
             whileHover={{ y: -1 }}
@@ -55,26 +51,6 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
             <span className="text-[11px] font-bold tracking-tight">Central</span>
             <ChevronDown className="w-3.5 h-3.5 text-[#A3A9BA] shrink-0 lg:hidden" />
           </motion.button>
-
-          {onOpenMissions && (
-            <motion.button
-              type="button"
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.94 }}
-              transition={SPRING_SNAPPY}
-              onClick={onOpenMissions}
-              className="relative h-9 px-2 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 flex items-center gap-1 text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] cursor-pointer"
-              aria-label="Ouvrir les missions sponsorisées"
-              title="Missions Sponsorisées des Labels"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
-              {availableMissionsCount > 0 && (
-                <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black flex items-center justify-center">
-                  {availableMissionsCount}
-                </span>
-              )}
-            </motion.button>
-          )}
         </div>
 
         {/* 2. Bloc central STRICTEMENT SYMÉTRIQUE : Logo DROP centré au pixel près */}

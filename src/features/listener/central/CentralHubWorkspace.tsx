@@ -165,32 +165,6 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             <span className="font-mono">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
           </motion.button>
 
-          <motion.button
-            type="button"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={SPRING_SNAPPY}
-            onClick={() => {
-              closeAllAnalyticsSheets();
-              setCentralFullPageView(null);
-              setHubSearchQuery('');
-              setHubTab('MISSIONS');
-            }}
-            className={`relative px-2.5 py-1.5 rounded-full border text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition ${
-              hubTab === 'MISSIONS'
-                ? 'bg-amber-500 text-[#080A0F] border-amber-300 font-extrabold shadow-sm'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-300'
-            }`}
-            title="Espace Dédié Missions Sponsorisées"
-          >
-            <Zap className="w-3.5 h-3.5 shrink-0 fill-current" />
-            <span className="hidden sm:inline">Missions</span>
-            {availableMissionsCount > 0 && (
-              <span className="px-1.5 py-0.2 min-w-[15px] text-center rounded-full bg-[#DE1B34] text-white text-[9px] font-mono font-black shadow-sm">
-                {availableMissionsCount}
-              </span>
-            )}
-          </motion.button>
 
           <motion.button
             type="button"

@@ -3,11 +3,8 @@ import { Immersive3DPlayer } from '../../components/Immersive3DPlayer';
 import { streamTracker } from '../../services/offlineStreamTracker';
 import { QrDownloadModal } from '../downloads';
 import {
-  SponsoredTrackBanner,
   SponsoredMissionsModal,
   UserTokenWalletModal,
-  getSponsorCampaigns,
-  hasUserCompletedCampaign,
 } from '../tokens';
 import type { ReturnTypeUseDropPlatformController } from './hooks/useDropPlatformController';
 
@@ -35,31 +32,8 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     royaltyLedger, royaltyLedgerState,
   } = ctrl;
 
-  const activeCampaigns = getSponsorCampaigns('ACTIVE');
-  const currentCampaign = activeCampaigns.find(
-    (c) =>
-      c.targetTrackId === currentTrack.id ||
-      (c.targetArtistName &&
-        c.targetArtistName.toLowerCase() === currentTrack.artist.toLowerCase())
-  ) || null;
-  const isCompleted = currentCampaign
-    ? hasUserCompletedCampaign(currentUser?.id || 'usr-default', currentCampaign.id)
-    : false;
-
   return (
         <main className="relative z-10 h-full w-full flex items-center justify-center bg-[#080A0F] overflow-hidden">
-          {currentCampaign && (
-            <div className="absolute top-16 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-30">
-              <SponsoredTrackBanner
-                campaign={currentCampaign}
-                listenedSec={Math.floor(currentTime)}
-                isCompleted={isCompleted}
-                onOpenMissionsModal={() => setIsMissionsModalOpen(true)}
-                onOpenWalletModal={() => setIsTokenWalletOpen(true)}
-              />
-            </div>
-          )}
-
           <Immersive3DPlayer
             catalogue={catalogue}
             albumIdx={safeAlbumIdx}

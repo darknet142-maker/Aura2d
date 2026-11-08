@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Zap } from 'lucide-react';
 import { ProLockBadgeSvg } from '../PlayerIcons';
 import { DropOfficialLogo } from '../../CoverArtwork';
 
@@ -19,6 +19,8 @@ export interface OptionsMenuModalProps {
   onOpenAdminStudio: () => void;
   onNotifyProRequired: (feature: string) => void;
   onToast: (msg: string, color?: string) => void;
+  onOpenMissions?: () => void;
+  availableMissionsCount?: number;
 }
 
 export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
@@ -37,6 +39,8 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
   onOpenAdminStudio,
   onNotifyProRequired,
   onToast,
+  onOpenMissions,
+  availableMissionsCount = 0,
 }) => {
   if (!isOpen) return null;
 
@@ -170,6 +174,27 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
             {!isPro && <ProLockBadgeSvg />}
           </button>
         </div>
+
+        {onOpenMissions && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenMissions();
+            }}
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 font-semibold text-sm transition cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 fill-amber-400" />
+              <span>Missions Sponsorisées des Labels</span>
+            </div>
+            {availableMissionsCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-[#DE1B34] text-white text-[10px] font-mono font-bold shadow">
+                {availableMissionsCount} disponible{availableMissionsCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
+        )}
 
         <button
           type="button"

@@ -5,7 +5,6 @@ import { DropOfficialLogo } from '../../components/CoverArtwork';
 import { streamTracker, type SyncStatusSnapshot } from '../../services/offlineStreamTracker';
 import type { Track } from '../types/domain.types';
 import { SPRING_SNAPPY, SUBTLE_ENTRANCE_VARIANTS } from './springMotion';
-import { getSponsorCampaigns } from '../../features/tokens';
 
 interface AppTopNavigationHeaderProps {
   appView: 'AUTH' | 'PLAYER' | 'ADMIN';
@@ -88,24 +87,6 @@ export const AppTopNavigationHeader: React.FC<AppTopNavigationHeaderProps> = ({
             </span>
           </motion.button>
         )}
-
-        <motion.button
-          type="button"
-          whileHover={{ y: -1 }}
-          whileTap={{ scale: 0.96 }}
-          transition={SPRING_SNAPPY}
-          onClick={() => setAppView('PLAYER')}
-          className="relative h-7 px-2 rounded-lg text-[11px] font-mono flex items-center gap-1.5 border bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-300 cursor-pointer"
-          title="Missions Sponsorisées des Labels & Partenaires"
-        >
-          <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
-          <span className="hidden sm:inline">Missions</span>
-          {getSponsorCampaigns('ACTIVE').length > 0 && (
-            <span className="px-1 py-0.2 rounded-full bg-[#DE1B34] text-white text-[9px] font-bold">
-              {getSponsorCampaigns('ACTIVE').length}
-            </span>
-          )}
-        </motion.button>
 
         <motion.button
           type="button"
