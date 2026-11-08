@@ -109,3 +109,4 @@ export const MobileDownloadSimulatorModal: React.FC<MobileDownloadSimulatorModal
     </div>
   );
 };
+

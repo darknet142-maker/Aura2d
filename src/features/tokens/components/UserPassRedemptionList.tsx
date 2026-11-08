@@ -110,3 +110,4 @@ export const UserPassRedemptionList: React.FC<UserPassRedemptionListProps> = ({
     </div>
   );
 };
+

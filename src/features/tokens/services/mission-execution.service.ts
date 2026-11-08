@@ -111,3 +111,4 @@ export function validateAndRewardMission(req: MissionValidationRequest): {
   completionsRegistry.push(completion);
   return { success: true, rewardTokens: camp.rewardPerMission, completion };
 }
+

@@ -20,3 +20,10 @@ export {
 export { AdminUploadWizard } from './components/AdminUploadWizard';
 export { AdminSponsorCampaignsPanel } from './components/AdminSponsorCampaignsPanel';
 export { AdminCreateCampaignModal } from './components/AdminCreateCampaignModal';
+export * from './types/admin-spaces.types';
+export { AdminStudio2Layout } from './components/layout/AdminStudio2Layout';
+export { AdminSidebar } from './components/layout/AdminSidebar';
+export { AdminHeader } from './components/layout/AdminHeader';
+export { AdminBreadcrumb } from './components/layout/AdminBreadcrumb';
+export { AdminOverviewDashboard } from './components/overview/AdminOverviewDashboard';
+export { AdminClassicBackofficeView } from './components/layout/AdminClassicBackofficeView';

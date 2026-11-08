@@ -107,3 +107,4 @@ export function getUserLedgerHistory(userId: string, limit = 50): TokenLedgerEnt
 export function getSponsorLedgerHistory(sponsorId: string, limit = 50): TokenLedgerEntry[] {
   return ledgerEntries.filter((e) => e.sponsorId === sponsorId).reverse().slice(0, limit);
 }
+

@@ -9,6 +9,7 @@ import {
   Users,
   Zap,
   Coins,
+  Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { AdminMainTabId } from '../backoffice.types';
@@ -28,6 +29,7 @@ export interface AdminCommandHeaderProps {
   usersCount: number;
   isBreakUiMode?: boolean;
   onToggleBreakUiMode?: () => void;
+  onSwitchToSaaSMode?: () => void;
 }
 
 export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
@@ -44,6 +46,7 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
   usersCount,
   isBreakUiMode = false,
   onToggleBreakUiMode,
+  onSwitchToSaaSMode,
 }) => {
   return (
     <motion.div
@@ -71,6 +74,17 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
               >
                 {isRealtimeConnected ? '● Temps Réel Actif' : '● Sync Hybride'}
               </span>
+              {onSwitchToSaaSMode && (
+                <button
+                  type="button"
+                  onClick={onSwitchToSaaSMode}
+                  className="px-2.5 py-0.5 rounded text-[10.5px] font-bold bg-[#DE1B34]/20 border border-[#DE1B34]/50 text-red-300 hover:bg-[#DE1B34] hover:text-white transition cursor-pointer flex items-center gap-1 shadow-sm"
+                  title="Basculer vers la nouvelle interface Admin Studio 2.0 (SaaS)"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300 shrink-0" />
+                  <span className="truncate">Mode Studio 2.0 (SaaS)</span>
+                </button>
+              )}
             </div>
             <span className="text-[10.5px] font-mono text-[#A3A9BA] block truncate mt-0.5">
               {lastAdminSavedAt

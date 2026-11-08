@@ -143,3 +143,4 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
     </div>
   );
 };
+

@@ -80,3 +80,4 @@ export function confirmDownloadTicket(params: ConfirmTicketParams): {
 
   return { success: true, downloadAuthToken: authToken, ticket };
 }
+
