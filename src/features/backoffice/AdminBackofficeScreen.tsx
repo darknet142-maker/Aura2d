@@ -18,6 +18,7 @@ import {
   AdminArtistDrilldownView,
   AdminConsumerUserDrilldownView,
   AdminUploadWizard,
+  AdminSponsorCampaignsPanel,
 } from './index';
 import type { ReturnTypeUseDropPlatformController } from '../listener/hooks/useDropPlatformController';
 
@@ -488,6 +489,13 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
                       'CERTIFICATION'
                     );
                   }}
+                />
+              )}
+
+              {adminMainTab === 'SPONSOR_CAMPAIGNS' && (
+                <AdminSponsorCampaignsPanel
+                  allTracksFlat={allTracksFlat}
+                  onToast={(msg, color) => pushNotification('Sponsors & Jetons', msg, color?.includes('rose') ? 'COMMUNITY' : 'DATABASE')}
                 />
               )}
             </>

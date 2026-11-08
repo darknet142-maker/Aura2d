@@ -106,6 +106,7 @@ import {
 import { useAdminDrmSandbox } from '../../backoffice/hooks/useAdminDrmSandbox';
 import { useAdminAnalytics } from '../../backoffice/hooks/useAdminAnalytics';
 import { useAdminUploadController } from '../../backoffice/hooks/useAdminUploadController';
+import type { AdminMainTabId } from '../../backoffice/backoffice.types';
 import {
   DSP_BANDS_SPEC,
   createSpatialDspGraph,
@@ -319,9 +320,7 @@ export function useDropPlatformController() {
   const [authEmail, setAuthEmail] = useState<string>('camille.ndong@drop.ga');
 
   // --- Admin Navigation & Sub-tabs ---
-  const [adminMainTab, setAdminMainTab] = useState<
-    'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS' | 'ROYALTIES_BUGADA'
-  >('CATALOGUE');
+  const [adminMainTab, setAdminMainTab] = useState<AdminMainTabId>('CATALOGUE');
   const [catalogueSubTab, setCatalogueSubTab] = useState<
     'REPERTOIRE' | 'ALGO' | 'MUSIC_INTEL' | 'RULES'
   >('REPERTOIRE');

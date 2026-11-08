@@ -18,3 +18,5 @@ export {
   AdminConsumerUserDrilldownView,
 } from './components/AdminDrilldownViews';
 export { AdminUploadWizard } from './components/AdminUploadWizard';
+export { AdminSponsorCampaignsPanel } from './components/AdminSponsorCampaignsPanel';
+export { AdminCreateCampaignModal } from './components/AdminCreateCampaignModal';

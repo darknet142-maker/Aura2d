@@ -18,6 +18,7 @@ import { formatTime, parseDurationInput, extractExternalStreamId } from '../../.
 import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
 import type { TrackAnalysis } from '../../music-intelligence/types/music-analysis.types';
 import { parseRawLyricsInput } from '../services/lyrics-parser.service';
+import type { AdminMainTabId } from '../backoffice.types';
 
 export function useAdminUploadController(params: {
   allTracksFlat: Track[];
@@ -29,7 +30,7 @@ export function useAdminUploadController(params: {
   setTrackIdx: React.Dispatch<React.SetStateAction<number>>;
   setIsDropMode: React.Dispatch<React.SetStateAction<boolean>>;
   setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
-  setAdminMainTab: React.Dispatch<React.SetStateAction<'CATALOGUE' | 'UPLOAD' | 'BANNERS' | 'DATABASE' | 'USERS' | 'ROYALTIES_BUGADA'>>;
+  setAdminMainTab: React.Dispatch<React.SetStateAction<AdminMainTabId>>;
   selectedTrackId: string | null;
   setSelectedTrackId: React.Dispatch<React.SetStateAction<string | null>>;
   pushNotification: (title: string, message: string, type?: AppNotification['type'], trackId?: string) => void;

@@ -6,7 +6,8 @@ export type AdminMainTabId =
   | 'BANNERS'
   | 'DATABASE'
   | 'USERS'
-  | 'ROYALTIES_BUGADA';
+  | 'ROYALTIES_BUGADA'
+  | 'SPONSOR_CAMPAIGNS';
 
 export type CatalogueSubTabId = 'REPERTOIRE' | 'ALGO' | 'RULES';
 

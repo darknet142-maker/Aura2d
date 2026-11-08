@@ -8,6 +8,7 @@ import {
   Database,
   Users,
   Zap,
+  Coins,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { AdminMainTabId } from '../backoffice.types';
@@ -143,7 +144,7 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
 
       <nav
         aria-label="Sections principales de l'administration"
-        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
+        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
       >
         <motion.button
           type="button"
@@ -292,6 +293,31 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
             }`}
           >
             60/40 • B2B • Modèle 36M
+          </span>
+        </motion.button>
+
+        <motion.button
+          type="button"
+          whileHover={{ y: -1.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={SPRING_SNAPPY}
+          onClick={() => onSelectMainTab('SPONSOR_CAMPAIGNS')}
+          className={`p-2.5 rounded-xl text-left border flex flex-col justify-between gap-1 cursor-pointer ${
+            adminMainTab === 'SPONSOR_CAMPAIGNS'
+              ? 'bg-amber-500 border-amber-400 text-[#080A0F] shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+              : 'bg-amber-500/10 border-amber-500/35 text-amber-300 hover:bg-amber-500/20'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-xs font-extrabold leading-tight">7. Partenaires</span>
+            <Coins className="w-3.5 h-3.5 shrink-0" />
+          </div>
+          <span
+            className={`text-[10px] font-mono block truncate ${
+              adminMainTab === 'SPONSOR_CAMPAIGNS' ? 'text-[#080A0F]/85 font-bold' : 'text-amber-300/90'
+            }`}
+          >
+            Sponsors &amp; Jetons
           </span>
         </motion.button>
       </nav>
