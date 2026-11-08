@@ -121,6 +121,7 @@ import {
   shouldDisplayNotificationToast,
   type NotificationPrefs,
 } from '../../notifications/notificationGovernance';
+import type { QrDownloadTicket } from '../../downloads';
 
 export function useDropPlatformController() {
   // --- Navigation & Auth State ---
@@ -343,6 +344,7 @@ export function useDropPlatformController() {
     () => loadAdBannerSettingsFromStorage()
   );
   const [supabaseHealthMsg, setSupabaseHealthMsg] = useState<string>('');
+  const [isQrDownloadModalOpen, setIsQrDownloadModalOpen] = useState(false);
   const isRemoteSyncInProgressRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -2527,7 +2529,7 @@ export function useDropPlatformController() {
     );
   };
 
-  // --- Toggle Offline Download Cache on Bottom-Right Button ---
+  // --- Toggle Offline Download Cache on Bottom-Right Button (Protocole QR Sécurisé) ---
   const handleToggleOfflineDownload = () => {
     const isCurrentlyDownloaded = Boolean(currentTrack.downloadedOffline);
     if (!isCurrentlyDownloaded) {
@@ -2550,15 +2552,42 @@ export function useDropPlatformController() {
         );
         return;
       }
+      // Ouverture du flux sécurisé QR Code (Téléchargement exclusivement mobile)
+      setIsQrDownloadModalOpen(true);
+      return;
     }
 
     setCatalogue((prev) =>
       prev.map((alb) => ({
         ...alb,
         tracks: alb.tracks.map((t) =>
-          t.id === currentTrack.id ? { ...t, downloadedOffline: !t.downloadedOffline } : t
+          t.id === currentTrack.id ? { ...t, downloadedOffline: false } : t
         ),
       }))
+    );
+    pushNotification(
+      'Morceau retiré du cache',
+      `Le titre « ${currentTrack.title} » a été supprimé du cache hors-ligne.`,
+      'CERTIFICATION',
+      currentTrack.id
+    );
+    streamTracker.sync();
+  };
+
+  const handleDownloadConfirmedByQr = (ticket: QrDownloadTicket) => {
+    setCatalogue((prev) =>
+      prev.map((alb) => ({
+        ...alb,
+        tracks: alb.tracks.map((t) =>
+          t.id === ticket.trackId ? { ...t, downloadedOffline: true } : t
+        ),
+      }))
+    );
+    pushNotification(
+      'Téléchargement Mobile Autorisé',
+      `Le titre « ${ticket.trackTitle} » est sauvegardé dans le stockage privé de votre application mobile.`,
+      'CERTIFICATION',
+      ticket.trackId
     );
     streamTracker.sync();
   };
@@ -3015,6 +3044,7 @@ export function useDropPlatformController() {
     seekAllEngines,
     handleSelectTrackIndex, handleSelectAlbumIndex, navigateTrack, navigateAlbum,
     handleCentralPlayToggle, toggleLike, handleToggleOfflineDownload,
+    isQrDownloadModalOpen, setIsQrDownloadModalOpen, handleDownloadConfirmedByQr,
     handleRecommendTrack, handleApplySocialPointsDelta, handleToggleSubscribeArtist, handleRecordLyricsOpen,
     handleConfirmCreditHandshake, handleOpenCreditDispute, handleResolveCreditDispute,
     handleToggleInPlaylist, handleSeekFromPlayer, handleQuickEnter,

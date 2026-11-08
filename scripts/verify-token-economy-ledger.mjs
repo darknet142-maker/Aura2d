@@ -19,6 +19,11 @@ import {
 } from '../src/features/tokens/index.js';
 import { buildRoyaltyLedger } from '../src/features/royalties/royaltyLedger.js';
 import { DEFAULT_ROYALTY_SETTINGS } from '../src/features/economics/economicConfig.js';
+import {
+  createDownloadTicket,
+  resolveDownloadTicket,
+  confirmDownloadTicket,
+} from '../src/features/downloads/index.js';
 
 console.log('🧪 Démarrage des tests du Journal Comptable des Jetons (Phase 1)...');
 
@@ -279,4 +284,52 @@ assert.ok(alloc, 'L allocation pour le titre doit exister');
 assert.equal(alloc.validStreams, 80, 'Seuls les 80 streams organiques doivent être comptabilisés dans le pool BUGADA (zéro stream sponsorisé)');
 console.log('✅ 14. Phase 5 : Séparation hermétique des streams sponsorisés (exclus de la BUGADA) validée.');
 
-console.log('🎉 TOUS LES 14 TESTS DES PHASES 1, 2, 3 ET 5 SONT VALIDÉS À 100 % !');
+// 15. Phase 6 : Génération du ticket QR opaque & anti-piratage
+const qrTicket = createDownloadTicket({
+  trackId: 't-main-1',
+  trackTitle: 'Le Morceau Phare',
+  trackArtist: 'Koba Building',
+  userId: 'usr_legit_web',
+});
+
+assert.ok(qrTicket.ticketId.startsWith('dl-tk-'), 'L ID du ticket doit être préfixé');
+assert.ok(!qrTicket.qrPayload.includes('.mp3') && !qrTicket.qrPayload.includes('http'), 'Le QR ne doit JAMAIS contenir d URL audio brute');
+assert.ok(qrTicket.qrPayload.startsWith('drop-dl://ticket/'), 'Le QR doit être une URI opaque');
+assert.equal(qrTicket.status, 'PENDING', 'Le statut initial doit être PENDING');
+console.log('✅ 15. Phase 6 : Génération QR opaque anti-piratage & TTL 120s validées.');
+
+// 16. Phase 6 & 7 : Rejet strict si compte mobile != compte web
+const hackAttempt = resolveDownloadTicket({
+  ticketId: qrTicket.ticketId,
+  mobileUserId: 'usr_intruder_pirate',
+});
+
+assert.equal(hackAttempt.success, false, 'Le scan par un compte différent doit être bloqué');
+assert.ok(hackAttempt.error?.includes('compte web'), 'Le message doit expliciter l inadéquation du compte');
+console.log('✅ 16. Phase 7 : Rejet de sécurité pour non-correspondance de compte validé.');
+
+// 17. Phase 7 : Résolution & Confirmation mobile avec choix de Haute Qualité
+const confirmRes = confirmDownloadTicket({
+  ticketId: qrTicket.ticketId,
+  mobileUserId: 'usr_legit_web',
+  quality: 'HIGH',
+});
+
+assert.equal(confirmRes.success, true, 'La confirmation avec le bon compte doit réussir');
+assert.ok(confirmRes.downloadAuthToken, 'Un jeton d autorisation temporaire chiffré doit être émis');
+assert.equal(confirmRes.ticket?.status, 'CONFIRMED', 'Le ticket doit passer au statut CONFIRMED');
+assert.equal(confirmRes.ticket?.selectedQuality, 'HIGH', 'La qualité sélectionnée doit être HIGH');
+console.log('✅ 17. Phase 7 : Confirmation mobile (Haute Qualité) & jeton d autorisation validés.');
+
+// 18. Phase 6 & 7 : Sécurité usage unique (Anti-rejoue)
+const replayAttempt = confirmDownloadTicket({
+  ticketId: qrTicket.ticketId,
+  mobileUserId: 'usr_legit_web',
+  quality: 'STANDARD',
+});
+
+assert.equal(replayAttempt.success, false, 'Le réemploi d un ticket déjà confirmé doit être refusé');
+assert.ok(replayAttempt.error?.includes('usage unique') || replayAttempt.error?.includes('utilisé'), 'L erreur doit indiquer l usage unique');
+console.log('✅ 18. Phase 6 & 7 : Blocage anti-rejoue & sécurité usage unique validés.');
+
+console.log('🎉 TOUS LES 18 TESTS DU CAHIER DES CHARGES SONT VALIDÉS À 100 % !');

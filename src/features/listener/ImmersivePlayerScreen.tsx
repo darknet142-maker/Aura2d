@@ -1,6 +1,7 @@
 import React from 'react';
 import { Immersive3DPlayer } from '../../components/Immersive3DPlayer';
 import { streamTracker } from '../../services/offlineStreamTracker';
+import { QrDownloadModal } from '../downloads';
 import type { ReturnTypeUseDropPlatformController } from './hooks/useDropPlatformController';
 
 export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
@@ -117,6 +118,20 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             rightsLines={royaltyLedger.rightsLines}
             payoutStatements={royaltyLedger.statements}
             royaltySettings={royaltyLedgerState.settings}
+          />
+
+          <QrDownloadModal
+            isOpen={ctrl.isQrDownloadModalOpen}
+            onClose={() => ctrl.setIsQrDownloadModalOpen(false)}
+            track={currentTrack}
+            currentUserId={currentUser?.id || 'usr-default'}
+            onDownloadConfirmed={(ticket) => {
+              ctrl.handleDownloadConfirmedByQr(ticket);
+              ctrl.setIsQrDownloadModalOpen(false);
+            }}
+            onToast={(msg, color) => {
+              ctrl.pushNotification('Téléchargement QR', msg, color?.includes('rose') ? 'COMMUNITY' : 'CERTIFICATION');
+            }}
           />
         </main>
   );

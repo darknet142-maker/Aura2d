@@ -12,6 +12,12 @@ import {
   validateAndRewardMission,
   getUserCompletedMissions,
 } from './src/features/tokens';
+import {
+  createDownloadTicket,
+  getTicketStatus,
+  resolveDownloadTicket,
+  confirmDownloadTicket,
+} from './src/features/downloads/services/qr-download.service';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -260,6 +266,61 @@ async function startServer() {
       const msg = err instanceof Error ? err.message : 'Erreur interne de validation de mission';
       return res.status(500).json({ status: 'error', message: msg });
     }
+  });
+
+  // ============================================================================
+  // TÉLÉCHARGEMENT QR SÉCURISÉ EXCLUSIVEMENT MOBILE (PHASE 6 & 7)
+  // ============================================================================
+
+  app.post('/api/download-requests', (req, res) => {
+    try {
+      const { trackId, trackTitle, trackArtist, coverUrl, userId } = req.body;
+      if (!trackId || !userId) {
+        return res.status(400).json({ status: 'error', message: 'trackId et userId requis' });
+      }
+      const ticket = createDownloadTicket({ trackId, trackTitle, trackArtist, coverUrl, userId });
+      return res.status(200).json({ status: 'ok', ticket });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur création ticket';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.get('/api/download-requests/:ticketId/status', (req, res) => {
+    const { ticketId } = req.params;
+    const result = getTicketStatus(ticketId);
+    if (!result.found || !result.ticket) {
+      return res.status(404).json({ status: 'error', message: result.error || 'Ticket non trouvé' });
+    }
+    return res.status(200).json({ status: 'ok', ticket: result.ticket });
+  });
+
+  app.post('/api/qr/resolve', (req, res) => {
+    const { ticketId, mobileUserId } = req.body;
+    if (!ticketId || !mobileUserId) {
+      return res.status(400).json({ status: 'error', message: 'ticketId et mobileUserId requis' });
+    }
+    const result = resolveDownloadTicket({ ticketId, mobileUserId });
+    if (!result.success) {
+      return res.status(403).json({ status: 'error', message: result.error });
+    }
+    return res.status(200).json({ status: 'ok', ticket: result.ticket });
+  });
+
+  app.post('/api/qr/confirm', (req, res) => {
+    const { ticketId, mobileUserId, quality } = req.body;
+    if (!ticketId || !mobileUserId || !quality) {
+      return res.status(400).json({ status: 'error', message: 'ticketId, mobileUserId et quality requis' });
+    }
+    const result = confirmDownloadTicket({ ticketId, mobileUserId, quality });
+    if (!result.success) {
+      return res.status(403).json({ status: 'error', message: result.error });
+    }
+    return res.status(200).json({
+      status: 'ok',
+      downloadAuthToken: result.downloadAuthToken,
+      ticket: result.ticket,
+    });
   });
 
   if (process.env.NODE_ENV !== 'production') {
