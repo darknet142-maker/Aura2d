@@ -75,3 +75,4 @@ export const EntityTracksRevenueTable: React.FC<EntityTracksRevenueTableProps> =
     </div>
   );
 };
+

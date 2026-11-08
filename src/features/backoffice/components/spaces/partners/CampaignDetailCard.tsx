@@ -98,3 +98,4 @@ export const CampaignDetailCard: React.FC<CampaignDetailCardProps> = ({
     </div>
   );
 };
+

@@ -132,3 +132,4 @@ export const EntityFinancialExplorer: React.FC<EntityFinancialExplorerProps> = (
     </div>
   );
 };
+
