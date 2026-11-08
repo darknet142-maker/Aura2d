@@ -10,6 +10,7 @@ import {
   Bell,
   Shield,
   Coins,
+  Zap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DropOfficialLogo } from '../../../components/CoverArtwork';
@@ -26,7 +27,13 @@ import { CentralExplorerTab } from './CentralExplorerTab';
 import { CentralRankingsTab } from './CentralRankingsTab';
 import { CentralAwardsTab } from './CentralAwardsTab';
 import { CentralRecosAndArtistsTabs } from './CentralRecosAndArtistsTabs';
-import { UserTokenWalletModal, getOrCreateUserWallet } from '../../tokens';
+import { CentralMissionsTab } from './CentralMissionsTab';
+import {
+  UserTokenWalletModal,
+  getOrCreateUserWallet,
+  getSponsorCampaigns,
+  hasUserCompletedCampaign,
+} from '../../tokens';
 
 export interface CentralHubWorkspaceProps {
   state: ReturnTypeUseImmersivePlayerState;
@@ -99,6 +106,10 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
   } = state;
 
   const [isTokenWalletOpen, setIsTokenWalletOpen] = useState(false);
+  const activeCampaigns = getSponsorCampaigns('ACTIVE');
+  const availableMissionsCount = activeCampaigns.filter(
+    (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
+  ).length;
 
   return (
     <motion.div
@@ -152,6 +163,33 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
           >
             <Coins className="w-3.5 h-3.5 shrink-0" />
             <span className="font-mono">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
+          </motion.button>
+
+          <motion.button
+            type="button"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={SPRING_SNAPPY}
+            onClick={() => {
+              closeAllAnalyticsSheets();
+              setCentralFullPageView(null);
+              setHubSearchQuery('');
+              setHubTab('MISSIONS');
+            }}
+            className={`relative px-2.5 py-1.5 rounded-full border text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition ${
+              hubTab === 'MISSIONS'
+                ? 'bg-amber-500 text-[#080A0F] border-amber-300 font-extrabold shadow-sm'
+                : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-300'
+            }`}
+            title="Espace Dédié Missions Sponsorisées"
+          >
+            <Zap className="w-3.5 h-3.5 shrink-0 fill-current" />
+            <span className="hidden sm:inline">Missions</span>
+            {availableMissionsCount > 0 && (
+              <span className="px-1.5 py-0.2 min-w-[15px] text-center rounded-full bg-[#DE1B34] text-white text-[9px] font-mono font-black shadow-sm">
+                {availableMissionsCount}
+              </span>
+            )}
           </motion.button>
 
           <motion.button
@@ -325,6 +363,18 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             <CentralRankingsTab state={state} />
             <CentralAwardsTab state={state} />
             <CentralRecosAndArtistsTabs state={state} />
+            {hubTab === 'MISSIONS' && (
+              <CentralMissionsTab
+                currentUser={currentUser}
+                catalogue={state.catalogue}
+                onPlayOrToggleTrack={handlePlayOrToggleSpecificTrack}
+                onOpenWalletModal={() => setIsTokenWalletOpen(true)}
+                onCloseCentral={() => {
+                  closeAllAnalyticsSheets();
+                  setActiveModal('NONE');
+                }}
+              />
+            )}
           </>
         )}
       </div>
@@ -389,7 +439,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
         <nav
           aria-label="Navigation principale Central"
           className={`grid ${
-            enableAwardsCeremony ? 'grid-cols-5' : 'grid-cols-4'
+            enableAwardsCeremony ? 'grid-cols-6' : 'grid-cols-5'
           } gap-1.5 pt-1 pb-0.5`}
         >
           {(
@@ -403,6 +453,12 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
                 id: 'RANGS',
                 label: 'Classements',
                 icon: <ChartNoAxesColumn className="w-4 h-4 stroke-[2]" />,
+              },
+              {
+                id: 'MISSIONS' as const,
+                label: 'Missions',
+                icon: <Zap className="w-4 h-4 stroke-[2]" />,
+                badgeCount: availableMissionsCount,
               },
               ...(enableAwardsCeremony
                 ? [
@@ -442,13 +498,22 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
                   setHubSearchQuery('');
                   setHubTab(item.id);
                 }}
-                className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer ${
+                className={`relative flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer ${
                   isActive
-                    ? 'bg-[#DE1B34] border-[#FF4D64] text-white font-bold shadow-[0_6px_16px_rgba(222,27,52,0.38)]'
+                    ? item.id === 'MISSIONS'
+                      ? 'bg-amber-500 border-amber-300 text-[#080A0F] font-bold shadow-[0_6px_16px_rgba(245,158,11,0.38)]'
+                      : 'bg-[#DE1B34] border-[#FF4D64] text-white font-bold shadow-[0_6px_16px_rgba(222,27,52,0.38)]'
                     : 'bg-[#07090E]/80 border-white/[0.06] text-[#A3A9BA] hover:text-[#F8FAFC] hover:border-white/15'
                 }`}
               >
-                {item.icon}
+                <div className="relative flex items-center justify-center">
+                  {item.icon}
+                  {'badgeCount' in item && typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black flex items-center justify-center shadow-md border border-[#080A0F]">
+                      {item.badgeCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] leading-none truncate max-w-full">
                   {item.label}
                 </span>

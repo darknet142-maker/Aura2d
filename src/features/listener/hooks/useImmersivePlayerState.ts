@@ -151,7 +151,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
 
   // Central Hub Tabs & Instant Bottom Search State (Sliding Tabs)
   const [hubTab, setHubTab] = useState<
-    'EXPLORER' | 'RANGS' | 'AWARDS' | 'RECOS' | 'ARTISTES' | 'PROFIL'
+    'EXPLORER' | 'RANGS' | 'AWARDS' | 'RECOS' | 'ARTISTES' | 'PROFIL' | 'MISSIONS'
   >('EXPLORER');
 
   useEffect(() => {

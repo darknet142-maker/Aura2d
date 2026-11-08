@@ -37,6 +37,7 @@ import { useImmersivePlayerState } from '../features/listener/hooks/useImmersive
 import { CentralHubWorkspace } from '../features/listener/central/CentralHubWorkspace';
 import { SPRING_SNAPPY } from '../shared/ui/springMotion';
 import { ProfileQuotaCleanupModal } from '../features/social-feed';
+import { getSponsorCampaigns, hasUserCompletedCampaign } from '../features/tokens';
 
 export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
   const state = useImmersivePlayerState(props);
@@ -232,6 +233,15 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onOpenOptions={() => setActiveModal('OPTIONS')}
             onOpenNotifications={onOpenNotifications}
             unreadNotificationsCount={unreadNotificationsCount}
+            onOpenMissions={() => {
+              setActiveModal('MINI');
+              setHubTab('MISSIONS');
+            }}
+            availableMissionsCount={
+              getSponsorCampaigns('ACTIVE').filter(
+                (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
+              ).length
+            }
             albumIdx={albumIdx}
             albumsTotal={catalogue.length}
             trackIdx={trackIdx}

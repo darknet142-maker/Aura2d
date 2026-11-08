@@ -97,3 +97,4 @@ export const SponsoredTrackBanner: React.FC<SponsoredTrackBannerProps> = ({
     </motion.div>
   );
 };
+
