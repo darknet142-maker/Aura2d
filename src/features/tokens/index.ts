@@ -5,3 +5,5 @@ export * from './services/mission-execution.service';
 export * from './components/UserPassRedemptionList';
 export * from './components/UserTokenHistoryList';
 export * from './components/UserTokenWalletModal';
+export * from './components/SponsoredTrackBanner';
+export * from './components/SponsoredMissionsModal';

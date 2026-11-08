@@ -6,6 +6,7 @@ import {
   MAX_ACTIVE_ITEMS_PER_PROFILE,
   STATUS_MAX_LIFESPAN_MS,
 } from './social-feed-seeds.service';
+import { uploadSharedMediaBlob } from '../../../services/remoteServerSync';
 
 export { MAX_ACTIVE_ITEMS_PER_PROFILE, STATUS_MAX_LIFESPAN_MS };
 
@@ -33,6 +34,7 @@ export function getCachedSocialVideoBlob(videoKey?: string): Blob | null {
 
 export async function saveSocialVideoBlob(videoKey: string, blob: Blob): Promise<boolean> {
   inMemoryBlobCache.set(videoKey, blob);
+  void uploadSharedMediaBlob(videoKey, blob);
   const db = await openVideoIdb();
   if (!db) return true;
   return new Promise((resolve) => {
@@ -49,15 +51,29 @@ export async function loadSocialVideoBlob(videoKey: string): Promise<Blob | null
   const cached = inMemoryBlobCache.get(videoKey);
   if (cached) return cached;
   const db = await openVideoIdb();
-  if (!db) return null;
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get(videoKey);
-      req.onsuccess = () => { const res = req.result instanceof Blob ? req.result : null; if (res) inMemoryBlobCache.set(videoKey, res); resolve(res); };
-      req.onerror = () => resolve(null);
-    } catch { resolve(null); }
-  });
+  if (db) {
+    const fromIdb = await new Promise<Blob | null>((resolve) => {
+      try {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(videoKey);
+        req.onsuccess = () => resolve(req.result instanceof Blob ? req.result : null);
+        req.onerror = () => resolve(null);
+      } catch { resolve(null); }
+    });
+    if (fromIdb) {
+      inMemoryBlobCache.set(videoKey, fromIdb);
+      return fromIdb;
+    }
+  }
+  try {
+    const res = await fetch(`/api/media/${videoKey}`);
+    if (res.ok) {
+      const b = await res.blob();
+      inMemoryBlobCache.set(videoKey, b);
+      return b;
+    }
+  } catch {}
+  return null;
 }
 
 export async function deleteSocialVideoBlob(videoKey?: string): Promise<boolean> {

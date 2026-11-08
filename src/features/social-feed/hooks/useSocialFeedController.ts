@@ -7,6 +7,7 @@ import { countUserActiveProfileItems, deleteSocialVideoBlob, loadPersistedSocial
 import { createManualFeedPost, createStudioVideoArtifacts, mutatePostAddComment, mutatePostToggleLike, mutatePostToggleReDrop, type ActingSocialUser } from '../services/social-feed-mutations.service';
 import { loadUserTasteProfile } from '../components/TasteOnboardingVibesModal';
 import { useStatusStoriesState } from './useStatusStoriesState';
+import { fetchSharedFeedPosts, publishSharedFeedPost, subscribeToRemoteLiveEvents } from '../../../services/remoteServerSync';
 
 export interface UseSocialFeedControllerParams {
   actor: ActingSocialUser; legacyRecommendations: CommunityRecommendationItem[]; likedTrackIds: Record<string, boolean>;
@@ -26,6 +27,11 @@ export function useSocialFeedController({ actor, legacyRecommendations, likedTra
   const [reportedIds, setReportedIds] = useState<string[]>(() => { try { const s = window.localStorage.getItem('drop_reported_posts_v1'); return s ? JSON.parse(s) : []; } catch { return []; } });
 
   useEffect(() => savePersistedSocialPosts(posts), [posts]);
+
+  useEffect(() => {
+    fetchSharedFeedPosts().then((r) => { if (r.length > 0) setPosts((p) => { const ids = new Set(p.map((x) => x.id)); const add = r.filter((x) => !ids.has(x.id)); return add.length > 0 ? [...add, ...p] : p; }); });
+    return subscribeToRemoteLiveEvents((ev) => { if (ev.type === 'POST_CREATED' && ev.payload) setPosts((p) => p.some((x) => x.id === ev.payload.id) ? p : [ev.payload, ...p]); });
+  }, []);
   const tracksById = useMemo(() => new Map(catalogueTracks.map((t) => [t.id, t])), [catalogueTracks]);
   const creditPointsToTarget = useCallback((target: SocialTargetSubject, delta: number, recDelta = 0) => {
     if (delta === 0 && recDelta === 0) return;
@@ -84,6 +90,7 @@ export function useSocialFeedController({ actor, legacyRecommendations, likedTra
       setIsQuotaCleanupOpen(true); onToast('Quota 10 items atteint : supprimez un statut pour faire de la place.', 'bg-rose-500'); return false;
     }
     const newPost = createManualFeedPost({ archetype, actor, caption, target, initialPoints: 0.35 });
+    void publishSharedFeedPost(newPost);
     setPosts((prev) => { const next = [newPost, ...prev]; savePersistedSocialPosts(next); return next; });
     setActiveLens('FOR_YOU_VIRAL'); creditPointsToTarget(target, 0.35, 1); onToast('Recommandation publiée', 'bg-amber-400'); return true;
   }, [actor, posts, statusCtrl.activeStatuses, creditPointsToTarget, onToast]);
@@ -98,6 +105,7 @@ export function useSocialFeedController({ actor, legacyRecommendations, likedTra
     const { status, feedPost, pointsDelta } = createStudioVideoArtifacts({ actor, videoIdbKey, ...payload });
     if (status) statusCtrl.prependStatus(status);
     if (feedPost) {
+      void publishSharedFeedPost(feedPost);
       setPosts((prev) => { const next = [feedPost, ...prev]; savePersistedSocialPosts(next); return next; });
       setActiveLens('FOR_YOU_VIRAL');
     }

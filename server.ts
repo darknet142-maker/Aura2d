@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import {
   applyTokenTransaction,
@@ -11,6 +12,9 @@ import {
   getSponsorLedgerHistory,
   validateAndRewardMission,
   getUserCompletedMissions,
+  getSponsorCampaigns,
+  createAndFundCampaign,
+  getCampaignById,
 } from './src/features/tokens';
 import {
   createDownloadTicket,
@@ -21,6 +25,70 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const STORAGE_DIR = path.join(__dirname, 'server_storage');
+const MEDIA_DIR = path.join(STORAGE_DIR, 'media');
+const POSTS_FILE = path.join(STORAGE_DIR, 'feed_posts.json');
+const STATUSES_FILE = path.join(STORAGE_DIR, 'user_statuses.json');
+
+try {
+  if (!fs.existsSync(STORAGE_DIR)) fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
+} catch (err) {
+  console.warn('Storage directory init warning:', err);
+}
+
+// Store centralisé des publications et statuts partagés
+let serverFeedPosts: any[] = [];
+let serverUserStatuses: any[] = [];
+
+try {
+  if (fs.existsSync(POSTS_FILE)) {
+    const raw = fs.readFileSync(POSTS_FILE, 'utf-8');
+    serverFeedPosts = JSON.parse(raw);
+  }
+} catch {
+  serverFeedPosts = [];
+}
+
+try {
+  if (fs.existsSync(STATUSES_FILE)) {
+    const raw = fs.readFileSync(STATUSES_FILE, 'utf-8');
+    serverUserStatuses = JSON.parse(raw);
+  }
+} catch {
+  serverUserStatuses = [];
+}
+
+function persistPosts() {
+  try {
+    fs.writeFileSync(POSTS_FILE, JSON.stringify(serverFeedPosts.slice(0, 200), null, 2));
+  } catch (err) {
+    console.warn('Persist posts error:', err);
+  }
+}
+
+function persistStatuses() {
+  try {
+    fs.writeFileSync(STATUSES_FILE, JSON.stringify(serverUserStatuses.slice(0, 100), null, 2));
+  } catch (err) {
+    console.warn('Persist statuses error:', err);
+  }
+}
+
+// Clients connectés au flux d'événements temps réel SSE (Server-Sent Events)
+const sseClients = new Set<express.Response>();
+
+function broadcastSse(event: { type: string; payload: unknown }) {
+  const data = `data: ${JSON.stringify(event)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(data);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
 
 interface StreamEventPayload {
   eventId: string;
@@ -79,7 +147,52 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '5mb' }));
+  app.use(express.json({ limit: '50mb' }));
+
+  // Middleware Anti-Cache Strict sur toutes les routes API et pages HTML
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+  });
+
+  app.use((req, res, next) => {
+    if (req.path === '/' || req.path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+    next();
+  });
+
+  // ============================================================================
+  // BUS DE SYNCHRONISATION UNIVERSEL TEMPS RÉEL (SERVER-SENT EVENTS - SSE)
+  // ============================================================================
+
+  app.get('/api/live-events', (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    sseClients.add(res);
+    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', clients: sseClients.size })}\n\n`);
+
+    const interval = setInterval(() => {
+      try {
+        res.write(`data: ${JSON.stringify({ type: 'PING', timestamp: Date.now() })}\n\n`);
+      } catch {
+        clearInterval(interval);
+      }
+    }, 20000);
+
+    req.on('close', () => {
+      clearInterval(interval);
+      sseClients.delete(res);
+    });
+  });
 
   // Endpoint de synchronisation par lot Offline-First (Store-and-Forward)
   app.post('/api/sync-metrics', async (req, res) => {
@@ -321,6 +434,144 @@ async function startServer() {
       downloadAuthToken: result.downloadAuthToken,
       ticket: result.ticket,
     });
+  });
+
+  // ============================================================================
+  // FLUX SOCIAL PARTAGÉ MULTI-APPAREILS & MÉDIAS EN LIGNE
+  // ============================================================================
+
+  app.get('/api/feed/posts', (_req, res) => {
+    return res.status(200).json({
+      status: 'ok',
+      count: serverFeedPosts.length,
+      posts: serverFeedPosts,
+    });
+  });
+
+  app.post('/api/feed/posts', (req, res) => {
+    try {
+      const post = req.body?.post;
+      if (!post || !post.id) {
+        return res.status(400).json({ status: 'error', message: 'Post invalide' });
+      }
+      serverFeedPosts = [post, ...serverFeedPosts.filter((p) => p.id !== post.id)];
+      persistPosts();
+      broadcastSse({ type: 'POST_CREATED', payload: post });
+      return res.status(200).json({ status: 'ok', post });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur sauvegarde post';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.get('/api/feed/statuses', (_req, res) => {
+    const now = Date.now();
+    const active = serverUserStatuses.filter((s) => {
+      const exp = Date.parse(s.expiresAtIso);
+      return Number.isFinite(exp) && exp > now;
+    });
+    return res.status(200).json({ status: 'ok', count: active.length, statuses: active });
+  });
+
+  app.post('/api/feed/statuses', (req, res) => {
+    try {
+      const status = req.body?.status;
+      if (!status || !status.id) {
+        return res.status(400).json({ status: 'error', message: 'Statut invalide' });
+      }
+      serverUserStatuses = [status, ...serverUserStatuses.filter((s) => s.id !== status.id)];
+      persistStatuses();
+      broadcastSse({ type: 'STATUS_CREATED', payload: status });
+      return res.status(200).json({ status: 'ok', userStatus: status });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur sauvegarde statut';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.post('/api/feed/media-upload', (req, res) => {
+    try {
+      const { mediaId, base64Data } = req.body || {};
+      if (!mediaId || !base64Data) {
+        return res.status(400).json({ status: 'error', message: 'mediaId et base64Data requis' });
+      }
+      const cleanBase64 = base64Data.replace(/^data:.*?;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const filePath = path.join(MEDIA_DIR, mediaId);
+      fs.writeFileSync(filePath, buffer);
+      const mediaUrl = `/api/media/${mediaId}`;
+      return res.status(200).json({ status: 'ok', mediaId, url: mediaUrl });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur téléversement média';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.get('/api/media/:mediaId', (req, res) => {
+    const { mediaId } = req.params;
+    const filePath = path.join(MEDIA_DIR, mediaId);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ status: 'error', message: 'Média non trouvé' });
+    }
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    const mimeType = mediaId.endsWith('.mp4')
+      ? 'video/mp4'
+      : mediaId.endsWith('.mp3')
+      ? 'audio/mpeg'
+      : mediaId.endsWith('.wav')
+      ? 'audio/wav'
+      : 'video/webm';
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': mimeType,
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': mimeType,
+        'Accept-Ranges': 'bytes',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
+    }
+  });
+
+  // ============================================================================
+  // CAMPAGNES SPONSORISÉES CENTRALES & SYNCHRONISÉES
+  // ============================================================================
+
+  app.get('/api/campaigns', (req, res) => {
+    const status = req.query.status as any;
+    const campaigns = getSponsorCampaigns(status);
+    return res.status(200).json({ status: 'ok', count: campaigns.length, campaigns });
+  });
+
+  app.post('/api/campaigns', (req, res) => {
+    try {
+      const result = createAndFundCampaign(req.body);
+      if (!result.success || !result.campaign) {
+        return res.status(400).json({ status: 'error', message: result.error });
+      }
+      broadcastSse({ type: 'CAMPAIGN_CREATED', payload: result.campaign });
+      return res.status(200).json({ status: 'ok', campaign: result.campaign });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur création campagne';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
   });
 
   if (process.env.NODE_ENV !== 'production') {

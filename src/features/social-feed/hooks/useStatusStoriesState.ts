@@ -7,6 +7,7 @@ import {
   purgeExpiredStatusesIrreversibly,
   savePersistedUserStatuses,
 } from '../services/status-video-storage.service';
+import { fetchSharedStatuses, publishSharedStatus, subscribeToRemoteLiveEvents } from '../../../services/remoteServerSync';
 
 export interface GroupedUserStatusRing {
   userId: string;
@@ -27,6 +28,11 @@ export function useStatusStoriesState(params: {
   const [activeStatusUserId, setActiveStatusUserId] = useState<string | null>(null);
 
   useEffect(() => savePersistedUserStatuses(statuses), [statuses]);
+
+  useEffect(() => {
+    fetchSharedStatuses().then((r) => { if (r.length > 0) setStatuses((p) => { const ids = new Set(p.map((x) => x.id)); const add = r.filter((x) => !ids.has(x.id)); return add.length > 0 ? [...add, ...p] : p; }); });
+    return subscribeToRemoteLiveEvents((ev) => { if (ev.type === 'STATUS_CREATED' && ev.payload) setStatuses((p) => p.some((x) => x.id === ev.payload.id) ? p : [ev.payload, ...p]); });
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -65,6 +71,7 @@ export function useStatusStoriesState(params: {
   }, [activeStatuses, actorId]);
 
   const prependStatus = useCallback((story: UserStatusStory) => {
+    void publishSharedStatus(story);
     setStatuses((prev) => [story, ...purgeExpiredStatusesIrreversibly(prev).active]);
   }, []);
 

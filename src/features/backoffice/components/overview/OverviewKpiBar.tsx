@@ -131,3 +131,4 @@ export const OverviewKpiBar: React.FC<OverviewKpiBarProps> = ({
     </div>
   );
 };
+

@@ -78,6 +78,11 @@ import {
   useRoyaltyLedgerState,
   type StatsBaseline,
 } from '../../../features/royalties/royaltyLedgerStore';
+import {
+  getSponsorCampaigns,
+  hasUserCompletedCampaign,
+  validateAndRewardMission,
+} from '../../tokens';
 
 // --- Architecture Modulaire par Domaine Métier (Feature-Based Architecture) ---
 import type {
@@ -2199,6 +2204,46 @@ export function useDropPlatformController() {
           manualSessionRef.current.ecgValidatedAt30Sec = true;
           manualSessionRef.current.playCountedAtOneSec = true;
           const trackId = currentTrack.id;
+
+          // ⚡ VÉRIFICATION DE MISSION SPONSORISÉE PAR UN LABEL & RÉCOMPENSE EN JETONS
+          const activeCampaigns = getSponsorCampaigns('ACTIVE');
+          const targetCampaign = activeCampaigns.find(
+            (c) =>
+              c.targetTrackId === trackId ||
+              (c.targetArtistName &&
+                c.targetArtistName.toLowerCase() === currentTrack.artist.toLowerCase())
+          );
+
+          if (
+            targetCampaign &&
+            !hasUserCompletedCampaign(currentUser.id, targetCampaign.id)
+          ) {
+            const rewardResult = validateAndRewardMission({
+              userId: currentUser.id,
+              campaignId: targetCampaign.id,
+              trackId,
+              durationPlayedSeconds: listenedSec,
+            });
+
+            if (rewardResult.success) {
+              pushNotification(
+                '⚡ Mission Sponsorisée Validée',
+                `+${targetCampaign.rewardPerMission} Jetons offerts par ${targetCampaign.targetArtistName || 'le Label'} crédités ! Débloquez vos Pass 100% Jetons dès maintenant.`,
+                'CERTIFICATION',
+                trackId
+              );
+              void fetch('/api/tokens/validate-mission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: currentUser.id,
+                  campaignId: targetCampaign.id,
+                  trackId,
+                  durationPlayedSeconds: listenedSec,
+                }),
+              }).catch(() => {});
+            }
+          }
           const prevDailyCount = dailyUserTrackPlaysRef.current[trackId] || 0;
 
           const ecgAudit = evaluateEcgStreamValidation({
