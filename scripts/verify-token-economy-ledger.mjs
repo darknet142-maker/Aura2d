@@ -11,6 +11,11 @@ import {
   getLedgerHistory,
   getUserLedgerHistory,
   getSponsorLedgerHistory,
+  registerSponsorAccount,
+  createAndFundCampaign,
+  validateAndRewardMission,
+  getUserCompletedMissions,
+  hasUserCompletedCampaign,
 } from '../src/features/tokens/index.js';
 
 console.log('🧪 Démarrage des tests du Journal Comptable des Jetons (Phase 1)...');
@@ -158,4 +163,73 @@ const sponsorHistory = getSponsorLedgerHistory('sp_major_label');
 assert.equal(sponsorHistory.length, 2, 'Le sponsor doit avoir 2 transactions enregistrées');
 console.log('✅ 9. Journal comptable immuable (Ledger append-only) & intégrité d audit validés.');
 
-console.log('🎉 TOUS LES TESTS DE LA PHASE 1 SONT VALIDÉS À 100 % !');
+// 10. Phase 2 : Création de Campagne et Réservation Préalable
+registerSponsorAccount({
+  id: 'sp_major_label',
+  name: 'Sony Music Africa',
+  legalEntity: 'Sony Music Ltd',
+  role: 'LABEL',
+  isVerified: true,
+  contactEmail: 'sony@music.com',
+  createdAtIso: new Date().toISOString(),
+});
+
+const campCreated = createAndFundCampaign({
+  sponsorId: 'sp_major_label',
+  title: 'Campagne Test Sony / Vicky R',
+  targetTrackId: 't_vicky_01',
+  targetArtistName: 'Vicky R',
+  totalBudgetTokens: 10_000,
+  rewardPerMission: 50,
+  maxParticipants: 200,
+  missionType: 'LISTEN_1_TRACK',
+  startDateIso: new Date().toISOString(),
+  endDateIso: new Date(Date.now() + 86400000).toISOString(),
+});
+
+assert.equal(campCreated.success, true, 'La création de campagne avec réservation doit réussir');
+const testCampId = campCreated.campaign?.id || '';
+assert.ok(testCampId, 'Un ID de campagne unique doit être généré');
+console.log('✅ 10. Phase 2 : Création de campagne & réservation budgétaire validées.');
+
+// 11. Phase 3 : Validation d'écoute qualifiée >= 30s & attribution de récompense
+const mValid = validateAndRewardMission({
+  userId: 'usr_beta',
+  campaignId: testCampId,
+  trackId: 't_vicky_01',
+  durationPlayedSeconds: 32,
+});
+
+assert.equal(mValid.success, true, 'L écoute de 32s doit valider la mission');
+assert.equal(mValid.rewardTokens, 50, 'La récompense attribuée doit être 50 jetons');
+assert.equal(getOrCreateUserWallet('usr_beta').availableBalanceTokens, 50, 'Le solde de usr_beta doit être 50');
+assert.equal(hasUserCompletedCampaign('usr_beta', testCampId), true, 'usr_beta doit être marqué comme ayant accompli la campagne');
+console.log('✅ 11. Phase 3 : Validation écoute 30s & crédit portefeuille validés.');
+
+// 12. Phase 3 : Déduplication & Anti-fraude (tentative immédiate de double rémunération)
+const mDuplicate = validateAndRewardMission({
+  userId: 'usr_beta',
+  campaignId: testCampId,
+  trackId: 't_vicky_01',
+  durationPlayedSeconds: 45,
+});
+
+assert.equal(mDuplicate.success, false, 'La 2e tentative sur la même campagne doit être rejetée');
+assert.equal(mDuplicate.alreadyRewarded, true, 'Le flag alreadyRewarded doit être true');
+assert.equal(getOrCreateUserWallet('usr_beta').availableBalanceTokens, 50, 'Le solde de usr_beta ne doit pas avoir bougé');
+console.log('✅ 12. Phase 3 : Protection anti-fraude & zéro doublon de mission validées.');
+
+// 13. Phase 3 : Rejet si durée d'écoute < 30 secondes
+const mTooShort = validateAndRewardMission({
+  userId: 'usr_gamma',
+  campaignId: testCampId,
+  trackId: 't_vicky_01',
+  durationPlayedSeconds: 12,
+});
+
+assert.equal(mTooShort.success, false, 'Une écoute de 12s doit être refusée');
+assert.ok(mTooShort.error?.includes('30 secondes'), 'Le message doit exiger 30s');
+assert.equal(getOrCreateUserWallet('usr_gamma').availableBalanceTokens, 0, 'usr_gamma doit rester à 0 jeton');
+console.log('✅ 13. Phase 3 : Rejet d écoute trop courte (< 30s) validé.');
+
+console.log('🎉 TOUS LES 13 TESTS DES PHASES 1, 2 ET 3 SONT VALIDÉS À 100 % !');

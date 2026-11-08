@@ -9,6 +9,8 @@ import {
   getLedgerHistory,
   getUserLedgerHistory,
   getSponsorLedgerHistory,
+  validateAndRewardMission,
+  getUserCompletedMissions,
 } from './src/features/tokens';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -217,6 +219,34 @@ async function startServer() {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur interne de transaction';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.get('/api/tokens/missions/:userId', (req, res) => {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ status: 'error', message: 'userId manquant' });
+    const missions = getUserCompletedMissions(userId);
+    return res.status(200).json({ status: 'ok', count: missions.length, missions });
+  });
+
+  app.post('/api/tokens/validate-mission', (req, res) => {
+    try {
+      const result = validateAndRewardMission(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          status: 'error',
+          alreadyRewarded: Boolean(result.alreadyRewarded),
+          message: result.error,
+        });
+      }
+      return res.status(200).json({
+        status: 'ok',
+        rewardTokens: result.rewardTokens,
+        completion: result.completion,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur interne de validation de mission';
       return res.status(500).json({ status: 'error', message: msg });
     }
   });

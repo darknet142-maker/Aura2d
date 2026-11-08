@@ -34,6 +34,13 @@ export function getSponsorAccounts(): SponsorAccount[] {
   return [...sponsorsRegistry];
 }
 
+export function registerSponsorAccount(account: SponsorAccount): SponsorAccount {
+  const existing = sponsorsRegistry.find((s) => s.id === account.id);
+  if (existing) return existing;
+  sponsorsRegistry.push(account);
+  return account;
+}
+
 export function getSponsorCampaigns(statusFilter?: CampaignStatus): SponsorCampaign[] {
   if (!statusFilter) return [...campaignsRegistry];
   return campaignsRegistry.filter((c) => c.status === statusFilter);
@@ -82,4 +89,18 @@ export function createAndFundCampaign(
 
   campaignsRegistry.unshift(campaign);
   return { success: true, campaign };
+}
+
+export function getCampaignById(campaignId: string): SponsorCampaign | undefined {
+  return campaignsRegistry.find((c) => c.id === campaignId);
+}
+
+export function incrementCampaignDistributedTokens(campaignId: string, amount: number): boolean {
+  const camp = campaignsRegistry.find((c) => c.id === campaignId);
+  if (!camp) return false;
+  camp.distributedTokens += amount;
+  if (camp.distributedTokens >= camp.totalBudgetTokens) {
+    camp.status = 'COMPLETED';
+  }
+  return true;
 }

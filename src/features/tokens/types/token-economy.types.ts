@@ -100,3 +100,28 @@ export interface TokenTransactionResult {
   userWallet?: UserTokenWallet;
   sponsorWallet?: SponsorTokenWallet;
 }
+
+export interface UserMissionCompletion {
+  id: string;
+  campaignId: string;
+  userId: string;
+  missionType: CampaignMissionType;
+  completedAtIso: string;
+  rewardTokens: number;
+  transactionId: string;
+  proof: {
+    trackId: string;
+    durationPlayedSeconds?: number;
+    retentionPct?: number;
+    deviceHardwareId?: string;
+  };
+}
+
+export interface MissionValidationRequest {
+  userId: string;
+  campaignId: string;
+  trackId: string;
+  durationPlayedSeconds?: number;
+  opinionText?: string;
+  deviceHardwareId?: string;
+}
