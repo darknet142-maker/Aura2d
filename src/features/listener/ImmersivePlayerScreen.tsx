@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { Immersive3DPlayer } from '../../components/Immersive3DPlayer';
 import { streamTracker } from '../../services/offlineStreamTracker';
 import { QrDownloadModal } from '../downloads';
+import { SubscriptionCheckoutModal } from '../payments';
 import {
   SponsoredMissionsModal,
   UserTokenWalletModal,
+  getOrCreateUserWallet,
 } from '../tokens';
 import type { ReturnTypeUseDropPlatformController } from './hooks/useDropPlatformController';
 
 export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
   const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
   const [isTokenWalletOpen, setIsTokenWalletOpen] = useState(false);
+  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
   const {
     catalogue, safeAlbumIdx, safeTrackIdx, currentTrack, isPlaying, isDropMode, currentTime,
     isShuffle, repeatMode, isCurrentLiked, likedTrackIds, recommendedTrackIds, subscribedArtists,
@@ -165,6 +168,23 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             onPassRedeemed={(pass) => setSubscriptionPass(pass)}
             onToast={(msg, color) => {
               ctrl.pushNotification('Portefeuille Jetons', msg, color?.includes('rose') ? 'COMMUNITY' : 'CERTIFICATION');
+            }}
+          />
+
+          <SubscriptionCheckoutModal
+            isOpen={isSubscriptionCheckoutOpen}
+            onClose={() => setIsSubscriptionCheckoutOpen(false)}
+            userBalance={getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens}
+            onActivatePass={(tier, method, ref) => {
+              setSubscriptionPass('PASS_MENSUEL_HEBDO');
+              ctrl.pushNotification(
+                'Abonnement DROP Activé',
+                `${tier === 'PREMIUM_MENSUEL' ? 'Pass Mensuel Premium' : 'Pass Streaming'} activé via ${method === 'DIRECT_PAID' ? 'Paiement Direct (Airtel/Moov)' : '100% Jetons (Modèle A)'} (Réf : ${ref}).`,
+                'CERTIFICATION'
+              );
+            }}
+            onGoToMissions={() => {
+              setIsMissionsModalOpen(true);
             }}
           />
         </main>
