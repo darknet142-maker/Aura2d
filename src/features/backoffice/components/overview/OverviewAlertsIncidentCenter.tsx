@@ -19,63 +19,70 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
       label: 'Opérations de synchronisation',
       status: 'À vérifier',
       type: 'warning' as const,
-      details: `${pendingSyncCount} écoutes store-and-forward en file d'attente mobile`,
+      actionLabel: 'Inspecter la file',
+      details: `${pendingSyncCount} écoutes store-and-forward en attente`,
       space: '07_INFRASTRUCTURE' as AdminSpaceId,
-      icon: <RefreshCw className="w-4 h-4 text-amber-400" />,
+      icon: <RefreshCw className="w-3.5 h-3.5 text-amber-400" />,
     },
     {
       id: 'sec-incidents',
       label: 'Incidents de sécurité & DRM',
       status: 'Opérationnel',
       type: 'success' as const,
-      details: '0 fuite détectée • DRM AES-256 actif • Keystore mobile intègre',
+      actionLabel: 'Coffre-fort',
+      details: '0 fuite détectée • Keystore AES-256 intègre',
       space: '08_SECURITY' as AdminSpaceId,
-      icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
+      icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
       id: 'main-api',
       label: 'API principale & Latence Edge',
       status: 'Opérationnel (12 ms)',
       type: 'success' as const,
-      details: 'Cluster SQL Supabase réactif • Disponibilité 100.00%',
+      actionLabel: 'Télémétrie',
+      details: 'Cluster SQL Supabase actif • SLA 100.00%',
       space: '07_INFRASTRUCTURE' as AdminSpaceId,
-      icon: <Server className="w-4 h-4 text-emerald-400" />,
+      icon: <Server className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
       id: 'audio-mastering',
       label: 'Conformité Master Audio (-14 LUFS)',
       status: 'À vérifier',
       type: 'warning' as const,
-      details: '2 masters audio dépassent la cible Loudness EBU R128',
+      actionLabel: 'Auditer',
+      details: '2 masters audio analysés à calibrer en Studio',
       space: '02_STUDIO' as AdminSpaceId,
-      icon: <Music className="w-4 h-4 text-amber-400" />,
+      icon: <Music className="w-3.5 h-3.5 text-amber-400" />,
     },
     {
       id: 'partner-campaigns',
-      label: 'Vérification Campagnes Partenaires',
+      label: 'Campagnes & Jetons Partenaires',
       status: 'À vérifier',
       type: 'warning' as const,
-      details: '1 campagne de label en attente d\'approbation budgétaire',
+      actionLabel: 'Arbitrer',
+      details: '1 campagne de label en attente d’allocation',
       space: '04_PARTNERS' as AdminSpaceId,
-      icon: <Coins className="w-4 h-4 text-amber-400" />,
+      icon: <Coins className="w-3.5 h-3.5 text-amber-400" />,
     },
     {
       id: 'bugada-tax',
       label: 'Déclarations Droits BUGADA & DGI',
       status: 'Opérationnel',
       type: 'success' as const,
-      details: 'Clôture mensuelle des royalties 12% prête pour export officiel',
+      actionLabel: 'Clôturer',
+      details: 'Bordereau mensuel 12% prêt pour validation fiscale',
       space: '05_FINANCE' as AdminSpaceId,
-      icon: <Award className="w-4 h-4 text-emerald-400" />,
+      icon: <Award className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
       id: 'anti-fraud-bursts',
-      label: 'Plafonds Anti-Fraude & Rafales',
+      label: 'Plafonds Anti-Fraude & Vélocité',
       status: 'Opérationnel',
       type: 'success' as const,
-      details: 'Vélocité normale • Zéro compte suspect détecté sur les missions',
+      actionLabel: 'Auditer',
+      details: 'Taux d’intégrité 99.8% • Zéro automate suspect',
       space: '03_LISTENERS' as AdminSpaceId,
-      icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
+      icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />,
     },
   ];
 
@@ -89,7 +96,7 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
           <h3 className="text-xs font-bold tracking-wider uppercase text-[#F8FAFC]">
             Centre d&apos;Alertes Plateforme
           </h3>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 tabular-nums">
             7 en attente
           </span>
         </div>
@@ -138,8 +145,9 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
                 <p className="text-[10px] text-[#A3A9BA] truncate mt-0.5">{alt.details}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0 text-[#A3A9BA] group-hover:text-white">
-              <span className="text-[10px] hidden sm:inline">Traiter</span>
+
+            <div className="flex items-center gap-1 shrink-0 text-[#A3A9BA] group-hover:text-emerald-400 transition-colors">
+              <span className="text-[10px] hidden sm:inline">{alt.actionLabel}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -148,4 +156,3 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
     </div>
   );
 };
-

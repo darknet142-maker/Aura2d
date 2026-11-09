@@ -955,6 +955,18 @@ export function useDropPlatformController() {
             : 'Tous les paramètres Admin, Catalogue, Bannières et Royalties sont synchronisés.'
         );
 
+        // 5. Diffuser immédiatement l'invalidation de cache universelle sur tous les terminaux
+        await broadcastLiveSync({
+          type: 'TRACKS_UPDATED',
+          payload: {
+            action: 'UPDATE',
+            message: sectionLabel
+              ? `Mise à jour « ${sectionLabel} » diffusée sur le réseau.`
+              : 'Synchronisation globale de la plateforme effectuée.',
+            timestamp: new Date().toISOString(),
+          },
+        }).catch(() => {});
+
         const timeStr = new Date().toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
@@ -3080,7 +3092,7 @@ export function useDropPlatformController() {
     markAllNotificationsRead, handleRegisterEntityInDb, handleDeleteEntityFromDb,
     sqlCopiedBanner, setSqlCopiedBanner, showSqlEditorModal, setShowSqlEditorModal,
     htmlAudioRef, uploadPreviewAudioRef, safeAlbumIdx, currentAlbum, safeTrackIdx, currentTrack,
-    isRealtimeConnected, handleSaveAndSyncAllAdmin, allTracksFlat, royaltyLedger,
+    isRealtimeConnected, handleSaveAndSyncAllAdmin, refreshAllCloudData, allTracksFlat, royaltyLedger,
     trackRankMap, finalizeListeningSessionOnZap, handleChangeMasterVolume,
     handleChangeEqBand, handleChangeBandQ, handleApplyEqPreset, handleApplyPrecisionPreset, handleResetEq,
     handleToggleEqBypass, handleChangePreampDb, handleChangeEqQFactor,

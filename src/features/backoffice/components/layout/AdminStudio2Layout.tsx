@@ -66,9 +66,6 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
           canGoBack={nav.canGoBack}
           previousLabel={nav.previousLabel}
           onGoBack={() => {
-            ctrl.setSelectedTrackId(null);
-            ctrl.setSelectedArtistName(null);
-            ctrl.setSelectedConsumerUserId(null);
             nav.goBack();
           }}
         />
@@ -121,6 +118,7 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
                 nav.goBack();
               }}
               onSelectTrack={handleSelectTrack}
+              onToast={(msg) => ctrl.pushNotification('Auditeur 360°', msg, 'COMMUNITY')}
             />
           ) : (
             <AdminSpaceContentRouter

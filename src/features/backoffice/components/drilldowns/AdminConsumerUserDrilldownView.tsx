@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Clock, Play, ShieldCheck, User, Smartphone, Coins, Lock, Disc3 } from 'lucide-react';
+import { ChevronLeft, Clock, Play } from 'lucide-react';
+import { UserIdentityAndActionsCard } from './user/UserIdentityAndActionsCard';
 import { UserSubscriptionPassCard } from './user/UserSubscriptionPassCard';
 import { UserTokenWalletCard } from './user/UserTokenWalletCard';
 import { UserOfflineDrmCard } from './user/UserOfflineDrmCard';
@@ -7,6 +8,8 @@ import { AuditorDevicesTable } from './user/AuditorDevicesTable';
 import { AuditorTokenLedgerCard } from './user/AuditorTokenLedgerCard';
 import { AuditorDrmLicensesCard } from './user/AuditorDrmLicensesCard';
 import { UserListeningHistoryTable } from './user/UserListeningHistoryTable';
+import { UserCompletedMissionsCard } from './user/UserCompletedMissionsCard';
+import { UserContestationsCard } from './user/UserContestationsCard';
 import type { AppUser } from '../../../../shared/types/domain.types';
 import type { ConsumerAnalyticsData } from './drilldown.types';
 
@@ -17,26 +20,33 @@ export interface AdminConsumerUserDrilldownProps {
   trackRankMap: Record<string, { rank: number; delta: number }>;
   onClose: () => void;
   onSelectTrack: (trackId: string) => void;
+  onToast?: (msg: string) => void;
 }
 
-export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldownProps> = ({
-  selectedConsumerUser, consumerAnalytics, users, trackRankMap, onClose, onSelectTrack,
-}) => {
-  const [tab, setTab] = useState<'SYNTHESE' | 'DEVICES' | 'DRM' | 'LEDGER' | 'TRACKS'>('SYNTHESE');
+export type AuditorTab = 'SYNTHESE' | 'MISSIONS' | 'DEVICES' | 'CONTESTATIONS' | 'DRM' | 'LEDGER' | 'TRACKS';
 
-  const formatLongDuration = (sec: number) => {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    return `${h}h ${m}m`;
-  };
+export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldownProps> = ({
+  selectedConsumerUser, consumerAnalytics, users, onClose, onSelectTrack, onToast,
+}) => {
+  const [tab, setTab] = useState<AuditorTab>('SYNTHESE');
 
   const rank = [...users]
     .sort((a, b) => b.totalListenSeconds - a.totalListenSeconds)
     .findIndex((u) => u.id === selectedConsumerUser.id) + 1;
 
+  const tabs: { id: AuditorTab; label: string }[] = [
+    { id: 'SYNTHESE', label: 'Synthèse 360°' },
+    { id: 'MISSIONS', label: 'Missions & Récompenses' },
+    { id: 'DEVICES', label: 'Appareils & Sessions' },
+    { id: 'CONTESTATIONS', label: 'Contestations & Litiges' },
+    { id: 'DRM', label: 'Coffre-fort DRM' },
+    { id: 'LEDGER', label: 'Grand Livre Jetons' },
+    { id: 'TRACKS', label: `Écoutes ECG (${consumerAnalytics.byListenTime.length})` },
+  ];
+
   return (
     <div className="flex-1 w-full flex flex-col bg-[#080A0F] border border-white/[0.08] rounded-2xl p-4 overflow-y-auto gap-4 font-mono">
-      {/* 1. Header Navigation & Titre */}
+      {/* 1. Entête de Navigation & Titre */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3 shrink-0">
         <div className="flex items-center gap-3">
           <button
@@ -58,10 +68,6 @@ export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldown
         </div>
 
         <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#0D1017] border border-white/10 text-white font-bold">
-            <Clock className="w-3.5 h-3.5 text-[#DE1B34]" />
-            {formatLongDuration(selectedConsumerUser.totalListenSeconds)}
-          </span>
           <span className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold">
             <Play className="w-3.5 h-3.5 fill-current" />
             {selectedConsumerUser.totalValidatedPlays} streams ECG
@@ -69,56 +75,26 @@ export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldown
         </div>
       </div>
 
-      {/* 2. Onglets de Navigation Auditeur 360° */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0D1017] border border-white/10 w-fit text-xs">
-        <button
-          type="button"
-          onClick={() => setTab('SYNTHESE')}
-          className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            tab === 'SYNTHESE' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Synthèse
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('DEVICES')}
-          className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            tab === 'DEVICES' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Appareils &amp; Sessions
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('DRM')}
-          className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            tab === 'DRM' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Coffre-fort DRM
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('LEDGER')}
-          className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            tab === 'LEDGER' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Grand Livre Jetons
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('TRACKS')}
-          className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            tab === 'TRACKS' ? 'bg-white/15 text-white' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Écoutes ECG ({consumerAnalytics.byListenTime.length})
-        </button>
+      {/* 2. Profil & Statut & Actions Rapides */}
+      <UserIdentityAndActionsCard user={selectedConsumerUser} onToast={onToast} />
+
+      {/* 3. Onglets de Navigation 360° */}
+      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0D1017] border border-white/10 overflow-x-auto text-xs shrink-0">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`px-3 py-1.5 rounded-lg font-bold shrink-0 cursor-pointer transition ${
+              tab === t.id ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* 3. Contenu de l'onglet actif */}
+      {/* 4. Contenu de l'onglet actif */}
       {tab === 'SYNTHESE' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
@@ -133,7 +109,9 @@ export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldown
         </div>
       )}
 
+      {tab === 'MISSIONS' && <UserCompletedMissionsCard user={selectedConsumerUser} />}
       {tab === 'DEVICES' && <AuditorDevicesTable user={selectedConsumerUser} />}
+      {tab === 'CONTESTATIONS' && <UserContestationsCard user={selectedConsumerUser} onToast={onToast} />}
       {tab === 'DRM' && <AuditorDrmLicensesCard user={selectedConsumerUser} />}
       {tab === 'LEDGER' && <AuditorTokenLedgerCard user={selectedConsumerUser} />}
       {tab === 'TRACKS' && (

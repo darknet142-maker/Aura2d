@@ -36,6 +36,14 @@ export const AdminInfrastructureWorkspace: React.FC<AdminInfrastructureWorkspace
       <SquaredUpObservabilityCard
         supabaseHealthMsg={ctrl.supabaseHealthMsg}
         queueLength={ctrl.syncSnapshot.queue.length}
+        onForceClearCache={() => {
+          ctrl.refreshAllCloudData();
+          ctrl.pushNotification(
+            'Cache purgé avec succès',
+            'Toutes les pistes et métadonnées ont été rechargées depuis Supabase.',
+            'DATABASE'
+          );
+        }}
       />
 
       {subTab === 'ENTITIES' && (

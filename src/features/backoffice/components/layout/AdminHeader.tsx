@@ -26,6 +26,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   isSavingAdmin, onSaveAndSyncAll, adminLayoutMode, onToggleLayoutMode,
   onExitToPlayer, onToggleMobileSidebar, canGoBack = false, previousLabel = 'Précédent', onGoBack,
 }) => {
+  // Navigation clavier intelligente : Alt+Flèche Gauche ou Échap pour revenir sur ses pas
+  React.useEffect(() => {
+    if (!canGoBack || !onGoBack) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onGoBack();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canGoBack, onGoBack]);
+
   return (
     <header className="h-14 px-4 bg-[#0D1017] border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
       <div className="flex items-center gap-2.5 min-w-0">
@@ -47,11 +60,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             whileTap={{ scale: 0.96 }}
             transition={SPRING_SNAPPY}
             onClick={onGoBack}
-            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
-            title={`Revenir en arrière : ${previousLabel}`}
+            className="px-2.5 py-1.5 rounded-xl bg-[#131722] hover:bg-white/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0 transition"
+            title={`Revenir sur vos pas : ${previousLabel} (Raccourci: Alt + ←)`}
           >
             <ChevronLeft className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline truncate max-w-[140px]">{previousLabel}</span>
+            <span className="hidden sm:inline truncate max-w-[160px]">← {previousLabel}</span>
           </motion.button>
         )}
 

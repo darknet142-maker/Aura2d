@@ -13,6 +13,7 @@ import {
   compareWaveformsConcordance,
   type WaveformConcordanceResult,
 } from '../../../services/musicService';
+import { broadcastLiveSync } from '../../../services/realtimeSync';
 import type { AlbumNode, AppNotification, EntityDatabase, Track } from '../../../shared/types/domain.types';
 import { formatTime, parseDurationInput, extractExternalStreamId } from '../../../shared/utils/mediaFormatters';
 import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
@@ -997,6 +998,45 @@ export function useAdminUploadController(params: {
         metadataPayload,
         selectedRawCoverFile
       ).catch(() => {});
+    } else {
+      // Cas Preset Studio Opus ou Audio synthétique : persister également dans Supabase pour réplication multi-appareils
+      updateTrackMetadataInStorage(createdTrack.id, {
+        title: createdTrack.title,
+        artist: createdTrack.artist,
+        album: createdTrack.album,
+        category: createdTrack.category,
+        label_name: createdTrack.labelName,
+        copyright_text: createdTrack.copyrightText,
+        beatmaker_name: createdTrack.beatmakerName,
+        sound_engineer_name: createdTrack.soundEngineerName,
+        recording_engineer_name: createdTrack.recordingEngineerName || null,
+        mixing_engineer_name: createdTrack.mixingEngineerName || null,
+        mastering_engineer_name: createdTrack.masteringEngineerName || null,
+        lyricist_name: createdTrack.lyricistName,
+        is_external_lyricist: Boolean(createdTrack.isExternalLyricist),
+        is_instrumental: Boolean(createdTrack.isInstrumental),
+        cover_url: createdTrack.cover || null,
+        duration: createdTrack.duration,
+        drop_start: createdTrack.dropStart,
+        drop_duration: createdTrack.dropDuration,
+        bpm: createdTrack.bpm,
+        audio_codec: 'OPUS',
+        lufs_master_level: createdTrack.lufsMasterLevel ?? -14.0,
+        stream_url: createdTrack.audioUrl || 'synth://studio-opus-preset',
+        source_type: 'file',
+      }).catch(() => {});
+
+      broadcastLiveSync({
+        type: 'TRACKS_UPDATED',
+        payload: {
+          action: 'CREATE',
+          trackId: createdTrack.id,
+          trackTitle: createdTrack.title,
+          artist: createdTrack.artist,
+          message: `Nouvelle piste publiée (Preset Studio) : « ${createdTrack.title} »`,
+          timestamp: new Date().toISOString(),
+        },
+      }).catch(() => {});
     }
 
     pushNotification(
