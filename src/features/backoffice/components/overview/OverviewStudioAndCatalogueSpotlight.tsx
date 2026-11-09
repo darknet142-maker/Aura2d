@@ -132,3 +132,4 @@ export const OverviewStudioAndCatalogueSpotlight: React.FC<OverviewStudioAndCata
     </div>
   );
 };
+
