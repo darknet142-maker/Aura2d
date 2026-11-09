@@ -105,3 +105,4 @@ export const UserContestationsCard: React.FC<UserContestationsCardProps> = ({ us
     </div>
   );
 };
+

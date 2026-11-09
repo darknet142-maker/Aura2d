@@ -78,9 +78,8 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
               key={mode}
               type="button"
               onClick={() => setFilter(mode)}
-              className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition ${
-                filter === mode ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-              }`}
+              className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition ${filter === mode ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+                }`}
             >
               {mode === 'ALL' ? `Tous (${users.length})` : 'Top Écoutes'}
             </button>

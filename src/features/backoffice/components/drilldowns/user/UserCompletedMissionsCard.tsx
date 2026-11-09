@@ -109,3 +109,4 @@ export const UserCompletedMissionsCard: React.FC<UserCompletedMissionsCardProps>
     </div>
   );
 };
+

@@ -85,9 +85,8 @@ export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldown
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-3 py-1.5 rounded-lg font-bold shrink-0 cursor-pointer transition ${
-              tab === t.id ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-            }`}
+            className={`px-3 py-1.5 rounded-lg font-bold shrink-0 cursor-pointer transition ${tab === t.id ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+              }`}
           >
             {t.label}
           </button>
