@@ -53,7 +53,7 @@ export const PlayerPlaybackDock: React.FC<PlayerPlaybackDockProps> = ({
           >
             <Shuffle className="w-5 h-5 stroke-[2]" />
             {isShuffle && (
-              <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+              <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
             )}
           </button>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Coins, Sparkles, History, ShieldCheck } from 'lucide-react';
+import { X, Coins, CreditCard, History, ShieldCheck } from 'lucide-react';
 import {
   getOrCreateUserWallet,
   getUserLedgerHistory,
@@ -54,7 +54,7 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
     }
 
     setRefreshKey((k) => k + 1);
-    onToast(`Pass débloqué avec succès ! (-${cost} jetons)`, 'bg-emerald-400');
+    onToast(`Pass activé (-${cost} jetons)`, 'bg-emerald-400');
     if (onPassRedeemed) onPassRedeemed(passKey);
   };
 
@@ -114,7 +114,7 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
               activeTab === 'PASS' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <CreditCard className="w-3.5 h-3.5" />
             <span>Débloquer un Pass</span>
           </button>
           <button

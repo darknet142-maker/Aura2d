@@ -158,45 +158,22 @@
 
   /* Niveau 1 — chrome flottant (dock, mini-lecteur, navigation) */
   .glass {
-    background: linear-gradient(160deg, rgb(255 255 255 / 0.11) 0%, rgb(255 255 255 / 0.04) 48%, rgb(18 18 24 / 0.38) 100%);
-    backdrop-filter: blur(32px) saturate(185%);
-    -webkit-backdrop-filter: blur(32px) saturate(185%);
-    box-shadow:
-      0 24px 48px -24px rgb(0 0 0 / 0.75),
-      0 2px 8px rgb(0 0 0 / 0.25),
-      inset 0 1px 0 rgb(255 255 255 / 0.12);
+    background: #0D1017;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 34px -12px rgba(6, 8, 14, 0.88);
   }
 
   /* Niveau 2 — feuilles et dialogues */
   .glass-strong {
-    background: linear-gradient(180deg, rgb(32 32 40 / 0.86) 0%, rgb(16 16 21 / 0.92) 100%);
-    backdrop-filter: blur(40px) saturate(170%);
-    -webkit-backdrop-filter: blur(40px) saturate(170%);
-    box-shadow:
-      0 -20px 60px -20px rgb(0 0 0 / 0.8),
-      inset 0 1px 0 rgb(255 255 255 / 0.1);
+    background: #080A0F;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -20px 60px -20px rgba(6, 8, 14, 0.95);
   }
 
   /* Niveau 0 — rangées et puces en ligne */
   .glass-subtle {
-    background: rgb(255 255 255 / 0.05);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
-  }
-
-  /* Liseré spéculaire : plus lumineux en haut, s'éteint vers le bas */
-  .glass::before,
-  .glass-strong::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0.08) 38%, rgb(255 255 255 / 0.03) 100%);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    background: #07090E;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   /* ---- Boutons ------------------------------------------------------------ */
@@ -206,10 +183,10 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 44px;
-    padding: 0 1.25rem;
-    border-radius: 9999px;
-    font-size: 14px;
+    min-height: 40px;
+    padding: 0 1.125rem;
+    border-radius: 12px;
+    font-size: 13.5px;
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1;
@@ -217,13 +194,13 @@
     transition:
       transform 160ms var(--ease-premium),
       background-color 180ms ease,
-      box-shadow 180ms ease,
+      border-color 180ms ease,
       color 180ms ease,
       opacity 180ms ease;
   }
 
   .btn:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
   .btn:disabled {
@@ -231,9 +208,10 @@
   }
 
   .btn-sm {
-    min-height: 36px;
-    padding: 0 0.875rem;
-    font-size: 13px;
+    min-height: 34px;
+    padding: 0 0.75rem;
+    font-size: 12.5px;
+    border-radius: 10px;
   }
 
   .btn-block {
@@ -242,34 +220,32 @@
 
   .btn-primary {
     color: #fff;
-    background: linear-gradient(180deg, var(--color-brand-400) 0%, var(--color-brand-600) 100%);
-    box-shadow:
-      0 10px 24px -10px rgb(240 22 74 / 0.75),
-      inset 0 1px 0 rgb(255 255 255 / 0.28);
+    background: #DE1B34;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 14px -4px rgba(6, 8, 14, 0.7);
   }
 
   .btn-primary:hover:not(:disabled) {
-    box-shadow:
-      0 14px 30px -10px rgb(240 22 74 / 0.9),
-      inset 0 1px 0 rgb(255 255 255 / 0.34);
+    background: #C9162D;
+    box-shadow: 0 6px 18px -4px rgba(6, 8, 14, 0.85);
   }
 
   .btn-gold {
-    color: #1a1204;
-    background: linear-gradient(180deg, var(--color-gold-300) 0%, var(--color-gold-500) 100%);
-    box-shadow:
-      0 10px 24px -12px rgb(245 158 11 / 0.8),
-      inset 0 1px 0 rgb(255 255 255 / 0.45);
+    color: #080A0F;
+    background: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    box-shadow: 0 4px 14px -4px rgba(6, 8, 14, 0.7);
   }
 
   .btn-secondary {
     color: var(--color-ink-1);
-    background: rgb(255 255 255 / 0.08);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    background: #131722;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.13);
+    background: #1C2232;
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
   .btn-ghost {
@@ -279,13 +255,13 @@
 
   .btn-ghost:hover:not(:disabled) {
     color: var(--color-ink-1);
-    background: rgb(255 255 255 / 0.06);
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .btn-danger {
     color: #fff;
-    background: linear-gradient(180deg, #fb5876 0%, #e11d48 100%);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
+    background: #E11D48;
+    border: 1px solid rgba(225, 29, 72, 0.3);
   }
 
   /* ---- Boutons icônes (cible tactile ≥ 44 px garantie) ------------------- */

@@ -21,14 +21,22 @@ export interface AdminConsumerUserDrilldownProps {
   onClose: () => void;
   onSelectTrack: (trackId: string) => void;
   onToast?: (msg: string) => void;
+  initialTab?: AuditorTab;
+  onTabChange?: (tab: AuditorTab) => void;
 }
 
-export type AuditorTab = 'SYNTHESE' | 'MISSIONS' | 'DEVICES' | 'CONTESTATIONS' | 'DRM' | 'LEDGER' | 'TRACKS';
+export type AuditorTab = 'SYNTHESE' | 'MISSIONS' | 'DEVICES' | 'CONTESTATIONS' | 'DRM' | 'LEDGER' | 'TRACKS' | 'ACTIONS';
 
 export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldownProps> = ({
   selectedConsumerUser, consumerAnalytics, users, onClose, onSelectTrack, onToast,
+  initialTab = 'SYNTHESE', onTabChange,
 }) => {
-  const [tab, setTab] = useState<AuditorTab>('SYNTHESE');
+  const [tab, setTab] = useState<AuditorTab>(initialTab);
+
+  const handleSelectTab = (newTab: AuditorTab) => {
+    setTab(newTab);
+    onTabChange?.(newTab);
+  };
 
   const rank = [...users]
     .sort((a, b) => b.totalListenSeconds - a.totalListenSeconds)
@@ -84,7 +92,7 @@ export const AdminConsumerUserDrilldownView: React.FC<AdminConsumerUserDrilldown
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => handleSelectTab(t.id)}
             className={`px-3 py-1.5 rounded-lg font-bold shrink-0 cursor-pointer transition ${tab === t.id ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
               }`}
           >

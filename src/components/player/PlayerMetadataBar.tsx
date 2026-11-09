@@ -208,9 +208,9 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
               }
             >
               {currentArtistSubscribed ? (
-                <UserCheck className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
+                <UserCheck className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
               ) : (
-                <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[2.4]" />
+                <UserPlus className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
               )}
             </motion.button>
           </div>

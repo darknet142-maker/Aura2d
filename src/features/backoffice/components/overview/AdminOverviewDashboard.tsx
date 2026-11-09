@@ -5,6 +5,7 @@ import { OverviewDualStreamsChart } from './OverviewDualStreamsChart';
 import { OverviewMicroservicesHealthBar } from './OverviewMicroservicesHealthBar';
 import { OverviewAlertsIncidentCenter } from './OverviewAlertsIncidentCenter';
 import { OverviewRecentActivityFeed } from './OverviewRecentActivityFeed';
+import { OverviewStudioAndCatalogueSpotlight } from './OverviewStudioAndCatalogueSpotlight';
 import { getLedgerHistory } from '../../../tokens';
 import type { AppUser, Track } from '../../../../shared/types/domain.types';
 import type { SyncStatusSnapshot } from '../../../../services/offlineStreamTracker';
@@ -15,6 +16,7 @@ export interface AdminOverviewDashboardProps {
   tracks: Track[];
   syncSnapshot: SyncStatusSnapshot;
   onNavigateToSpace: (spaceId: AdminSpaceId) => void;
+  onSelectTrack?: (trackId: string) => void;
 }
 
 const QUICK_SPACES: { id: AdminSpaceId; label: string; code: string }[] = [
@@ -33,6 +35,7 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
   tracks,
   syncSnapshot,
   onNavigateToSpace,
+  onSelectTrack,
 }) => {
   const ledgerEntries = getLedgerHistory(100);
   const totalDistributedTokens = ledgerEntries
@@ -104,13 +107,20 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
       {/* 4. Activité de la Plateforme — Courbes interactives avec séparation étanche */}
       <OverviewDualStreamsChart onNavigateToSpace={onNavigateToSpace} />
 
-      {/* 5. Barre de Santé des Microservices & Disponibilité (100.00%) */}
+      {/* 5. Console DSP Studio & Top Titres Diffusés */}
+      <OverviewStudioAndCatalogueSpotlight
+        tracks={tracks}
+        onNavigateToSpace={onNavigateToSpace}
+        onSelectTrack={onSelectTrack}
+      />
+
+      {/* 6. Barre de Santé des Microservices & Disponibilité (100.00%) */}
       <OverviewMicroservicesHealthBar
         onNavigateToSpace={onNavigateToSpace}
         latencyMs={12}
       />
 
-      {/* 6. Centre d'Alertes (7 en attente) & Activité Récente */}
+      {/* 7. Centre d'Alertes (7 en attente) & Activité Récente */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
         <div className="lg:col-span-6">
           <OverviewAlertsIncidentCenter

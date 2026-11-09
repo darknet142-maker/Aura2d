@@ -36,6 +36,7 @@ export const AdminSpaceContentRouter: React.FC<AdminSpaceContentRouterProps> = (
           tracks={ctrl.allTracksFlat}
           syncSnapshot={ctrl.syncSnapshot}
           onNavigateToSpace={onNavigateToSpace}
+          onSelectTrack={onSelectTrack}
         />
       );
 

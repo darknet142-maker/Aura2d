@@ -63,6 +63,9 @@ export const UserListeningHistoryTable: React.FC<UserListeningHistoryTableProps>
               </div>
 
               <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/5 border border-white/10 text-[#A3A9BA]">
+                  {track.isInstrumental ? 'Beat' : 'Organique'}
+                </span>
                 <span className="text-[#A3A9BA] text-[11px] flex items-center gap-1">
                   <Repeat className="w-3 h-3 text-amber-400" />
                   {stat.loopsCount}x ↻

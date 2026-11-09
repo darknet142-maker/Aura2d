@@ -88,6 +88,7 @@ export interface UseAdminNavigationHistoryReturn {
   navigateToArtist: (artistName: string, label?: string, originSpaceId?: AdminSpaceId, artistTab?: string) => void;
   goBack: () => void;
   resetToSpace: (spaceId: AdminSpaceId) => void;
+  updateCurrentSubTab: (subTab: string) => void;
 }
 
 export function useAdminNavigationHistory(
@@ -179,6 +180,24 @@ export function useAdminNavigationHistory(
     });
   }, []);
 
+  const updateCurrentSubTab = useCallback((subTab: string) => {
+    setCurrent((prev) => {
+      if (prev.type === 'USER_DRILLDOWN') {
+        return { ...prev, userTab: subTab as UserDrilldownTab };
+      }
+      if (prev.type === 'TRACK_DRILLDOWN') {
+        return { ...prev, trackTab: subTab };
+      }
+      if (prev.type === 'ARTIST_DRILLDOWN') {
+        return { ...prev, artistTab: subTab };
+      }
+      if (prev.type === 'SPACE') {
+        return { ...prev, subTab };
+      }
+      return prev;
+    });
+  }, []);
+
   const canGoBack = historyStack.length > 0;
   const previous = canGoBack ? historyStack[historyStack.length - 1] : null;
 
@@ -213,5 +232,6 @@ export function useAdminNavigationHistory(
     navigateToArtist,
     goBack,
     resetToSpace,
+    updateCurrentSubTab,
   };
 }

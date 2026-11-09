@@ -44,18 +44,18 @@ export const CentralMissionsTab: React.FC<CentralMissionsTabProps> = ({
   return (
     <div className="space-y-3 pr-0.5 text-xs text-[#F8FAFC]">
       {/* En-tête */}
-      <div className="p-3.5 rounded-2xl bg-[#0D1017] border border-amber-500/20 shadow-[0_12px_30px_-10px_rgba(245,158,11,0.18)] flex flex-wrap items-center justify-between gap-3">
+      <div className="p-3.5 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/25">
               <Zap className="w-4 h-4 fill-amber-400" />
             </div>
-            <h2 className="text-sm font-mono font-black uppercase tracking-wider text-[#F8FAFC]">
-              Espace Missions Sponsorisées
+            <h2 className="text-sm font-mono font-bold text-[#F8FAFC]">
+              Missions sponsorisées
             </h2>
           </div>
           <p className="text-[10.5px] font-mono text-[#A3A9BA] mt-0.5">
-            Financé 100% par les labels • Gagnez des jetons gratuits pour vos Pass
+            Financé à 100% par les labels • Gagnez des jetons pour débloquer vos pass
           </p>
         </div>
 

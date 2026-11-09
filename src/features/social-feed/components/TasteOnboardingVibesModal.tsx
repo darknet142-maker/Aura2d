@@ -60,15 +60,15 @@ export const TasteOnboardingVibesModal: React.FC<TasteOnboardingVibesModalProps>
         role="dialog" aria-modal="true" aria-label="Profil d'Écoute & Goûts Musicaux DROP"
         initial={{ opacity: 0, y: 32, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={SPRING_DRAWER}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] bg-[#0D1017] border border-white/15 p-5 sm:p-6 space-y-4 shadow-[0_24px_70px_rgba(6,8,14,0.95)] max-h-[92dvh] overflow-y-auto"
+        className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-[#0D1017] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-[0_24px_70px_rgba(6,8,14,0.95)] max-h-[92dvh] overflow-y-auto"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 pr-2 space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">
-              <ShieldCheck className="w-3 h-3 shrink-0" /> Calibrage Studio • -14.0 LUFS
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-medium text-emerald-300">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Calibrage studio • -14.0 LUFS
             </span>
-            <h2 className="text-lg sm:text-xl font-black text-[#F8FAFC] tracking-tight leading-snug">
-              Qu&apos;aimerais-tu écouter sur DROP ?
+            <h2 className="text-lg sm:text-xl font-bold text-[#F8FAFC] tracking-tight leading-snug">
+              Qu&apos;aimeriez-vous écouter sur DROP ?
             </h2>
             <p className="text-xs text-[#A3A9BA]">
               Ajustez vos styles de prédilection et votre signature acoustique.
