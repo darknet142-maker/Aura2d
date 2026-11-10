@@ -4,10 +4,10 @@
 /* ========================================================================== */
 
 .celestial-star-container {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
   overflow: hidden;
   pointer-events: none;
@@ -2101,10 +2101,77 @@
   }
 }
 
+/* Étoiles filantes célestes d'ambiance */
+.celestial-shooting-star {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15), 0 0 0 6px rgba(255, 255, 255, 0.08), 0 0 16px rgba(255, 255, 255, 1);
+  animation: celestialShooting 7s linear infinite;
+  pointer-events: none;
+}
+
+.celestial-shooting-star::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  height: 1.5px;
+  background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.4), transparent);
+}
+
+.celestial-shooting-star:nth-child(1) {
+  top: -20px;
+  right: 120px;
+  left: initial;
+  animation-delay: 0s;
+  animation-duration: 5s;
+}
+
+.celestial-shooting-star:nth-child(2) {
+  top: 40px;
+  right: 360px;
+  left: initial;
+  animation-delay: 2.2s;
+  animation-duration: 6s;
+}
+
+.celestial-shooting-star:nth-child(3) {
+  top: 100px;
+  right: 640px;
+  left: initial;
+  animation-delay: 4.5s;
+  animation-duration: 7s;
+}
+
+@keyframes celestialShooting {
+  0% {
+    transform: rotate(315deg) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 1;
+  }
+  85%, 100% {
+    transform: rotate(315deg) translateX(-1100px);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #stars,
   #stars2,
-  #stars3 {
+  #stars3,
+  .celestial-shooting-star {
     animation: none !important;
   }
 }
+

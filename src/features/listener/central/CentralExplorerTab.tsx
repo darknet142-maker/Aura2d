@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from 'motion/react';
+import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import {
   ChevronRight,
   ChevronLeft,
@@ -234,9 +236,12 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                   },
                                 ] as const
                               ).map((catCard) => (
-                                <button
+                                <motion.button
                                   key={catCard.id}
                                   type="button"
+                                  whileHover={{ y: -6, scale: 1.04 }}
+                                  whileTap={{ scale: 0.96 }}
+                                  transition={SPRING_SNAPPY}
                                   onClick={() =>
                                     setCentralFullPageView({
                                       type: 'ROLE',
@@ -245,7 +250,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                       accentColor: catCard.color,
                                     })
                                   }
-                                  className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/40 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                  className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400/80 shrink-0 text-left shadow-lg cursor-pointer transition-colors"
                                 >
                                   <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
                                     <CoverArtwork
@@ -272,7 +277,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                       {catCard.title}
                                     </span>
                                   </div>
-                                </button>
+                                </motion.button>
                               ))}
 
                               {/* Cartes carrées des Genres musicaux à la suite dans le défilement */}
@@ -290,9 +295,12 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                 ];
                                 const gColor = palette[gIdx % palette.length];
                                 return (
-                                  <button
+                                  <motion.button
                                     key={genre}
                                     type="button"
+                                    whileHover={{ y: -6, scale: 1.04 }}
+                                    whileTap={{ scale: 0.96 }}
+                                    transition={SPRING_SNAPPY}
                                     onClick={() =>
                                       setCentralFullPageView({
                                         type: 'GENRE',
@@ -301,7 +309,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         accentColor: gColor,
                                       })
                                     }
-                                    className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/40 shrink-0 text-left transition-transform active:scale-95 shadow-lg"
+                                    className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/50 shrink-0 text-left shadow-lg cursor-pointer transition-colors"
                                   >
                                     {genreTrack && (
                                       <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
@@ -330,7 +338,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                         {genre}
                                       </span>
                                     </div>
-                                  </button>
+                                  </motion.button>
                                 );
                               })}
                             </div>
@@ -378,15 +386,18 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                     accentColors[idx % accentColors.length];
 
                                   return (
-                                    <div
+                                    <motion.div
                                       key={t.id}
+                                      whileHover={{ y: -5, scale: 1.03 }}
+                                      whileTap={{ scale: 0.97 }}
+                                      transition={SPRING_SNAPPY}
                                       onClick={() =>
                                         handlePlayOrToggleSpecificTrack(
                                           albumIndex,
                                           trackIndex
                                         )
                                       }
-                                      className="group relative w-64 sm:w-72 aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 shrink-0 cursor-pointer transition-transform active:scale-[0.98] shadow-xl"
+                                      className="group relative w-64 sm:w-72 aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 shrink-0 cursor-pointer shadow-xl transition-colors"
                                     >
                                       <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
                                         <CoverArtwork
@@ -455,7 +466,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                           Fiche
                                         </button>
                                       </div>
-                                    </div>
+                                    </motion.div>
                                   );
                                 }
                               )}
@@ -506,15 +517,18 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                     const isThisPlaying =
                                       currentTrack.id === t.id && isPlaying;
                                     return (
-                                      <div
+                                      <motion.div
                                         key={t.id}
+                                        whileHover={{ y: -5, scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        transition={SPRING_SNAPPY}
                                         onClick={() =>
                                           handlePlayOrToggleSpecificTrack(
                                             albumIndex,
                                             trackIndex
                                           )
                                         }
-                                        className="group relative w-64 sm:w-72 rounded-2xl overflow-hidden border border-cyan-400/35 hover:border-cyan-300 bg-zinc-900/90 p-3 shrink-0 cursor-pointer transition-transform active:scale-[0.98] shadow-xl flex flex-col justify-between gap-2.5"
+                                        className="group relative w-64 sm:w-72 rounded-2xl overflow-hidden border border-cyan-400/35 hover:border-cyan-300 bg-zinc-900/90 p-3 shrink-0 cursor-pointer shadow-xl flex flex-col justify-between gap-2.5 transition-colors"
                                       >
                                         <div className="flex items-center gap-3">
                                           <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-white/15 shrink-0">
@@ -606,7 +620,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                             Fiche
                                           </button>
                                         </div>
-                                      </div>
+                                      </motion.div>
                                     );
                                   })}
                               </div>

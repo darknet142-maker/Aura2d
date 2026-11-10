@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from 'motion/react';
+import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
 import { Play, Pause } from 'lucide-react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { CertificationBadgeSvg } from '../../../components/ReusableAnalyticsSheets';
@@ -51,11 +53,14 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
           {decoupledStudioRankings
             .filter((ent) => centralFullPageView.role === 'ALL' || ent.role === centralFullPageView.role)
             .map((ent) => (
-              <button
+              <motion.button
                 key={ent.key}
                 type="button"
+                whileHover={{ y: -5, scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                transition={SPRING_SNAPPY}
                 onClick={() => openUserEntitySheet(ent.name, ent.role)}
-                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 text-left transition-transform active:scale-[0.98] cursor-pointer"
+                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 text-left cursor-pointer transition-colors"
               >
                 <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
                   <CoverArtwork artworkType={ent.artworkType} coverUrl={ent.cover} title={ent.name} artist={ent.name} />
@@ -75,7 +80,7 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
                   <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">{ent.name}</p>
                   <span className="text-[11px] text-white/80 font-medium block truncate">{ent.primaryMetricValue}</span>
                 </div>
-              </button>
+              </motion.button>
             ))}
         </div>
       )}
@@ -94,10 +99,13 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
               const isThisPlaying = currentTrack.id === t.id && isPlaying;
               const tCert = getTrackCertification(t.realPlays);
               return (
-                <div
+                <motion.div
                   key={t.id}
+                  whileHover={{ y: -5, scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={SPRING_SNAPPY}
                   onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.98]"
+                  className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
                 >
                   <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
                     <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
@@ -165,7 +173,7 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
                       </button>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
         </div>
@@ -178,10 +186,13 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
             const isThisPlaying = currentTrack.id === t.id && isPlaying;
             const tCert = getTrackCertification(t.realPlays);
             return (
-              <div
+              <motion.div
                 key={t.id}
+                whileHover={{ y: -5, scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                transition={SPRING_SNAPPY}
                 onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
-                className="group relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.99]"
+                className="group relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
               >
                 <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
                   <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
@@ -232,7 +243,7 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
                     Fiche
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -243,12 +254,14 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {catalogue.map((alb, aIdx) => {
             const firstTrack = alb.tracks[0] || currentTrack;
-            const totalPlays = alb.tracks.reduce((s, t) => s + (t.realPlays || 0), 0);
             return (
-              <div
+              <motion.div
                 key={alb.id}
+                whileHover={{ y: -5, scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                transition={SPRING_SNAPPY}
                 onClick={() => handlePlayOrToggleSpecificTrack(aIdx, 0)}
-                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-transform active:scale-[0.98]"
+                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
               >
                 <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
                   <CoverArtwork artworkType={firstTrack.artworkType} coverUrl={firstTrack.cover} title={alb.albumTitle} artist={alb.artist} />
@@ -266,7 +279,7 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
                   <p className="text-sm font-extrabold text-white truncate drop-shadow">{alb.albumTitle}</p>
                   <p className="text-xs text-amber-300 truncate">{alb.artist}</p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

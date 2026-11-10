@@ -501,9 +501,9 @@
   height: 100dvh;
   max-width: 440px;
   max-height: 920px;
-  background: rgba(11, 10, 8, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(11, 10, 8, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -542,8 +542,8 @@
     radial-gradient(circle at 50% 28%, var(--ambient-primary) 0%, transparent 55%),
     radial-gradient(circle at 24% 60%, var(--ambient-secondary) 0%, transparent 60%),
     radial-gradient(circle at 78% 76%, var(--ambient-primary) 0%, transparent 52%);
-  opacity: 0.5;
-  filter: blur(64px) saturate(160%);
+  opacity: 0.32;
+  filter: blur(64px) saturate(140%);
   transition: background 0.65s var(--ease-premium), opacity 0.5s ease;
 }
 
@@ -553,8 +553,8 @@
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 34%, rgb(12 10 8 / 0.05) 0%, rgb(10 8 7 / 0.5) 70%, rgb(6 5 7 / 0.88) 100%),
-    linear-gradient(180deg, rgb(8 7 9 / 0.62) 0%, rgb(14 11 8 / 0.12) 24%, rgb(14 11 8 / 0.3) 58%, rgb(6 6 8 / 0.92) 100%);
+    radial-gradient(circle at 50% 34%, rgb(12 10 8 / 0.02) 0%, rgb(10 8 7 / 0.25) 70%, rgb(6 5 7 / 0.55) 100%),
+    linear-gradient(180deg, rgb(8 7 9 / 0.40) 0%, rgb(14 11 8 / 0.08) 24%, rgb(14 11 8 / 0.18) 58%, rgb(6 6 8 / 0.60) 100%);
 }
 
 /* Fine texture de grain pour un rendu photographique, non interactif */

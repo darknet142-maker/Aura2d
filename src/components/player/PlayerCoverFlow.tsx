@@ -31,6 +31,38 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
 }) => {
   const currentAlbum = catalogue[albumIdx] || catalogue[0];
 
+  // Flat release sequence for full 3D CoverFlow carousel across all tracks
+  const allCards = React.useMemo(() => {
+    const list: {
+      key: string;
+      albumIndex: number;
+      trackIndex: number;
+      track: PlayerTrackItem;
+      albumTitle: string;
+    }[] = [];
+    catalogue.forEach((alb, aIdx) => {
+      alb.tracks.forEach((trk, tIdx) => {
+        list.push({
+          key: `${alb.id}-${trk.id}-${aIdx}-${tIdx}`,
+          albumIndex: aIdx,
+          trackIndex: tIdx,
+          track: trk,
+          albumTitle: alb.albumTitle,
+        });
+      });
+    });
+    return list;
+  }, [catalogue]);
+
+  const activeIndex = React.useMemo(() => {
+    const found = allCards.findIndex((c) => c.track.id === currentTrack.id);
+    if (found !== -1) return found;
+    const byIndices = allCards.findIndex(
+      (c) => c.albumIndex === albumIdx && c.trackIndex === trackIdx
+    );
+    return byIndices !== -1 ? byIndices : 0;
+  }, [allCards, currentTrack.id, albumIdx, trackIdx]);
+
   // Gesture state
   const [isDragging, setIsDragging] = useState(false);
   const [dragAxis, setDragAxis] = useState<'NONE' | 'X' | 'Y'>('NONE');
@@ -110,9 +142,21 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
     const threshold = 40;
     if (dragAxis === 'X') {
       if (dragDeltaX < -threshold) {
-        onNavigateAlbum(1);
+        if (allCards.length > 1) {
+          const nextIdx = (activeIndex + 1) % allCards.length;
+          const target = allCards[nextIdx];
+          onSelectAlbumIndex(target.albumIndex, target.trackIndex, true);
+        } else {
+          onNavigateAlbum(1);
+        }
       } else if (dragDeltaX > threshold) {
-        onNavigateAlbum(-1);
+        if (allCards.length > 1) {
+          const prevIdx = (activeIndex - 1 + allCards.length) % allCards.length;
+          const target = allCards[prevIdx];
+          onSelectAlbumIndex(target.albumIndex, target.trackIndex, true);
+        } else {
+          onNavigateAlbum(-1);
+        }
       }
     } else if (dragAxis === 'Y') {
       if (dragDeltaY < -threshold) {
@@ -129,15 +173,22 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
     setDragDeltaY(0);
     dragStartRef.current = null;
     pendingDeltaRef.current = null;
-  }, [dragAxis, dragDeltaX, dragDeltaY, onNavigateAlbum, onNavigateTrack, onToast]);
+  }, [dragAxis, dragDeltaX, dragDeltaY, allCards, activeIndex, onSelectAlbumIndex, onNavigateAlbum, onNavigateTrack, onToast]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (Math.abs(e.deltaX) > 28) {
-      onNavigateAlbum(e.deltaX > 0 ? 1 : -1);
+      if (allCards.length > 1) {
+        const dir = e.deltaX > 0 ? 1 : -1;
+        const targetIdx = (activeIndex + dir + allCards.length) % allCards.length;
+        const target = allCards[targetIdx];
+        onSelectAlbumIndex(target.albumIndex, target.trackIndex, true);
+      } else {
+        onNavigateAlbum(e.deltaX > 0 ? 1 : -1);
+      }
     } else if (Math.abs(e.deltaY) > 35) {
       onNavigateTrack(e.deltaY > 0 ? 1 : -1);
     }
-  }, [onNavigateAlbum, onNavigateTrack]);
+  }, [allCards, activeIndex, onSelectAlbumIndex, onNavigateAlbum, onNavigateTrack]);
 
   const dragOffsetRatio = dragAxis === 'X' ? dragDeltaX / 220 : 0;
 
@@ -152,11 +203,11 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
         className="carousel-stage touch-none"
         style={{ touchAction: 'none' }}
       >
-        {catalogue.map((alb, idx) => {
-          const isActiveCard = idx === albumIdx;
-          const displayedTrack = isActiveCard ? currentTrack : alb.tracks[0];
+        {allCards.map((card, idx) => {
+          const isActiveCard = idx === activeIndex;
+          const displayedTrack = isActiveCard ? currentTrack : card.track;
 
-          const rawOffset = idx - albumIdx + dragOffsetRatio;
+          const rawOffset = idx - activeIndex + dragOffsetRatio;
           const absOffset = Math.abs(rawOffset);
 
           // Hardware accelerated 3D transforms (compositor thread)
@@ -181,11 +232,11 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
 
           return (
             <div
-              key={alb.id}
+              key={card.key}
               onClick={() => {
                 if (dragMovedRef.current) return;
                 if (!isActiveCard) {
-                  onSelectAlbumIndex(idx, 0, false);
+                  onSelectAlbumIndex(card.albumIndex, card.trackIndex, true);
                 } else {
                   onOpenActiveTrackSheet?.();
                 }
@@ -193,7 +244,7 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
               title={
                 isActiveCard
                   ? `Inspecter « ${displayedTrack.title} » (Crédits Studio, Split Royalties & Paramètres)`
-                  : `Basculer vers l'album « ${alb.albumTitle} »`
+                  : `Écouter « ${card.track.title} » (${card.track.artist})`
               }
               style={{
                 zIndex,

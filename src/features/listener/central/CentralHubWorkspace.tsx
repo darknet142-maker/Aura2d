@@ -118,8 +118,8 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
       animate="animate"
       className={
         isEmbeddedDesktopConsole
-          ? 'w-full h-full rounded-[28px] bg-[#0B0E16]/95 border border-white/[0.09] shadow-[0_28px_70px_-20px_rgba(4,6,12,0.92),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-5 overflow-hidden'
-          : 'absolute inset-0 z-40 bg-[#080A0F]/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-5 overflow-hidden'
+          ? 'w-full h-full rounded-[28px] bg-[#090C15]/65 border border-white/[0.09] shadow-[0_28px_70px_-20px_rgba(4,6,12,0.92),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md flex flex-col justify-between p-4 sm:p-5 overflow-hidden'
+          : 'absolute inset-0 z-40 bg-[#090C15]/65 backdrop-blur-md flex flex-col justify-between p-4 sm:p-5 overflow-hidden'
       }
     >
       {/* En-tête de la Console "Central" */}
