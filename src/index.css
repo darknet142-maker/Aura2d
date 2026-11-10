@@ -501,7 +501,9 @@
   height: 100dvh;
   max-width: 440px;
   max-height: 920px;
-  background: #0b0a08;
+  background: rgba(11, 10, 8, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
   display: flex;
   flex-direction: column;

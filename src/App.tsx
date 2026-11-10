@@ -20,6 +20,7 @@ import { NotificationSystem } from './shared/ui/NotificationSystem';
 import { AuthPortalView } from './features/listener/AuthPortalView';
 import { ImmersivePlayerScreen } from './features/listener/ImmersivePlayerScreen';
 import { useDropPlatformController } from './features/listener/hooks/useDropPlatformController';
+import { UserCelestialStarBackground } from './features/listener/components/UserCelestialStarBackground';
 import { AdminBackofficeScreen } from './features/backoffice/AdminBackofficeScreen';
 
 /**
@@ -38,6 +39,9 @@ export function App() {
         id="hidden-external-audio-stream"
         className="fixed -top-[9999px] -left-[9999px] w-px h-px opacity-0 pointer-events-none"
       />
+
+      {/* Fond Céleste Étoilé Animé — Exclusivement Section Utilisateur (Player & Auth, JAMAIS Admin) */}
+      {ctrl.appView !== 'ADMIN' && <UserCelestialStarBackground />}
 
       {ctrl.appView === 'PLAYER' && <ImmersivePlayerScreen ctrl={ctrl} />}
 
