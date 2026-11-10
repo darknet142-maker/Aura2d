@@ -85,3 +85,4 @@ export function registerNewUser(name: string, email: string, role: 'USER' | 'ADM
   saveCurrentUserToStorage(newUser);
   return newUser;
 }
+

@@ -65,3 +65,4 @@ export function recordNewSubscription(params: {
   saveSubscription(record);
   return record;
 }
+

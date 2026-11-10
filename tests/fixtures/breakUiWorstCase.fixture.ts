@@ -65,3 +65,4 @@ export function buildBreakUiWorstCaseCatalogue(baseCatalogue: AlbumNode[] = []):
     return alb;
   });
 }
+
