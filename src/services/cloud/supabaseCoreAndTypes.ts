@@ -32,13 +32,35 @@ const ENV_SUPABASE_ANON_KEY =
     ? rawEnvKey
     : DEFAULT_SUPABASE_ANON_KEY;
 
-export const LOCAL_STORAGE_TRACKS_KEY = 'drop_supabase_tracks_v2';
-export const LOCAL_STORAGE_CATALOGUE_SNAPSHOT_KEY = 'drop_full_catalogue_snapshot_v2';
+export const LOCAL_STORAGE_TRACKS_KEY = 'drop_real_supabase_tracks_v3';
+export const LOCAL_STORAGE_CATALOGUE_SNAPSHOT_KEY = 'drop_real_catalogue_snapshot_v3';
 export const LOCAL_STORAGE_ENTITIES_KEY = 'drop_entity_db_v1';
 export const LOCAL_STORAGE_PLAYLISTS_KEY = 'drop_user_playlists_v1';
 export const LOCAL_STORAGE_LIBRARY_KEY = 'drop_user_library_state_v1';
 export const LOCAL_STORAGE_AD_BANNERS_KEY = 'drop_ad_banners_v1';
 export const LOCAL_STORAGE_AD_SETTINGS_KEY = 'drop_ad_banner_settings_v1';
+
+export function purgeLegacyMockLocalStorage(): void {
+  try {
+    const legacyKeys = [
+      'drop_full_catalogue_snapshot_v1',
+      'drop_full_catalogue_snapshot_v2',
+      'drop_catalogue_snapshot_v1',
+      'drop_catalogue_snapshot_v2',
+      'drop_catalogue_v1',
+      'drop_catalogue_v2',
+      'drop_supabase_tracks_v1',
+      'drop_supabase_tracks_v2',
+      'aura_catalogue_v1',
+      'drop_mock_catalogue',
+    ];
+    legacyKeys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    });
+  } catch {}
+}
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(

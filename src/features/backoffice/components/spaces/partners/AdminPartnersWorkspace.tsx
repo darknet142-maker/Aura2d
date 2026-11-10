@@ -34,6 +34,7 @@ export const AdminPartnersWorkspace: React.FC<AdminPartnersWorkspaceProps> = ({ 
   };
 
   const activeCount = campaigns.filter((c) => c.status === 'ACTIVE').length;
+  const totalEscrow = campaigns.reduce((acc, c) => acc + (c.reservedTokens || c.totalBudgetTokens || 0), 0);
 
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-xs">
@@ -48,7 +49,7 @@ export const AdminPartnersWorkspace: React.FC<AdminPartnersWorkspaceProps> = ({ 
             <span className="text-[#A3A9BA] text-[9.5px]">100% Sponsorisé</span>
           </div>
           <span className="text-xl font-extrabold text-[#F8FAFC] my-1 tabular-nums">
-            2 500 000 JTN
+            {totalEscrow.toLocaleString('fr-FR')} JTN
           </span>
           <span className="text-[9.5px] text-[#A3A9BA]">
             Financé exclusivement par labels &amp; producteurs

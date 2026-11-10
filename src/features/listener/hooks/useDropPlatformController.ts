@@ -36,6 +36,10 @@ import {
   loadUserLibraryStateFromStorage,
   saveFullCatalogueSnapshot,
   loadFullCatalogueSnapshot,
+  sanitizeRealCatalogue,
+  isMockTrack,
+  isMockAlbum,
+  purgeLegacyMockLocalStorage,
   fileToPersistentDataUrl,
   uploadCoverFile,
   updateTrackMetadataInStorage,
@@ -136,8 +140,10 @@ export function useDropPlatformController() {
   // --- Navigation & Auth State ---
   const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('PLAYER');
   const [catalogue, setCatalogue] = useState<AlbumNode[]>(() => {
+    purgeLegacyMockLocalStorage();
     const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>() || [];
-    return rawCat.map((alb) => ({
+    const cleanCat = sanitizeRealCatalogue(rawCat);
+    return cleanCat.map((alb) => ({
       ...alb,
       tracks: (alb.tracks || []).map((t) => {
         const peaks =
@@ -210,17 +216,15 @@ export function useDropPlatformController() {
   }, []);
 
   // --- Player 2D Coordinates ---
-  const [albumIdx, setAlbumIdx] = useState<number>(1); // Index 1 = "Lumières du Bord de Mer" au centre par défaut
-  const [trackIdx, setTrackIdx] = useState<number>(0); // Axe Y (Swipe Haut/Bas & Suivant/Précédent au sein d'un album)
+  const [albumIdx, setAlbumIdx] = useState<number>(0);
+  const [trackIdx, setTrackIdx] = useState<number>(0);
 
   // --- Playback & 5-Band Web Audio Equalizer State ---
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isDropMode, setIsDropMode] = useState<boolean>(
     () => loadSavedPlaybackPrefs().defaultStartMode !== 'FULL_NONSTOP'
   );
-  const [currentTime, setCurrentTime] = useState<number>(() =>
-    loadSavedPlaybackPrefs().defaultStartMode === 'FULL_NONSTOP' ? 0 : 116
-  );
+  const [currentTime, setCurrentTime] = useState<number>(0);
 
   // Redirection directe vers une chanson via le QR Code du filigrane Trend (?track=<id>)
   useEffect(() => {
@@ -663,97 +667,112 @@ export function useDropPlatformController() {
       if (!savedRows || savedRows.length === 0) return;
 
       setCatalogue((prevCatalogue) => {
+        const cloudIdSet = new Set<string>();
         const rowMap = new Map<string, SupabaseTrackRow>();
         savedRows.forEach((r) => {
-          if (r.app_track_id) rowMap.set(r.app_track_id, r);
-          if (r.id) rowMap.set(r.id, r);
+          if (r.app_track_id) {
+            rowMap.set(r.app_track_id, r);
+            cloudIdSet.add(r.app_track_id);
+          }
+          if (r.id) {
+            rowMap.set(r.id, r);
+            cloudIdSet.add(r.id);
+          }
         });
 
-        // 1. Mettre à jour chaque piste existante avec les métadonnées récentes de Supabase
-        const updatedCatalogue = prevCatalogue.map((album) => {
-          return {
-            ...album,
-            tracks: album.tracks.map((t) => {
-              const matchedRow = rowMap.get(t.id);
-              if (matchedRow) {
-                rowMap.delete(t.id);
-                if (matchedRow.app_track_id) rowMap.delete(matchedRow.app_track_id);
-                if (matchedRow.id) rowMap.delete(matchedRow.id);
+        // 1. Filtrer et assainir le catalogue existant : ZÉRO mock track, et UNIQUEMENT les pistes présentes dans Supabase
+        const cleanPrev = sanitizeRealCatalogue(prevCatalogue);
+        const updatedCatalogue = cleanPrev
+          .map((album) => {
+            return {
+              ...album,
+              tracks: (album.tracks || [])
+                .filter((t) => cloudIdSet.has(t.id) && !isMockTrack(t))
+                .map((t) => {
+                  const matchedRow = rowMap.get(t.id);
+                  if (matchedRow) {
+                    rowMap.delete(t.id);
+                    if (matchedRow.app_track_id) rowMap.delete(matchedRow.app_track_id);
+                    if (matchedRow.id) rowMap.delete(matchedRow.id);
 
-                const peaks =
-                  t.waveformPeaks && t.waveformPeaks.length >= 32
-                    ? t.waveformPeaks
-                    : computeDeterministicWaveformPeaks(
-                      `${t.id}-${matchedRow.title}-${matchedRow.artist}`
-                    );
-                const cid =
-                  t.dropContentId ||
-                  generateDropContentId(
-                    peaks,
-                    matchedRow.duration || t.duration,
-                    t.id
-                  );
+                    const peaks =
+                      t.waveformPeaks && t.waveformPeaks.length >= 32
+                        ? t.waveformPeaks
+                        : computeDeterministicWaveformPeaks(
+                          `${t.id}-${matchedRow.title}-${matchedRow.artist}`
+                        );
+                    const cid =
+                      t.dropContentId ||
+                      generateDropContentId(
+                        peaks,
+                        matchedRow.duration || t.duration,
+                        t.id
+                      );
 
-                return {
-                  ...t,
-                  title: matchedRow.title || t.title,
-                  artist: matchedRow.artist || t.artist,
-                  featuringArtists:
-                    matchedRow.featuring_artists && matchedRow.featuring_artists.length > 0
-                      ? matchedRow.featuring_artists
-                      : t.featuringArtists,
-                  featuringSplitMode: matchedRow.featuring_split_mode || t.featuringSplitMode,
-                  album: matchedRow.album || t.album,
-                  category: matchedRow.category || t.category,
-                  labelName: matchedRow.label_name || t.labelName,
-                  copyrightText: matchedRow.copyright_text || t.copyrightText,
-                  beatmakerName: matchedRow.beatmaker_name || t.beatmakerName,
-                  soundEngineerName: matchedRow.sound_engineer_name || t.soundEngineerName,
-                  recordingEngineerName:
-                    matchedRow.recording_engineer_name || t.recordingEngineerName,
-                  mixingEngineerName:
-                    matchedRow.mixing_engineer_name || t.mixingEngineerName,
-                  masteringEngineerName:
-                    matchedRow.mastering_engineer_name || t.masteringEngineerName,
-                  lyricistName: matchedRow.lyricist_name || t.lyricistName,
-                  isExternalLyricist:
-                    matchedRow.is_external_lyricist !== undefined
-                      ? Boolean(matchedRow.is_external_lyricist)
-                      : t.isExternalLyricist,
-                  isInstrumental:
-                    matchedRow.is_instrumental !== undefined
-                      ? Boolean(matchedRow.is_instrumental)
-                      : t.isInstrumental,
-                  cover: matchedRow.cover_url || t.cover,
-                  duration: Number(matchedRow.duration || t.duration),
-                  dropStart: Number(matchedRow.drop_start ?? t.dropStart),
-                  dropDuration: Number(matchedRow.drop_duration ?? t.dropDuration),
-                  bpm: matchedRow.bpm != null ? Number(matchedRow.bpm) : t.bpm,
-                  trackAnalysis: matchedRow.track_analysis ?? t.trackAnalysis,
-                  lyrics:
-                    matchedRow.lyrics && matchedRow.lyrics.length > 0
-                      ? matchedRow.lyrics
-                      : t.lyrics,
-                  audioUrl:
-                    matchedRow.source_type === 'file' && matchedRow.stream_url
-                      ? matchedRow.stream_url
-                      : t.audioUrl,
-                  externalStreamId:
-                    matchedRow.source_type === 'youtube' && matchedRow.youtube_id
-                      ? matchedRow.youtube_id
-                      : t.externalStreamId,
-                  waveformPeaks: peaks,
-                  dropContentId: cid,
-                  isBeatDownloadable: Boolean(matchedRow.is_instrumental),
-                };
-              }
-              return t;
-            }),
-          };
-        });
+                    return {
+                      ...t,
+                      title: matchedRow.title || t.title,
+                      artist: matchedRow.artist || t.artist,
+                      featuringArtists:
+                        matchedRow.featuring_artists && matchedRow.featuring_artists.length > 0
+                          ? matchedRow.featuring_artists
+                          : t.featuringArtists,
+                      featuringSplitMode: matchedRow.featuring_split_mode || t.featuringSplitMode,
+                      album: matchedRow.album || t.album,
+                      category: matchedRow.category || t.category,
+                      labelName: matchedRow.label_name || t.labelName,
+                      copyrightText: matchedRow.copyright_text || t.copyrightText,
+                      beatmakerName: matchedRow.beatmaker_name || t.beatmakerName,
+                      soundEngineerName: matchedRow.sound_engineer_name || t.soundEngineerName,
+                      recordingEngineerName:
+                        matchedRow.recording_engineer_name || t.recordingEngineerName,
+                      mixingEngineerName:
+                        matchedRow.mixing_engineer_name || t.mixingEngineerName,
+                      masteringEngineerName:
+                        matchedRow.mastering_engineer_name || t.masteringEngineerName,
+                      lyricistName: matchedRow.lyricist_name || t.lyricistName,
+                      isExternalLyricist:
+                        matchedRow.is_external_lyricist !== undefined
+                          ? Boolean(matchedRow.is_external_lyricist)
+                          : t.isExternalLyricist,
+                      isInstrumental:
+                        matchedRow.is_instrumental !== undefined
+                          ? Boolean(matchedRow.is_instrumental)
+                          : t.isInstrumental,
+                      cover: matchedRow.cover_url || t.cover,
+                      duration: Number(matchedRow.duration || t.duration),
+                      dropStart: Number(matchedRow.drop_start ?? t.dropStart),
+                      dropDuration: Number(matchedRow.drop_duration ?? t.dropDuration),
+                      bpm: matchedRow.bpm != null ? Number(matchedRow.bpm) : t.bpm,
+                      trackAnalysis: matchedRow.track_analysis ?? t.trackAnalysis,
+                      lyrics:
+                        matchedRow.lyrics && matchedRow.lyrics.length > 0
+                          ? matchedRow.lyrics
+                          : t.lyrics,
+                      audioUrl:
+                        matchedRow.source_type === 'file' && matchedRow.stream_url
+                          ? matchedRow.stream_url
+                          : t.audioUrl,
+                      externalStreamId:
+                        matchedRow.source_type === 'youtube' && matchedRow.youtube_id
+                          ? matchedRow.youtube_id
+                          : t.externalStreamId,
+                      waveformPeaks: peaks,
+                      dropContentId: cid,
+                      isBeatDownloadable: Boolean(matchedRow.is_instrumental),
+                    };
+                  }
+                  return t;
+                }),
+            };
+          })
+          .filter((album) => album.tracks.length > 0);
 
         // 2. Insérer les pistes nouvelles de Supabase qui n'existaient pas encore localement
-        const remainingRows = Array.from(new Set(Array.from(rowMap.values())));
+        const remainingRows = Array.from(new Set(Array.from(rowMap.values()))).filter(
+          (row) => !isMockTrack({ id: row.app_track_id || row.id, title: row.title })
+        );
+
         if (remainingRows.length > 0) {
           const newTracksToInsert: Track[] = remainingRows.map((row) => {
             const trackId = row.app_track_id || row.id;
@@ -779,7 +798,7 @@ export function useDropPlatformController() {
                 `Copyright 2026 ${row.label_name || 'DROP'}. Tous droits réservés`,
               beatmakerName: row.beatmaker_name || row.artist,
               soundEngineerName:
-                row.sound_engineer_name || 'Maître Boussengui (Studio K)',
+                row.sound_engineer_name || 'Studio K',
               recordingEngineerName: row.recording_engineer_name || undefined,
               mixingEngineerName:
                 row.mixing_engineer_name || row.sound_engineer_name,
@@ -794,8 +813,8 @@ export function useDropPlatformController() {
               ambientPrimary: row.ambient_primary || '#f59e0b',
               ambientSecondary: row.ambient_secondary || '#ef4444',
               duration: Number(row.duration || 180),
-              dropStart: Number(row.drop_start || 30),
-              dropDuration: Number(row.drop_duration || 22),
+              dropStart: Number(row.drop_start ?? 30),
+              dropDuration: Number(row.drop_duration ?? 22),
               baseFreq: 120,
               bpm:
                 row.bpm != null
@@ -808,21 +827,21 @@ export function useDropPlatformController() {
                 row.source_type === 'youtube'
                   ? row.youtube_id || undefined
                   : undefined,
-              realPlays: Number(row.real_plays || 100000),
+              realPlays: Number(row.real_plays ?? 0),
               lastActivityAgo: 'Synchronisé Supabase',
-              totalListenSeconds: Number(row.total_listen_seconds || 180000),
-              listenSessions: Number(row.listen_sessions || 1200),
-              avgRetentionPct: Number(row.avg_retention_pct || 89),
-              retention30sPct: 92,
-              algoPoints: 14.5,
-              likesCount: Number(row.likes_count || 1200),
-              loopPlaysCount: Number(row.loop_plays_count || 300),
-              recommendationsCount: 150,
-              lyricsOpensCount: 900,
-              lyricsSharesCount: 180,
-              longevityDays: 15,
+              totalListenSeconds: Number(row.total_listen_seconds ?? 0),
+              listenSessions: Number(row.listen_sessions ?? 0),
+              avgRetentionPct: Number(row.avg_retention_pct ?? 0),
+              retention30sPct: 0,
+              algoPoints: 0,
+              likesCount: Number(row.likes_count ?? 0),
+              loopPlaysCount: Number(row.loop_plays_count ?? 0),
+              recommendationsCount: 0,
+              lyricsOpensCount: 0,
+              lyricsSharesCount: 0,
+              longevityDays: 1,
               consecutiveLoops: 0,
-              baselineRank: 5,
+              baselineRank: 0,
               waveformPeaks: peaks,
               dropContentId: cid,
               isBeatDownloadable: Boolean(row.is_instrumental),
@@ -859,8 +878,11 @@ export function useDropPlatformController() {
           });
         }
 
-        saveFullCatalogueSnapshot(updatedCatalogue);
-        return updatedCatalogue;
+        const finalCatalogue = sanitizeRealCatalogue(
+          updatedCatalogue.filter((a) => a.tracks && a.tracks.length > 0)
+        );
+        saveFullCatalogueSnapshot(finalCatalogue);
+        return finalCatalogue;
       });
     },
     []
@@ -922,8 +944,13 @@ export function useDropPlatformController() {
         ]);
 
       if (serverCatRes.hasData && serverCatRes.catalogue.length > 0) {
-        setCatalogue(serverCatRes.catalogue);
-        saveFullCatalogueSnapshot(serverCatRes.catalogue);
+        const cleanServerCat = sanitizeRealCatalogue(serverCatRes.catalogue);
+        if (cleanServerCat.length > 0) {
+          setCatalogue(cleanServerCat);
+          saveFullCatalogueSnapshot(cleanServerCat);
+        } else if (savedRows && savedRows.length > 0) {
+          reconcileCatalogueWithCloudTracks(savedRows);
+        }
       } else if (savedRows && savedRows.length > 0) {
         reconcileCatalogueWithCloudTracks(savedRows);
       }
@@ -1141,25 +1168,31 @@ export function useDropPlatformController() {
       if (ev.type === 'CATALOGUE_UPDATED' || ev.type === 'TRACK_SAVED') {
         const payloadCat = (ev.payload as any)?.catalogue;
         if (Array.isArray(payloadCat) && payloadCat.length > 0) {
-          setCatalogue(payloadCat);
-          saveFullCatalogueSnapshot(payloadCat);
-          pushNotification(
-            'Catalogue synchronisé en direct',
-            'Mise à jour instantanée reçue du serveur.',
-            'PUBLISH'
-          );
-          return;
+          const cleanCat = sanitizeRealCatalogue(payloadCat);
+          if (cleanCat.length > 0) {
+            setCatalogue(cleanCat);
+            saveFullCatalogueSnapshot(cleanCat);
+            pushNotification(
+              'Catalogue synchronisé en direct',
+              'Mise à jour instantanée reçue du serveur.',
+              'PUBLISH'
+            );
+            return;
+          }
         }
         fetchServerCatalogue().then((serverRes) => {
           if (!mounted) return;
           if (serverRes.hasData && serverRes.catalogue.length > 0) {
-            setCatalogue(serverRes.catalogue);
-            saveFullCatalogueSnapshot(serverRes.catalogue);
-            pushNotification(
-              'Catalogue en direct',
-              'Le catalogue s\'est synchronisé instantanément avec les autres appareils.',
-              'PUBLISH'
-            );
+            const cleanCat = sanitizeRealCatalogue(serverRes.catalogue);
+            if (cleanCat.length > 0) {
+              setCatalogue(cleanCat);
+              saveFullCatalogueSnapshot(cleanCat);
+              pushNotification(
+                'Catalogue en direct',
+                'Le catalogue s\'est synchronisé instantanément avec les autres appareils.',
+                'PUBLISH'
+              );
+            }
           }
         });
       }

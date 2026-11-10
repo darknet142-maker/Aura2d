@@ -122,13 +122,20 @@ function sanitizePost(p: SocialFeedPost): SocialFeedPost {
   };
 }
 
+const MOCK_ID_REGEX = /^(t-10[0-9]|t-20[0-9]|t-30[0-9]|t-main-|t-beat-|track-mock-)/;
+
 export function loadPersistedSocialPosts(legacyRecos: CommunityRecommendationItem[]): SocialFeedPost[] {
   if (typeof localStorage === 'undefined') return buildSeedSocialPosts(legacyRecos);
   try {
     const raw = localStorage.getItem(SOCIAL_POSTS_LS_KEY);
     if (raw === null) return buildSeedSocialPosts(legacyRecos);
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return (parsed as SocialFeedPost[]).map(sanitizePost);
+    if (Array.isArray(parsed)) {
+      const clean = (parsed as SocialFeedPost[])
+        .filter((p) => !p.target?.trackId || !MOCK_ID_REGEX.test(p.target.trackId))
+        .map(sanitizePost);
+      return clean.length > 0 ? clean : buildSeedSocialPosts(legacyRecos);
+    }
   } catch { /* fallback */ }
   return buildSeedSocialPosts(legacyRecos);
 }
@@ -144,7 +151,13 @@ export function loadPersistedUserStatuses(): UserStatusStory[] {
     const raw = localStorage.getItem(USER_STATUSES_LS_KEY);
     if (raw === null) return buildSeedUserStatuses();
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return purgeExpiredStatusesIrreversibly(parsed as UserStatusStory[]).active;
+    if (Array.isArray(parsed)) {
+      const clean = (parsed as UserStatusStory[]).filter(
+        (s) => !s.target?.trackId || !MOCK_ID_REGEX.test(s.target.trackId)
+      );
+      const { active } = purgeExpiredStatusesIrreversibly(clean);
+      return active.length > 0 ? active : buildSeedUserStatuses();
+    }
   } catch { /* fallback */ }
   return buildSeedUserStatuses();
 }

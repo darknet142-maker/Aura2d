@@ -90,43 +90,49 @@ export const OverviewStudioAndCatalogueSpotlight: React.FC<OverviewStudioAndCata
         </div>
 
         <div className="space-y-1.5">
-          {topTracks.map((t, idx) => {
-            const plays = t.realPlays || 1200 + idx * 800;
-            const org = Math.round(plays * 0.86);
-            const spon = plays - org;
+          {topTracks.length === 0 ? (
+            <div className="p-3 rounded-xl bg-[#07090E] border border-white/[0.06] text-center text-[#A3A9BA] text-xs">
+              Aucune piste disponible dans le catalogue
+            </div>
+          ) : (
+            topTracks.map((t, idx) => {
+              const plays = t.realPlays || 0;
+              const org = Math.round(plays * 0.88);
+              const spon = plays - org;
 
-            return (
-              <div
-                key={t.id}
-                onClick={() => onSelectTrack?.(t.id)}
-                className="flex items-center justify-between p-2 rounded-xl bg-[#07090E] hover:bg-white/[0.04] border border-white/[0.06] cursor-pointer transition group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-[10px] font-bold text-emerald-400 w-4 shrink-0">
-                    #{idx + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-[#F8FAFC] truncate group-hover:text-emerald-300 transition">
-                      {t.title}
-                    </p>
-                    <span className="text-[9.5px] text-[#A3A9BA] truncate block">
-                      {t.artist} • {t.category}
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => onSelectTrack?.(t.id)}
+                  className="flex items-center justify-between p-2 rounded-xl bg-[#07090E] hover:bg-white/[0.04] border border-white/[0.06] cursor-pointer transition group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-[10px] font-bold text-emerald-400 w-4 shrink-0">
+                      #{idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#F8FAFC] truncate group-hover:text-emerald-300 transition">
+                        {t.title}
+                      </p>
+                      <span className="text-[9.5px] text-[#A3A9BA] truncate block">
+                        {t.artist} • {t.category}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-[11px] font-bold text-[#F8FAFC] tabular-nums block">
+                      {plays.toLocaleString('fr-FR')} plays
+                    </span>
+                    <span className="text-[9px] text-[#A3A9BA] tabular-nums">
+                      <span className="text-emerald-400">{org} org.</span> •{' '}
+                      <span className="text-amber-400">{spon} spon.</span>
                     </span>
                   </div>
                 </div>
-
-                <div className="text-right shrink-0">
-                  <span className="text-[11px] font-bold text-[#F8FAFC] tabular-nums block">
-                    {plays.toLocaleString('fr-FR')} plays
-                  </span>
-                  <span className="text-[9px] text-[#A3A9BA] tabular-nums">
-                    <span className="text-emerald-400">{org} org.</span> •{' '}
-                    <span className="text-amber-400">{spon} spon.</span>
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>

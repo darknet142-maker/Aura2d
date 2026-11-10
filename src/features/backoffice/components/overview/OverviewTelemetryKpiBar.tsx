@@ -13,9 +13,9 @@ export interface OverviewTelemetryKpiBarProps {
 
 export const OverviewTelemetryKpiBar: React.FC<OverviewTelemetryKpiBarProps> = ({
   onNavigateToSpace,
-  activeListenersCount = 12840,
-  todayStreamsCount = 48291,
-  distributedTokensCount = 284500,
+  activeListenersCount = 0,
+  todayStreamsCount = 0,
+  distributedTokensCount = 0,
 }) => {
   const organicStreams = Math.round(todayStreamsCount * 0.88);
   const sponsoredStreams = todayStreamsCount - organicStreams;
@@ -26,8 +26,8 @@ export const OverviewTelemetryKpiBar: React.FC<OverviewTelemetryKpiBarProps> = (
       spaceId: '03_LISTENERS' as AdminSpaceId,
       label: 'Auditeurs Actifs',
       value: activeListenersCount.toLocaleString('fr-FR'),
-      delta: '+8,4 %',
-      deltaColor: 'text-emerald-400',
+      delta: activeListenersCount > 0 ? 'En direct' : 'En attente',
+      deltaColor: activeListenersCount > 0 ? 'text-emerald-400' : 'text-[#A3A9BA]',
       footerLabel: 'Modèle A : 100% Jetons',
       footerHighlight: '0 F Sortant',
       icon: <Users className="w-4 h-4 text-[#A3A9BA]" />,
@@ -37,8 +37,8 @@ export const OverviewTelemetryKpiBar: React.FC<OverviewTelemetryKpiBarProps> = (
       spaceId: '01_CATALOGUE' as AdminSpaceId,
       label: 'Streams du Jour',
       value: todayStreamsCount.toLocaleString('fr-FR'),
-      delta: '+12,2 %',
-      deltaColor: 'text-emerald-400',
+      delta: todayStreamsCount > 0 ? 'Actif' : '0 stream',
+      deltaColor: todayStreamsCount > 0 ? 'text-emerald-400' : 'text-[#A3A9BA]',
       footerLabel: `${organicStreams.toLocaleString('fr-FR')} Org.`,
       footerHighlight: `${sponsoredStreams.toLocaleString('fr-FR')} Spon.`,
       icon: <Activity className="w-4 h-4 text-[#A3A9BA]" />,
@@ -48,8 +48,8 @@ export const OverviewTelemetryKpiBar: React.FC<OverviewTelemetryKpiBarProps> = (
       spaceId: '04_PARTNERS' as AdminSpaceId,
       label: 'Jetons Distribués',
       value: distributedTokensCount.toLocaleString('fr-FR'),
-      delta: 'Ce mois-ci',
-      deltaColor: 'text-amber-400',
+      delta: distributedTokensCount > 0 ? 'Ce mois-ci' : 'Solde 0',
+      deltaColor: distributedTokensCount > 0 ? 'text-amber-400' : 'text-[#A3A9BA]',
       footerLabel: 'Budget Partenaires',
       footerHighlight: '100% Sponsorisé',
       icon: <Coins className="w-4 h-4 text-amber-400" />,

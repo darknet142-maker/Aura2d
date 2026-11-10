@@ -13,6 +13,7 @@ import {
   fileToPersistentDataUrl,
   extractYoutubeId,
   sanitizeStorageFileName,
+  purgeLegacyMockLocalStorage,
   type SupabaseTrackRow,
   type UploadTrackMetadataInput,
   type StudioEntityRecord,
@@ -24,11 +25,53 @@ import {
   deleteAudioBlobFromIndexedDb,
 } from './audioIndexedDbAndOpus.service';
 
+const MOCK_TRACK_ID_REGEX = /^(t-10[0-9]|t-20[0-9]|t-30[0-9]|t-main-|t-beat-|track-mock-)/;
+const MOCK_ALBUM_ID_REGEX = /^(alb-[0-9]|alb-main|alb-beats-|album-mock-)/;
+const MOCK_TITLES = new Set([
+  'souverain du komo',
+  "écho d'akanda",
+  "echo d'akanda",
+  'nuit à nzeng-ayong',
+  'nuit a nzeng-ayong',
+  'lumières du bord de mer',
+  'lumieres du bord de mer',
+  "pluie d'équateur",
+  "pluie d'equateur",
+  "traverse l'ogooué",
+  "traverse l'ogooue",
+]);
+
+export function isMockTrack(track: any): boolean {
+  if (!track) return true;
+  if (track.id && MOCK_TRACK_ID_REGEX.test(track.id)) return true;
+  if (track.title && MOCK_TITLES.has(String(track.title).toLowerCase().trim())) return true;
+  return false;
+}
+
+export function isMockAlbum(album: any): boolean {
+  if (!album) return true;
+  if (album.id && MOCK_ALBUM_ID_REGEX.test(album.id)) return true;
+  return false;
+}
+
+export function sanitizeRealCatalogue<T extends any[]>(cat: T): T {
+  if (!Array.isArray(cat)) return [] as unknown as T;
+  const filtered = cat
+    .filter((a: any) => !isMockAlbum(a))
+    .map((a: any) => ({
+      ...a,
+      tracks: Array.isArray(a.tracks) ? a.tracks.filter((t: any) => !isMockTrack(t)) : [],
+    }))
+    .filter((a: any) => a.tracks.length > 0);
+  return filtered as unknown as T;
+}
+
 export function saveFullCatalogueSnapshot<T>(catalogue: T): void {
   try {
+    const clean = Array.isArray(catalogue) ? sanitizeRealCatalogue(catalogue) : catalogue;
     localStorage.setItem(
       LOCAL_STORAGE_CATALOGUE_SNAPSHOT_KEY,
-      JSON.stringify(catalogue)
+      JSON.stringify(clean)
     );
   } catch {
     // Ignore storage quota errors
@@ -36,11 +79,14 @@ export function saveFullCatalogueSnapshot<T>(catalogue: T): void {
 }
 
 export function loadFullCatalogueSnapshot<T>(): T | null {
+  purgeLegacyMockLocalStorage();
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_CATALOGUE_SNAPSHOT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as T) : null;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const clean = sanitizeRealCatalogue(parsed);
+    return clean.length > 0 ? (clean as T) : null;
   } catch {
     return null;
   }
@@ -65,7 +111,12 @@ export async function getAllTracks(): Promise<SupabaseTrackRow[]> {
 
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_TRACKS_KEY);
-    return raw ? (JSON.parse(raw) as SupabaseTrackRow[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (r) => !isMockTrack({ id: r.app_track_id || r.id, title: r.title })
+    ) as SupabaseTrackRow[];
   } catch {
     return [];
   }
@@ -280,12 +331,12 @@ export async function uploadLocalTrack(
     bpm: metadata.bpm ?? null,
     track_analysis: metadata.trackAnalysis ?? null,
     lyrics: metadata.lyrics || [],
-    real_plays: 100000,
-    loop_plays_count: 820,
-    likes_count: 3400,
-    total_listen_seconds: 180000,
-    listen_sessions: 1200,
-    avg_retention_pct: 90,
+    real_plays: 0,
+    loop_plays_count: 0,
+    likes_count: 0,
+    total_listen_seconds: 0,
+    listen_sessions: 0,
+    avg_retention_pct: 0,
     created_at: new Date().toISOString(),
   };
 
@@ -396,12 +447,12 @@ export async function addYoutubeTrack(
   const localRow: SupabaseTrackRow = {
     id: `uuid-yt-${Date.now()}`,
     ...insertPayload,
-    real_plays: 100000,
-    loop_plays_count: 820,
-    likes_count: 3400,
-    total_listen_seconds: 180000,
-    listen_sessions: 1200,
-    avg_retention_pct: 90,
+    real_plays: 0,
+    loop_plays_count: 0,
+    likes_count: 0,
+    total_listen_seconds: 0,
+    listen_sessions: 0,
+    avg_retention_pct: 0,
     created_at: new Date().toISOString(),
   };
 
@@ -484,12 +535,12 @@ export async function updateTrackMetadataInStorage(
             drop_start: updates.drop_start ?? 30,
             drop_duration: updates.drop_duration ?? 22,
             bpm: updates.bpm ?? null,
-            real_plays: 100000,
-            loop_plays_count: 820,
-            likes_count: 3400,
-            total_listen_seconds: 180000,
-            listen_sessions: 1200,
-            avg_retention_pct: 90,
+            real_plays: 0,
+            loop_plays_count: 0,
+            likes_count: 0,
+            total_listen_seconds: 0,
+            listen_sessions: 0,
+            avg_retention_pct: 0,
             created_at: new Date().toISOString(),
             ...updates,
           } as SupabaseTrackRow,

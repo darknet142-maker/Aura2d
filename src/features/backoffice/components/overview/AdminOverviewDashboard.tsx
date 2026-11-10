@@ -42,9 +42,9 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
     .filter((e) => e.reason === 'MISSION_REWARD')
     .reduce((sum, e) => sum + e.amountTokens, 0);
 
-  const activeListeners = Math.max(users.length, 12840);
-  const totalStreams = Math.max(tracks.reduce((s, t) => s + (t.realPlays || 0), 0), 48291);
-  const pendingSyncOps = Math.max(syncSnapshot.queue.length, 3);
+  const activeListeners = users.length;
+  const totalStreams = tracks.reduce((s, t) => s + (t.realPlays || 0), 0);
+  const pendingSyncOps = syncSnapshot.queue.length;
 
   return (
     <div className="flex-1 w-full overflow-y-auto space-y-4 pr-0.5 text-xs text-[#F8FAFC] font-mono">
@@ -58,7 +58,7 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
             </h2>
           </div>
           <p className="text-[10.5px] text-[#A3A9BA]">
-            Télémétrie en direct • Données consolidées plateforme DROP
+            Télémétrie en direct • Données réelles consolidées plateforme DROP
           </p>
         </div>
 
@@ -101,11 +101,14 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
         onNavigateToSpace={onNavigateToSpace}
         activeListenersCount={activeListeners}
         todayStreamsCount={totalStreams}
-        distributedTokensCount={totalDistributedTokens > 0 ? totalDistributedTokens : 284500}
+        distributedTokensCount={totalDistributedTokens}
       />
 
       {/* 4. Activité de la Plateforme — Courbes interactives avec séparation étanche */}
-      <OverviewDualStreamsChart onNavigateToSpace={onNavigateToSpace} />
+      <OverviewDualStreamsChart
+        tracks={tracks}
+        onNavigateToSpace={onNavigateToSpace}
+      />
 
       {/* 5. Console DSP Studio & Top Titres Diffusés */}
       <OverviewStudioAndCatalogueSpotlight
@@ -120,16 +123,21 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
         latencyMs={12}
       />
 
-      {/* 7. Centre d'Alertes (7 en attente) & Activité Récente */}
+      {/* 7. Centre d'Alertes & Activité Récente */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
         <div className="lg:col-span-6">
           <OverviewAlertsIncidentCenter
             onNavigateToSpace={onNavigateToSpace}
             pendingSyncCount={pendingSyncOps}
+            tracksCount={tracks.length}
+            usersCount={users.length}
           />
         </div>
         <div className="lg:col-span-6">
-          <OverviewRecentActivityFeed onNavigateToSpace={onNavigateToSpace} />
+          <OverviewRecentActivityFeed
+            tracks={tracks}
+            onNavigateToSpace={onNavigateToSpace}
+          />
         </div>
       </div>
     </div>

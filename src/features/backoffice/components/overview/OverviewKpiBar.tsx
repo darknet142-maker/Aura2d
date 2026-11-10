@@ -13,9 +13,9 @@ export interface OverviewKpiBarProps {
 
 export const OverviewKpiBar: React.FC<OverviewKpiBarProps> = ({
   onNavigateToSpace,
-  activeListenersCount = 12840,
-  todayStreamsCount = 48291,
-  distributedTokensCount = 284500,
+  activeListenersCount = 0,
+  todayStreamsCount = 0,
+  distributedTokensCount = 0,
 }) => {
   const organicStreams = Math.round(todayStreamsCount * 0.88);
   const sponsoredStreams = todayStreamsCount - organicStreams;
@@ -41,7 +41,7 @@ export const OverviewKpiBar: React.FC<OverviewKpiBarProps> = ({
             {activeListenersCount.toLocaleString('fr-FR')}
           </span>
           <span className="text-[11px] text-emerald-400 font-mono font-bold flex items-center">
-            <TrendingUp className="w-3 h-3 mr-0.5" /> +8,4 %
+            <TrendingUp className="w-3 h-3 mr-0.5" /> {activeListenersCount > 0 ? 'En direct' : 'En attente'}
           </span>
         </div>
         <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10.5px] font-mono text-[#A3A9BA]">
@@ -68,7 +68,9 @@ export const OverviewKpiBar: React.FC<OverviewKpiBarProps> = ({
           <span className="text-2xl font-mono font-black text-[#F8FAFC]">
             {todayStreamsCount.toLocaleString('fr-FR')}
           </span>
-          <span className="text-[11px] text-cyan-400 font-mono font-bold">+12,2 %</span>
+          <span className="text-[11px] text-cyan-400 font-mono font-bold">
+            {todayStreamsCount > 0 ? 'Actif' : '0 stream'}
+          </span>
         </div>
         <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono">
           <span className="text-emerald-400 font-bold">■ {organicStreams.toLocaleString('fr-FR')} Org.</span>

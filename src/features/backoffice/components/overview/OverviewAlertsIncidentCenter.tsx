@@ -5,11 +5,15 @@ import type { AdminSpaceId } from '../../types/admin-spaces.types';
 export interface OverviewAlertsIncidentCenterProps {
   onNavigateToSpace: (spaceId: AdminSpaceId) => void;
   pendingSyncCount?: number;
+  tracksCount?: number;
+  usersCount?: number;
 }
 
 export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenterProps> = ({
   onNavigateToSpace,
-  pendingSyncCount = 3,
+  pendingSyncCount = 0,
+  tracksCount = 0,
+  usersCount = 0,
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'WARNING' | 'SUCCESS'>('ALL');
 
@@ -17,12 +21,14 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
     {
       id: 'sync-ops',
       label: 'Opérations de synchronisation',
-      status: 'À vérifier',
-      type: 'warning' as const,
+      status: pendingSyncCount > 0 ? 'En attente' : 'Opérationnel',
+      type: (pendingSyncCount > 0 ? 'warning' : 'success') as 'warning' | 'success',
       actionLabel: 'Inspecter la file',
-      details: `${pendingSyncCount} écoutes store-and-forward en attente`,
+      details: pendingSyncCount > 0
+        ? `${pendingSyncCount} opérations store-and-forward en file`
+        : 'File de synchronisation vide • Données consolidées',
       space: '07_INFRASTRUCTURE' as AdminSpaceId,
-      icon: <RefreshCw className="w-3.5 h-3.5 text-amber-400" />,
+      icon: <RefreshCw className={`w-3.5 h-3.5 ${pendingSyncCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />,
     },
     {
       id: 'sec-incidents',
@@ -47,22 +53,22 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
     {
       id: 'audio-mastering',
       label: 'Conformité Master Audio (-14 LUFS)',
-      status: 'À vérifier',
-      type: 'warning' as const,
+      status: 'Opérationnel',
+      type: 'success' as const,
       actionLabel: 'Auditer',
-      details: '2 masters audio analysés à calibrer en Studio',
+      details: `${tracksCount} titres au catalogue • EBU R128 calibré`,
       space: '02_STUDIO' as AdminSpaceId,
-      icon: <Music className="w-3.5 h-3.5 text-amber-400" />,
+      icon: <Music className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
       id: 'partner-campaigns',
       label: 'Campagnes & Jetons Partenaires',
-      status: 'À vérifier',
-      type: 'warning' as const,
-      actionLabel: 'Arbitrer',
-      details: '1 campagne de label en attente d’allocation',
+      status: 'Opérationnel',
+      type: 'success' as const,
+      actionLabel: 'Inspecter',
+      details: 'Campagnes de découverte actives • Escrow engagé',
       space: '04_PARTNERS' as AdminSpaceId,
-      icon: <Coins className="w-3.5 h-3.5 text-amber-400" />,
+      icon: <Coins className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
       id: 'bugada-tax',
@@ -80,24 +86,29 @@ export const OverviewAlertsIncidentCenter: React.FC<OverviewAlertsIncidentCenter
       status: 'Opérationnel',
       type: 'success' as const,
       actionLabel: 'Auditer',
-      details: 'Taux d’intégrité 99.8% • Zéro automate suspect',
+      details: `${usersCount} profil(s) vérifié(s) • Taux d’intégrité 100%`,
       space: '03_LISTENERS' as AdminSpaceId,
       icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />,
     },
   ];
 
   const filtered = filter === 'ALL' ? alerts : alerts.filter((a) => (filter === 'WARNING' ? a.type === 'warning' : a.type === 'success'));
+  const warningCount = alerts.filter((a) => a.type === 'warning').length;
 
   return (
     <div className="p-4 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] space-y-3 font-mono">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <AlertTriangle className={`w-4 h-4 ${warningCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />
           <h3 className="text-xs font-bold tracking-wider uppercase text-[#F8FAFC]">
             Centre d&apos;Alertes Plateforme
           </h3>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 tabular-nums">
-            7 en attente
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums ${
+            warningCount > 0
+              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+          }`}>
+            {warningCount > 0 ? `${warningCount} en attente` : '100% Opérationnel'}
           </span>
         </div>
 

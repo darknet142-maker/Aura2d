@@ -74,32 +74,44 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-3 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] font-mono">
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">Total Généré</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">198 400 F</span>
-              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +240% MoM</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.total.grossTtc).toLocaleString('fr-FR')} F
+              </span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">En direct</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">Airtel Money</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">122 500 F</span>
-              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +223%</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.subscriptions.grossTtc * 0.7).toLocaleString('fr-FR')} F
+              </span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">Pass Airtel</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">Moov Money</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">48 900 F</span>
-              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +198%</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.subscriptions.grossTtc * 0.3).toLocaleString('fr-FR')} F
+              </span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">Pass Moov</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">Sponsors JTN</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">19 300 F</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.ads.grossTtc).toLocaleString('fr-FR')} F
+              </span>
               <span className="text-[9.5px] text-amber-400 block mt-0.5">100% Sponsorisé</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">BUGADA 12%</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">23 808 F</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.bugada.totalAuthorship).toLocaleString('fr-FR')} F
+              </span>
               <span className="text-[9.5px] text-[#A3A9BA] block mt-0.5">Reversé DGI</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
               <span className="text-[10px] uppercase text-[#A3A9BA] block">Master 48%</span>
-              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">95 232 F</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">
+                {Math.round(ctrl.royaltyLedger.statements.reduce((sum, st) => sum + st.periodGross, 0)).toLocaleString('fr-FR')} F
+              </span>
               <span className="text-[9.5px] text-emerald-400 block mt-0.5">Ayants-droit</span>
             </div>
           </div>
