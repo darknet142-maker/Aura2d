@@ -20,6 +20,7 @@ import { OptionsMenuModal } from './player/modals/OptionsMenuModal';
 import { RecommendModal } from './player/modals/RecommendModal';
 import { FullscreenLyricsModal } from './player/modals/FullscreenLyricsModal';
 import { ProFeatureGateModal } from '../features/listener/components/ProFeatureGateModal';
+import { AssistiveFloatingMenu } from '../features/listener/components/AssistiveFloatingMenu';
 import {
   formatTime,
   formatCompactPlays,
@@ -898,6 +899,60 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
           onToggleUserPlan();
           showToast('Bienvenue sur DROP PRO ! Toutes les fonctionnalités sont débloquées.', 'bg-amber-400');
         }}
+      />
+
+      {/* Bouton Flottant Déplaçable AssistiveTouch (style iPhone) avec menu radial 8 options */}
+      <AssistiveFloatingMenu
+        onNavigateCoverFlow={() => {
+          setActiveModal('NONE');
+          setLyricsOpen(false);
+          closeAllAnalyticsSheets();
+          showToast('Lecteur CoverFlow 3D actif', 'bg-[#DE1B34]');
+        }}
+        onNavigateCentral={() => {
+          setHubTab('EXPLORER');
+          setActiveModal('MINI');
+          setLyricsOpen(false);
+          closeAllAnalyticsSheets();
+          showToast('DROP Central — Exploration musicale', 'bg-[#F59E0B]');
+        }}
+        onOpenQueue={() => {
+          setActiveModal('QUEUE');
+          setLyricsOpen(false);
+          closeAllAnalyticsSheets();
+        }}
+        onOpenLyrics={() => {
+          if (isPro) {
+            setLyricsOpen(true);
+            closeAllAnalyticsSheets();
+          } else {
+            notifyProRequired('Paroles Karaoké Synchronisées');
+          }
+        }}
+        onNavigateMissions={() => {
+          setHubTab('MISSIONS');
+          setActiveModal('MINI');
+          setLyricsOpen(false);
+          closeAllAnalyticsSheets();
+          showToast('Missions rémunérées en jetons', 'bg-[#F59E0B]');
+        }}
+        onOpenTrendStudio={() => {
+          setShowTrendStudioModal(true);
+        }}
+        onOpenEq={() => {
+          if (isPro) {
+            setActiveModal('EQ');
+            closeAllAnalyticsSheets();
+          } else {
+            notifyProRequired('Mastering Audio & Égaliseur');
+          }
+        }}
+        onOpenAdmin={() => {
+          if (onOpenAdminStudio) {
+            onOpenAdminStudio();
+          }
+        }}
+        isPlaying={isPlaying}
       />
     </div>
   );
