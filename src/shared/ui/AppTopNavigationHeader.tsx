@@ -28,8 +28,6 @@ export const AppTopNavigationHeader: React.FC<AppTopNavigationHeaderProps> = ({
   onOpenNotifications,
   syncSnapshot,
   isRealtimeConnected,
-  isBreakUiMode = false,
-  onToggleBreakUiMode,
 }) => {
   return (
     <motion.header
@@ -67,27 +65,6 @@ export const AppTopNavigationHeader: React.FC<AppTopNavigationHeaderProps> = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-        {onToggleBreakUiMode && (
-          <motion.button
-            type="button"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.96 }}
-            transition={SPRING_SNAPPY}
-            onClick={onToggleBreakUiMode}
-            className={`h-7 px-2.5 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 border cursor-pointer ${
-              isBreakUiMode
-                ? 'bg-amber-400 text-[#080A0F] border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
-                : 'bg-[#0D1017] hover:bg-[#131722] text-[#A3A9BA] hover:text-[#F8FAFC] border-white/[0.1]'
-            }`}
-            title="Protocole break-ui : tester les titres de 80+ caractères et les pochettes manquantes"
-          >
-            <Zap className="w-3 h-3 shrink-0" />
-            <span className="hidden md:inline">
-              {isBreakUiMode ? 'Crash-Test 80+ car. : ACTIF' : 'Crash-Test UI (80+ car.)'}
-            </span>
-          </motion.button>
-        )}
-
         <motion.button
           type="button"
           whileHover={{ y: -1 }}
@@ -105,17 +82,13 @@ export const AppTopNavigationHeader: React.FC<AppTopNavigationHeaderProps> = ({
           )}
         </motion.button>
 
-        <motion.button
-          type="button"
-          whileHover={{ y: -1 }}
-          whileTap={{ scale: 0.96 }}
-          transition={SPRING_SNAPPY}
-          onClick={() => streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)}
+        <div
           className={`h-7 px-2 rounded-lg text-[11px] font-mono flex items-center gap-1 border ${
             syncSnapshot.isOnline
               ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/35'
               : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
           }`}
+          title={syncSnapshot.isOnline ? 'Réseau connecté (En ligne)' : 'Mode hors-ligne'}
         >
           {syncSnapshot.isOnline ? (
             <Wifi className="w-3.5 h-3.5" />
@@ -125,7 +98,7 @@ export const AppTopNavigationHeader: React.FC<AppTopNavigationHeaderProps> = ({
           {syncSnapshot.queue.length > 0 && (
             <span className="text-[10px] font-bold">{syncSnapshot.queue.length}</span>
           )}
-        </motion.button>
+        </div>
 
         <div
           className={`h-7 px-2 rounded-lg text-[10px] font-mono flex items-center gap-1.5 border ${

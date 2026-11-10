@@ -154,24 +154,9 @@ export const UploadStep1AudioCover: React.FC<AdminUploadWizardProps> = ({
                       />
                     </label>
                     {!newAudioFileName && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={handleLoadStudioOpusMasterPreset}
-                          className="py-2 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">Master Opus Unique (Test)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateDuplicateWaveformUpload(allTracksFlat[0])}
-                          className="py-2 px-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
-                        >
-                          <Shield className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">Tester Doublon (&ge;85% Onde)</span>
-                        </button>
-                      </div>
+                      <p className="text-[10px] text-zinc-500 font-mono text-center">
+                        Formats acceptés : WAV, MP3, FLAC, AAC, OPUS • Analyse spectrale automatique
+                      </p>
                     )}
                   </div>
                 ) : (
@@ -312,25 +297,13 @@ export const UploadStep1AudioCover: React.FC<AdminUploadWizardProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {waveformVerificationReport.isBlocked ? (
+                    {waveformVerificationReport.isBlocked && (
                       <button
                         type="button"
                         onClick={handleCancelDuplicateUpload}
                         className="px-3 py-1 rounded-lg bg-rose-500 hover:bg-rose-400 text-white text-[11px] font-bold transition"
                       >
                         Annuler le téléversement &amp; Réinitialiser
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleSimulateDuplicateWaveformUpload(
-                            waveformVerificationReport.matchedTrack || allTracksFlat[0]
-                          )
-                        }
-                        className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-rose-500/20 border border-white/10 text-[10px] font-mono text-zinc-300 hover:text-rose-200 transition"
-                      >
-                        Simuler un doublon (&ge;85%)
                       </button>
                     )}
                   </div>

@@ -14,11 +14,12 @@ export interface RecoCardReactionsClusterProps {
   className?: string;
 }
 
-const formatReactionViews = (n: number) => {
+const formatCompactPlays = (n: number) => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return n.toLocaleString('fr-FR');
 };
+const formatReactionViews = formatCompactPlays;
 
 export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> = ({
   post,
@@ -68,9 +69,15 @@ export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> =
           className="relative z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#131722] hover:bg-[#1A2030] ring-2 ring-[#080A0F] border border-white/15 flex items-center justify-center active:scale-95 transition cursor-pointer"
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none">
+            <defs>
+              <linearGradient id="dropFlameGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F59E0B" />
+                <stop offset="100%" stopColor="#DE1B34" />
+              </linearGradient>
+            </defs>
             <path
               d="M12 2C10.2 4.8 7.5 7.4 7.5 11.8C7.5 15.2 9.8 18.5 12 20.5C14.2 18.5 16.5 15.2 16.5 11.8C16.5 7.8 13.2 4.8 12 2Z"
-              fill="#F59E0B"
+              fill="url(#dropFlameGrad)"
             />
             <path
               d="M12 11.5C11 13 10 14.5 10 16C10 17.5 11 19 12 19.5C13 19 14 17.5 14 16C14 14.5 13 13 12 11.5Z"
@@ -87,9 +94,15 @@ export const RecoCardReactionsCluster: React.FC<RecoCardReactionsClusterProps> =
           className="relative z-30 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#131722] hover:bg-[#1A2030] ring-2 ring-[#080A0F] border border-white/15 flex items-center justify-center active:scale-95 transition cursor-pointer"
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none">
+            <defs>
+              <linearGradient id="dropHeartGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#FF4D64" />
+                <stop offset="100%" stopColor="#DE1B34" />
+              </linearGradient>
+            </defs>
             <path
               d="M12 21.35L10.55 20.03C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5C22 12.27 18.6 15.36 13.45 20.03L12 21.35Z"
-              fill={hasLiked ? '#DE1B34' : '#F43F5E'}
+              fill={hasLiked ? 'url(#dropHeartGrad)' : '#F43F5E'}
             />
           </svg>
         </button>

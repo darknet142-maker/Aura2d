@@ -54,8 +54,6 @@ export function App() {
           }}
           syncSnapshot={ctrl.syncSnapshot}
           isRealtimeConnected={ctrl.isRealtimeConnected}
-          isBreakUiMode={ctrl.isBreakUiMode}
-          onToggleBreakUiMode={ctrl.handleToggleBreakUiMode}
         />
       )}
 

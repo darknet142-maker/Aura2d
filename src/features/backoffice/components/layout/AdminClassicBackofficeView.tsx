@@ -49,16 +49,6 @@ export const AdminClassicBackofficeView: React.FC<AdminClassicBackofficeViewProp
         tracksCount={ctrl.allTracksFlat.length}
         bannersCount={ctrl.adBanners.length}
         usersCount={ctrl.users.length}
-        isBreakUiMode={ctrl.isBreakUiMode}
-        onToggleBreakUiMode={() => {
-          const next = !ctrl.isBreakUiMode;
-          ctrl.handleToggleBreakUiMode();
-          ctrl.pushNotification(
-            next ? 'Crash-Test UI (break-ui) ACTIVÉ' : 'Retour au Catalogue Standard',
-            next ? 'Titres de 80+ caractères et pochettes manquantes injectés pour éprouver la symétrie et les placeholders SVG.' : 'Catalogue nominal restauré sans aucune perte de données.',
-            'CERTIFICATION'
-          );
-        }}
         onSwitchToSaaSMode={onSwitchToSaaSMode}
       />
 

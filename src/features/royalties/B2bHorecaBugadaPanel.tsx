@@ -21,7 +21,6 @@ import {
   type B2bProPackSpec,
 } from '../economics/monthlyTreasury36M';
 import { formatFcfa } from '../economics/formatters';
-import { INITIAL_CATALOGUE } from '../../mocks/catalogue.mock';
 import { DjModeB2bDeckCard, type DjB2bTrackLite } from '../music-intelligence';
 
 const B2B_STORAGE_KEY = 'drop_b2b_horeca_settings_v1';
@@ -708,7 +707,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
 
             {/* Platine DJ Mode B2B (Section 6.B — Intro/Outro, Phase, Roue de Camelot & Carrure 4/8 mesures) */}
             <DjModeB2bDeckCard
-              tracks={tracks && tracks.length > 0 ? tracks : INITIAL_CATALOGUE.flatMap((a) => a.tracks)}
+              tracks={tracks || []}
               activeCrossfadeSec={crossfadeSeconds}
               onApplyCrossfadeSec={(sec) => setCrossfadeSeconds(sec)}
               onTriggerTransition={onTriggerDjTransition}

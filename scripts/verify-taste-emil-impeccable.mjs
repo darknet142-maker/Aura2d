@@ -46,7 +46,7 @@ const hasLocalSvgFallback =
   (coverArtworkTxt.includes('MASTER BROADCAST') || coverArtworkTxt.includes('MASTER +241')) &&
   coverArtworkTxt.includes('onError={() => setImgError(true)}');
 
-const breakUiTxt = fs.readFileSync('src/mocks/breakUiWorstCase.mock.ts', 'utf8');
+const breakUiTxt = fs.readFileSync('tests/fixtures/breakUiWorstCase.fixture.ts', 'utf8');
 const has80CharTitles = breakUiTxt.includes(
   'Chroniques Nocturnes du Boulevard Triomphal & des Plages de la Sablière (Version Intégrale Studio 2026)'
 );

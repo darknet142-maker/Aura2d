@@ -896,7 +896,7 @@ export function useAdminUploadController(params: {
       duration: parsedNewDuration,
       dropStart: Math.min(newDropStart, Math.max(0, parsedNewDuration - 10)),
       dropDuration: Math.min(newDropDuration, Math.max(5, parsedNewDuration - Math.min(newDropStart, Math.max(0, parsedNewDuration - 10)))),
-      baseFreq: 110 + Math.floor(Math.random() * 50),
+      baseFreq: 120,
       bpm:
         newBpm ??
         currentTrackAnalysis?.confirmedBpm ??
@@ -918,20 +918,20 @@ export function useAdminUploadController(params: {
       },
       audioUrl: universalAudioUrl || (uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined),
       externalStreamId: streamId || undefined,
-      realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
+      realPlays: 0, // Démarrage authentique à 0 stream en Beta Test
       lastActivityAgo: 'à l’instant',
-      totalListenSeconds: 180000,
-      listenSessions: 1200,
-      avgRetentionPct: 89,
-      retention30sPct: 93,
-      algoPoints: 14.0,
-      likesCount: 3400,
-      recommendationsCount: 640,
-      loopPlaysCount: 820,
+      totalListenSeconds: 0,
+      listenSessions: 0,
+      avgRetentionPct: 0,
+      retention30sPct: 0,
+      algoPoints: 0.0,
+      likesCount: 0,
+      recommendationsCount: 0,
+      loopPlaysCount: 0,
       consecutiveLoops: 0,
-      lyricsOpensCount: newIsInstrumental ? 0 : 6400,
-      lyricsSharesCount: newIsInstrumental ? 0 : 1250,
-      longevityDays: 35,
+      lyricsOpensCount: 0,
+      lyricsSharesCount: 0,
+      longevityDays: 1,
       baselineRank: allTracksFlat.length + 1,
       autoDetectedChorus: detectedHotspotStart !== null,
     };

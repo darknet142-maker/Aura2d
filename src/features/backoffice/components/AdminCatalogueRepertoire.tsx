@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, ChevronRight, ArrowUp, ArrowDown, Music } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CoverArtwork } from '../../../components/CoverArtwork';
 import { CertificationBadgeSvg } from '../../../components/ReusableAnalyticsSheets';
@@ -257,6 +257,18 @@ export const AdminCatalogueRepertoire: React.FC<
           </div>
         );
       })}
+
+      {catalogue.length === 0 && (
+        <div className="w-full p-8 rounded-2xl bg-[#0D1017] border border-white/[0.08] text-center space-y-3 font-mono">
+          <div className="w-12 h-12 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#A3A9BA]">
+            <Music className="w-5 h-5 text-emerald-400" />
+          </div>
+          <h4 className="text-sm font-bold text-[#F8FAFC]">Catalogue Initial Vide</h4>
+          <p className="text-xs text-[#A3A9BA] max-w-md mx-auto">
+            Aucun album n&apos;est actuellement chargé. Utilisez l&apos;Espace Studio pour téléverser et masteriser vos premières pistes réelles.
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 };

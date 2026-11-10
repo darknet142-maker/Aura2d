@@ -68,7 +68,7 @@ export const TasteOnboardingVibesModal: React.FC<TasteOnboardingVibesModalProps>
               <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Calibrage studio • -14.0 LUFS
             </span>
             <h2 className="text-lg sm:text-xl font-bold text-[#F8FAFC] tracking-tight leading-snug">
-              Qu&apos;aimeriez-vous écouter sur DROP ?
+              Qu&apos;aimerais-tu écouter sur DROP ?
             </h2>
             <p className="text-xs text-[#A3A9BA]">
               Ajustez vos styles de prédilection et votre signature acoustique.

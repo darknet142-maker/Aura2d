@@ -27,8 +27,6 @@ export interface AdminCommandHeaderProps {
   tracksCount: number;
   bannersCount: number;
   usersCount: number;
-  isBreakUiMode?: boolean;
-  onToggleBreakUiMode?: () => void;
   onSwitchToSaaSMode?: () => void;
 }
 
@@ -44,8 +42,6 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
   tracksCount,
   bannersCount,
   usersCount,
-  isBreakUiMode = false,
-  onToggleBreakUiMode,
   onSwitchToSaaSMode,
 }) => {
   return (
@@ -113,27 +109,6 @@ export const AdminCommandHeader: React.FC<AdminCommandHeaderProps> = ({
                 : '☆ Activer DROP Awards'}
             </span>
           </motion.button>
-
-          {onToggleBreakUiMode && (
-            <motion.button
-              type="button"
-              whileHover={{ y: -1.5 }}
-              whileTap={{ scale: 0.97 }}
-              transition={SPRING_SNAPPY}
-              onClick={onToggleBreakUiMode}
-              className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-bold border flex items-center justify-center gap-1.5 cursor-pointer truncate ${
-                isBreakUiMode
-                  ? 'bg-[#DE1B34] text-white border-[#FF4D64] shadow-[0_0_15px_rgba(222,27,52,0.4)]'
-                  : 'bg-[#07090E] hover:bg-[#131722] text-[#A3A9BA] hover:text-[#F8FAFC] border-white/15'
-              }`}
-              title="Protocole break-ui : injecter des titres de 80+ caractères et des pochettes manquantes pour vérifier l'alignement"
-            >
-              <Zap className="w-3.5 h-3.5 shrink-0 text-amber-300" />
-              <span className="truncate">
-                {isBreakUiMode ? 'Crash-Test 80+ car. : ACTIF' : 'Crash-Test 80+ car. & Sans Image'}
-              </span>
-            </motion.button>
-          )}
         </div>
 
         <div className="lg:col-span-3">

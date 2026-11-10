@@ -18,7 +18,6 @@ import {
 } from '../economics/reportExport';
 import type { RoyaltyLedger } from './royaltyLedger';
 import type { ClosedPeriodRecord } from './royaltyLedgerStore';
-import { FinancialSimulator36M } from './FinancialSimulator36M';
 import { B2bHorecaBugadaPanel } from './B2bHorecaBugadaPanel';
 import { TelecomCemacCompliancePanel } from './TelecomCemacCompliancePanel';
 import type { DjB2bTrackLite } from '../music-intelligence';
@@ -41,7 +40,6 @@ type RoyaltySubTab =
   | 'PAIE_DGI'
   | 'BUGADA_CRD'
   | 'B2B_HORECA'
-  | 'SIMULATEUR_36M'
   | 'CONFORMITE_TELECOM';
 
 export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps> = ({
@@ -148,11 +146,11 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
         </div>
       </div>
 
-      {/* SOUS-ONGLETS DE NAVIGATION EN GRILLE SYMÉTRIQUE MULTI-AXES (2×3 MOBILE, 3×2 TABLETTE, 6×1 PC) */}
+      {/* SOUS-ONGLETS DE NAVIGATION EN GRILLE SYMÉTRIQUE MULTI-AXES (2×2 MOBILE, 3×2 TABLETTE, 5×1 PC) */}
       <div
         role="tablist"
         aria-label="Sections Royalties et Modèle Financier"
-        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
+        className="w-full grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 bg-[#0D1017] p-2 rounded-2xl border border-white/[0.08]"
       >
         {(
           [
@@ -160,8 +158,7 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
             { id: 'PAIE_DGI', short: '2. Paie Master 48%', sub: `DGI & BNC (${ledger.statements.length})` },
             { id: 'BUGADA_CRD', short: '3. Bordereau BUGADA', sub: `Auteur 12% (${ledger.bugada.beneficiaries.length})` },
             { id: 'B2B_HORECA', short: '4. Offre Pro B2B', sub: 'Bars/Maquis × BUGADA' },
-            { id: 'SIMULATEUR_36M', short: '5. Simulateur 36M', sub: 'Trésorerie & Point Mort' },
-            { id: 'CONFORMITE_TELECOM', short: '6. Push STK & CEMAC', sub: 'Conformité & Roadmap' },
+            { id: 'CONFORMITE_TELECOM', short: '5. Push STK & CEMAC', sub: 'Conformité & Roadmap' },
           ] as { id: RoyaltySubTab; short: string; sub: string }[]
         ).map((tab) => (
           <button
@@ -452,14 +449,6 @@ export const BugadaRoyaltiesAdminPanel: React.FC<BugadaRoyaltiesAdminPanelProps>
             onSaveAndSyncAll={onSaveAndSyncAll}
             tracks={tracks}
             onTriggerDjTransition={onTriggerDjTransition}
-          />
-        )}
-
-        {subTab === 'SIMULATEUR_36M' && (
-          <FinancialSimulator36M
-            settings={settings}
-            onUpdateSettings={onUpdateSettings}
-            onSaveAndSyncAll={onSaveAndSyncAll}
           />
         )}
 

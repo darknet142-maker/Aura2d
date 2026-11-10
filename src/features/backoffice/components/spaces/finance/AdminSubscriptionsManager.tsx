@@ -1,86 +1,18 @@
 import React, { useState } from 'react';
 import { Award, Smartphone, Coins, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Search, FileText } from 'lucide-react';
 import type { AppUser } from '../../../../../shared/types/domain.types';
+import { loadSubscriptions, type SubscriptionRecord } from '../../../../payments/services/subscription-store.service';
 
 export interface AdminSubscriptionsManagerProps {
   users: AppUser[];
   onToast?: (msg: string) => void;
 }
 
-interface SubscriptionRecord {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  planTitle: string;
-  method: 'AIRTEL_MONEY' | 'MOOV_MONEY' | 'CARD' | 'TOKEN_UNLOCKED';
-  amountFcfa: number;
-  tokensCost?: number;
-  startDate: string;
-  expiresInDays: number;
-  status: 'ACTIVE' | 'EXPIRING_SOON' | 'FAILED' | 'SUSPENDED';
-  autoRenew: boolean;
-}
-
 export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps> = ({ users, onToast }) => {
   const [filter, setFilter] = useState<'ALL' | 'DIRECT' | 'TOKENS' | 'EXPIRING' | 'FAILED'>('ALL');
   const [search, setSearch] = useState('');
 
-  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([
-    {
-      id: 'sub-01',
-      userId: users[0]?.id || 'usr-1',
-      userName: users[0]?.name || 'Junior Ndong',
-      userAvatar: users[0]?.avatar || '🎧',
-      planTitle: 'Pass Mensuel Premium',
-      method: 'AIRTEL_MONEY',
-      amountFcfa: 1500,
-      startDate: '01 Mars 2026',
-      expiresInDays: 22,
-      status: 'ACTIVE',
-      autoRenew: true,
-    },
-    {
-      id: 'sub-02',
-      userId: users[1]?.id || 'usr-2',
-      userName: users[1]?.name || 'Sylvie Mboumba',
-      userAvatar: users[1]?.avatar || '🎵',
-      planTitle: 'Pass Mensuel Premium',
-      method: 'TOKEN_UNLOCKED',
-      amountFcfa: 0,
-      tokensCost: 500,
-      startDate: '12 Fév 2026',
-      expiresInDays: 4,
-      status: 'EXPIRING_SOON',
-      autoRenew: false,
-    },
-    {
-      id: 'sub-03',
-      userId: users[2]?.id || 'usr-3',
-      userName: users[2]?.name || 'Marc Ella',
-      userAvatar: users[2]?.avatar || '⚡',
-      planTitle: 'Pass Hebdo 7 Jours',
-      method: 'MOOV_MONEY',
-      amountFcfa: 500,
-      startDate: '06 Mars 2026',
-      expiresInDays: 3,
-      status: 'ACTIVE',
-      autoRenew: true,
-    },
-    {
-      id: 'sub-04',
-      userId: 'usr-99',
-      userName: 'Boris Nguema',
-      userAvatar: '🎤',
-      planTitle: 'Pass Mensuel Premium',
-      method: 'AIRTEL_MONEY',
-      amountFcfa: 1500,
-      startDate: '08 Mars 2026',
-      expiresInDays: 0,
-      status: 'FAILED',
-      autoRenew: false,
-    },
-  ]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(loadSubscriptions);
 
   const handleAction = (subId: string, action: 'SUSPEND' | 'ACTIVATE' | 'EXTEND' | 'RECEIPT') => {
     if (action === 'EXTEND') {
@@ -139,9 +71,20 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] text-[#A3A9BA]">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Zéro Double Comptage</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSubscriptions(loadSubscriptions())}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-[#A3A9BA] hover:text-white transition cursor-pointer"
+            title="Rafraîchir les souscriptions réelles"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>Actualiser</span>
+          </button>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] text-[#A3A9BA]">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Zéro Double Comptage</span>
+          </div>
         </div>
       </div>
 
@@ -211,8 +154,17 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
 
       {/* 3. Table des Abonnements */}
       <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
-        {filtered.map((sub) => {
-          const isDirect = sub.method !== 'TOKEN_UNLOCKED';
+        {filtered.length === 0 ? (
+          <div className="py-8 text-center text-xs text-[#A3A9BA] border border-dashed border-white/10 rounded-xl bg-[#07090E]/60 flex flex-col items-center justify-center gap-1.5">
+            <Award className="w-5 h-5 text-white/20 mb-1" />
+            <p className="font-bold text-[#F8FAFC]">Aucun abonnement actif pour le moment</p>
+            <p className="text-[11px] text-[#A3A9BA]/80 max-w-sm">
+              Les souscriptions Mobile Money (+241) et les pass débloqués 100% en jetons apparaîtront ici en temps réel.
+            </p>
+          </div>
+        ) : (
+          filtered.map((sub) => {
+            const isDirect = sub.method !== 'TOKEN_UNLOCKED';
 
           return (
             <div
@@ -292,7 +244,8 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
               </div>
             </div>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );

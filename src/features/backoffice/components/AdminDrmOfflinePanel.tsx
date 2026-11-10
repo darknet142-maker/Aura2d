@@ -21,7 +21,7 @@ export interface AdminDrmOfflinePanelProps {
   adminDrmStatusMsg: string | null;
   onEncryptTrackToSandbox: (track: Track) => void;
   onTestRamDecrypt: (trackId: string) => void;
-  onSimulateExfiltrationSelfDestruct: (trackId: string) => void;
+  onSimulateExfiltrationSelfDestruct?: (trackId: string) => void;
   syncSnapshot: SyncStatusSnapshot;
 }
 
@@ -154,14 +154,6 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
           >
             Tester le déchiffrement en RAM
           </button>
-          <button
-            type="button"
-            disabled={!drmRec || drmRec.corrupted}
-            onClick={() => onSimulateExfiltrationSelfDestruct(targetTrack.id)}
-            className="py-2 px-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-bold transition disabled:opacity-40"
-          >
-            Simuler copie externe → Auto-destruction
-          </button>
         </div>
       </div>
 
@@ -177,11 +169,7 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() =>
-                streamTracker.setSimulatedOffline(!syncSnapshot.simulatedOffline)
-              }
+            <span
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border ${
                 syncSnapshot.isOnline
                   ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
@@ -191,15 +179,15 @@ export const AdminDrmOfflinePanel: React.FC<AdminDrmOfflinePanelProps> = ({
               {syncSnapshot.isOnline ? (
                 <>
                   <Wifi className="w-3.5 h-3.5" />
-                  <span>En ligne</span>
+                  <span>Connecté (Réseau Réel)</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-3.5 h-3.5" />
-                  <span>Mode Avion</span>
+                  <span>Hors ligne</span>
                 </>
               )}
-            </button>
+            </span>
 
             <button
               type="button"

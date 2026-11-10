@@ -14,7 +14,6 @@ import { LyricLine } from '../../../components/Immersive3DPlayer';
 import {
   StudioEntityRole,
 } from '../../../components/ReusableAnalyticsSheets';
-import { buildBreakUiWorstCaseCatalogue } from '../../../mocks/breakUiWorstCase.mock';
 import {
   CommunityRecommendationItem,
   FeaturingSplitMode,
@@ -106,13 +105,13 @@ export type {
   UserTrackStat,
   AppUser,
 };
-import { DEFAULT_CATEGORIES, INITIAL_CATALOGUE } from '../../../mocks/catalogue.mock';
-import { INITIAL_USERS } from '../../../mocks/users.mock';
+import { DEFAULT_CATEGORIES } from '../../../shared/constants/categories';
 import {
-  INITIAL_ARTIST_SUBSCRIBERS,
-  INITIAL_COMMUNITY_RECOMMENDATIONS,
-  INITIAL_NOTIFICATIONS,
-} from '../../../mocks/community.mock';
+  loadUsersFromStorage,
+  saveUsersToStorage,
+  loadCurrentUserFromStorage,
+  saveCurrentUserToStorage,
+} from '../../../services/cloud/serverUsersSync.service';
 import { useAdminDrmSandbox } from '../../backoffice/hooks/useAdminDrmSandbox';
 import { useAdminAnalytics } from '../../backoffice/hooks/useAdminAnalytics';
 import { useAdminUploadController } from '../../backoffice/hooks/useAdminUploadController';
@@ -137,20 +136,10 @@ export function useDropPlatformController() {
   // --- Navigation & Auth State ---
   const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('PLAYER');
   const [catalogue, setCatalogue] = useState<AlbumNode[]>(() => {
-    const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>() || INITIAL_CATALOGUE;
-    // S'assurer que l'album de Beats & Instrumentales existe et que chaque titre possède son Content ID DROP-CID et son onde 64 bandes
-    const hasBeatsAlbum = rawCat.some(
-      (a) =>
-        a.id === 'alb-beats-1' ||
-        a.tracks.some((t) => t.category === 'Beats & Instrumentales')
-    );
-    const mergedAlbums = hasBeatsAlbum
-      ? rawCat
-      : [...rawCat, INITIAL_CATALOGUE[INITIAL_CATALOGUE.length - 1]];
-
-    return mergedAlbums.map((alb) => ({
+    const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>() || [];
+    return rawCat.map((alb) => ({
       ...alb,
-      tracks: alb.tracks.map((t) => {
+      tracks: (alb.tracks || []).map((t) => {
         const peaks =
           t.waveformPeaks && t.waveformPeaks.length >= 32
             ? t.waveformPeaks
@@ -182,31 +171,20 @@ export function useDropPlatformController() {
   useEffect(() => {
     saveAwardsCeremonyEnabledToStorage(enableAwardsCeremony);
   }, [enableAwardsCeremony]);
-  const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
-  const [currentUser, setCurrentUser] = useState<AppUser>(INITIAL_USERS[0]);
+  const [users, setUsers] = useState<AppUser[]>(() => loadUsersFromStorage());
+  const [currentUser, setCurrentUser] = useState<AppUser>(() => loadCurrentUserFromStorage());
 
-  // --- Protocole `break-ui` (Crash-Test Visuel : titres 80+ caractères & images manquantes) ---
-  const [isBreakUiMode, setIsBreakUiMode] = useState<boolean>(false);
-  const normalCatalogueSnapshotRef = useRef<AlbumNode[] | null>(null);
-
-  // Sauvegarde automatique et immédiate de tout le catalogue (uniquement hors mode Crash-Test break-ui)
   useEffect(() => {
-    if (!isBreakUiMode) {
-      saveFullCatalogueSnapshot(catalogue);
-    }
-  }, [catalogue, isBreakUiMode]);
+    saveUsersToStorage(users);
+  }, [users]);
 
-  const handleToggleBreakUiMode = useCallback(() => {
-    setIsBreakUiMode((prev) => {
-      const next = !prev;
-      if (next) {
-        normalCatalogueSnapshotRef.current = catalogue;
-        setCatalogue(buildBreakUiWorstCaseCatalogue(catalogue));
-      } else if (normalCatalogueSnapshotRef.current) {
-        setCatalogue(normalCatalogueSnapshotRef.current);
-      }
-      return next;
-    });
+  useEffect(() => {
+    saveCurrentUserToStorage(currentUser);
+  }, [currentUser]);
+
+  // Sauvegarde automatique et immédiate de tout le catalogue
+  useEffect(() => {
+    saveFullCatalogueSnapshot(catalogue);
   }, [catalogue]);
 
   // --- Gabon Mobile Money Pass & Anti-Fraud Shield State ---
@@ -296,12 +274,44 @@ export function useDropPlatformController() {
         "L'Oiseau Rare": true,
       }
   );
-  const [artistSubscribers, setArtistSubscribers] = useState<Record<string, number>>(
-    INITIAL_ARTIST_SUBSCRIBERS
-  );
+  const [artistSubscribers, setArtistSubscribers] = useState<Record<string, number>>(() => {
+    try {
+      const saved = window.localStorage.getItem('drop_artist_subscribers_v1');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('drop_artist_subscribers_v1', JSON.stringify(artistSubscribers));
+    } catch {
+      // ignore
+    }
+  }, [artistSubscribers]);
+
   const [communityRecommendations, setCommunityRecommendations] = useState<
     CommunityRecommendationItem[]
-  >(INITIAL_COMMUNITY_RECOMMENDATIONS);
+  >(() => {
+    try {
+      const saved = window.localStorage.getItem('drop_community_recs_v1');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('drop_community_recs_v1', JSON.stringify(communityRecommendations));
+    } catch {
+      // ignore
+    }
+  }, [communityRecommendations]);
+
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [repeatMode, setRepeatMode] = useState<number>(0); // 0: Off, 1: All, 2: One
   const isRepeat = repeatMode > 0;
@@ -317,7 +327,7 @@ export function useDropPlatformController() {
     ecgValidatedAt30Sec: boolean;
     sessionPointsEarned: number;
   }>({
-    trackId: INITIAL_CATALOGUE[1].tracks[0].id,
+    trackId: catalogue[0]?.tracks[0]?.id || '',
     active: false,
     listenedSeconds: 0,
     playCountedAtOneSec: false,
@@ -328,7 +338,7 @@ export function useDropPlatformController() {
   // --- Auth Form State ---
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [authName, setAuthName] = useState<string>('');
-  const [authEmail, setAuthEmail] = useState<string>('camille.ndong@drop.ga');
+  const [authEmail, setAuthEmail] = useState<string>('');
 
   // --- Admin Navigation & Sub-tabs ---
   const [adminMainTab, setAdminMainTab] = useState<AdminMainTabId>('CATALOGUE');
@@ -371,7 +381,7 @@ export function useDropPlatformController() {
 
   // --- Persistent Entity Database (Artistes, Labels, Beatmakers, Ingés Son, Auteurs) ---
   const [entityDb, setEntityDb] = useState<EntityDatabase>(() => {
-    const initialTracks = INITIAL_CATALOGUE.flatMap((a) => a.tracks);
+    const initialTracks = (loadFullCatalogueSnapshot<AlbumNode[]>() || []).flatMap((a) => a.tracks || []);
     const defaultArtists = Array.from(
       new Set(
         initialTracks
@@ -449,7 +459,17 @@ export function useDropPlatformController() {
     } catch {
       // Ignore
     }
-    return INITIAL_NOTIFICATIONS;
+    return [
+      {
+        id: 'notif-welcome-beta',
+        title: 'Bienvenue sur DROP (+241)',
+        message: 'Plateforme de streaming haute-fidélité Gabon & CEMAC. Données réelles activées.',
+        type: 'INFO',
+        timestampIso: new Date().toISOString(),
+        isRead: false,
+        audience: 'GLOBAL',
+      },
+    ];
   });
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
@@ -627,8 +647,8 @@ export function useDropPlatformController() {
 
   const safeAlbumIdx = Math.min(albumIdx, Math.max(0, catalogue.length - 1));
   const currentAlbum = catalogue[safeAlbumIdx] || catalogue[0];
-  const safeTrackIdx = Math.min(trackIdx, Math.max(0, (currentAlbum?.tracks.length || 1) - 1));
-  const currentTrack = currentAlbum?.tracks[safeTrackIdx] || INITIAL_CATALOGUE[1].tracks[0];
+  const safeTrackIdx = Math.min(trackIdx, Math.max(0, (currentAlbum?.tracks?.length || 1) - 1));
+  const currentTrack = currentAlbum?.tracks?.[safeTrackIdx] || catalogue[0]?.tracks?.[0] || ({} as Track);
 
 
   const isPreviewingUploadDropRef = useRef<boolean>(false);
@@ -3151,7 +3171,6 @@ export function useDropPlatformController() {
     handleConfirmCreditHandshake, handleOpenCreditDispute, handleResolveCreditDispute,
     handleToggleInPlaylist, handleSeekFromPlayer, handleQuickEnter,
     isCurrentLiked, currentRankInfo,
-    isBreakUiMode, handleToggleBreakUiMode,
     ...drm,
     ...analytics,
     ...upload,

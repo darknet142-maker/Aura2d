@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import type { AlbumNode, Track } from '../../shared/types/domain.types';
-import { INITIAL_CATALOGUE } from '../../mocks/catalogue.mock';
 import { fetchSupabaseTracks } from './serverSupabaseBridge';
 
 export function mergeCatalogueWithTracks(baseCatalogue: AlbumNode[], tracks: Track[]): AlbumNode[] {
@@ -28,7 +27,9 @@ export function mergeCatalogueWithTracks(baseCatalogue: AlbumNode[], tracks: Tra
   return result;
 }
 
-export async function initServerCatalogue(filePath: string): Promise<AlbumNode[]> {
+export async function initServerCatalogue(
+  filePath: string = path.resolve(process.cwd(), 'server_storage', 'catalogue.json')
+): Promise<AlbumNode[]> {
   let diskCatalogue: AlbumNode[] | null = null;
   try {
     if (fs.existsSync(filePath)) {
@@ -39,7 +40,7 @@ export async function initServerCatalogue(filePath: string): Promise<AlbumNode[]
   } catch {
     diskCatalogue = null;
   }
-  const base = diskCatalogue && diskCatalogue.length > 0 ? diskCatalogue : INITIAL_CATALOGUE;
+  const base: AlbumNode[] = diskCatalogue && diskCatalogue.length > 0 ? diskCatalogue : [];
   const supabaseTracks = await fetchSupabaseTracks();
   const hydrated = mergeCatalogueWithTracks(base, supabaseTracks);
   try {

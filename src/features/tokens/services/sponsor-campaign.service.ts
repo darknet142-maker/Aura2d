@@ -4,30 +4,30 @@ import { applyTokenTransaction, getOrCreateSponsorWallet } from './token-ledger.
 const INITIAL_SPONSORS: SponsorAccount[] = [
   { id: 'sp-sony-bugada', name: 'Sony Music Afrique / BUGADA', legalEntity: 'Sony Music Entertainment Ltd', role: 'LABEL', isVerified: true, contactEmail: 'licensing@sonymusic.africa', createdAtIso: '2026-01-10T08:00:00Z' },
   { id: 'sp-direct-prod', name: 'Direct Prod Gabon', legalEntity: 'Direct Prod SARL', role: 'PRODUCER', isVerified: true, contactEmail: 'direction@directprod.ga', createdAtIso: '2026-02-14T10:30:00Z' },
-  { id: 'sp-koba-records', name: 'Koba Building Records', legalEntity: 'Building Music Group', role: 'ARTIST', isVerified: true, contactEmail: 'koba@building.ga', createdAtIso: '2026-03-01T12:00:00Z' },
+  { id: 'sp-khavap-records', name: 'Khavap Mawa Records', legalEntity: 'Khavap Music Group', role: 'ARTIST', isVerified: true, contactEmail: 'contact@khavapmawa.ga', createdAtIso: '2026-03-01T12:00:00Z' },
 ];
 
 const INITIAL_CAMPAIGNS: SponsorCampaign[] = [
   {
-    id: 'camp-koba-01', sponsorId: 'sp-koba-records', title: 'Découverte Titre Phare Koba Building',
-    targetTrackId: 't-main-1', targetArtistName: 'Koba Building', totalBudgetTokens: 50_000,
-    reservedTokens: 50_000, distributedTokens: 12_450, rewardPerMission: 50, maxParticipants: 1000,
-    missionType: 'LISTEN_1_TRACK', status: 'ACTIVE', startDateIso: '2026-11-01T00:00:00Z', endDateIso: '2026-11-30T23:59:59Z',
+    id: 'camp-khavap-01', sponsorId: 'sp-khavap-records', title: 'Découverte Titre Phare Khavap Mawa — Tcham 4',
+    targetTrackId: 't-1793630114895', targetArtistName: 'Khavap Mawa', totalBudgetTokens: 50_000,
+    reservedTokens: 50_000, distributedTokens: 0, rewardPerMission: 50, maxParticipants: 1000,
+    missionType: 'LISTEN_1_TRACK', status: 'ACTIVE', startDateIso: '2026-11-01T00:00:00Z', endDateIso: '2026-12-31T23:59:59Z',
   },
   {
-    id: 'camp-afrobeats-02', sponsorId: 'sp-sony-bugada', title: 'Campagne Panafricaine Afro-Pop & Amapiano',
-    targetTrackId: 't-101', targetArtistName: 'Vicky R', totalBudgetTokens: 100_000,
-    reservedTokens: 100_000, distributedTokens: 34_500, rewardPerMission: 75, maxParticipants: 1333,
-    missionType: 'DISCOVER_ARTIST', status: 'ACTIVE', startDateIso: '2026-11-05T00:00:00Z', endDateIso: '2026-12-05T23:59:59Z',
+    id: 'camp-chansa-02', sponsorId: 'sp-sony-bugada', title: 'Mission Afro-Pop & Rumba — AKALEZE (Chans\'A)',
+    targetTrackId: 't-1793635636298', targetArtistName: 'Chans\'A', totalBudgetTokens: 100_000,
+    reservedTokens: 100_000, distributedTokens: 0, rewardPerMission: 75, maxParticipants: 1333,
+    missionType: 'DISCOVER_ARTIST', status: 'ACTIVE', startDateIso: '2026-11-05T00:00:00Z', endDateIso: '2026-12-31T23:59:59Z',
   },
 ];
 
 let sponsorsRegistry: SponsorAccount[] = [...INITIAL_SPONSORS];
 let campaignsRegistry: SponsorCampaign[] = [...INITIAL_CAMPAIGNS];
 
-// Initialise un solde initial pour les sponsors de démo afin de supporter les réservations
+// Initialise un solde initial pour les sponsors partenaires afin de supporter les réservations
 applyTokenTransaction({ idempotencyKey: 'seed-sp-sony-init', sourceBucket: 'SYSTEM_PLATFORM', destinationBucket: 'SPONSOR_FUNDING', amountTokens: 250_000, sponsorId: 'sp-sony-bugada', reason: 'FUNDING' });
-applyTokenTransaction({ idempotencyKey: 'seed-sp-koba-init', sourceBucket: 'SYSTEM_PLATFORM', destinationBucket: 'SPONSOR_FUNDING', amountTokens: 150_000, sponsorId: 'sp-koba-records', reason: 'FUNDING' });
+applyTokenTransaction({ idempotencyKey: 'seed-sp-khavap-init', sourceBucket: 'SYSTEM_PLATFORM', destinationBucket: 'SPONSOR_FUNDING', amountTokens: 150_000, sponsorId: 'sp-khavap-records', reason: 'FUNDING' });
 applyTokenTransaction({ idempotencyKey: 'seed-sp-direct-init', sourceBucket: 'SYSTEM_PLATFORM', destinationBucket: 'SPONSOR_FUNDING', amountTokens: 100_000, sponsorId: 'sp-direct-prod', reason: 'FUNDING' });
 
 export function getSponsorAccounts(): SponsorAccount[] {

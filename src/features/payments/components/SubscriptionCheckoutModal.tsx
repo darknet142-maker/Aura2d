@@ -9,6 +9,7 @@ import {
   type PlanTier,
   type PlanSpec,
 } from './SubscriptionPlanCard';
+import { recordNewSubscription } from '../services/subscription-store.service';
 
 export type SubscriptionMode = 'DIRECT_PAID' | 'TOKEN_UNLOCK';
 export type { PlanTier };
@@ -73,6 +74,14 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
     setReceipt({
       txnId: ref,
       label: `${currentPlan.title} activé avec succès.`,
+    });
+    recordNewSubscription({
+      userId: 'usr-beta-1',
+      userName: 'Auditeur DROP Beta',
+      planTitle: currentPlan.title,
+      method: method === 'DIRECT_PAID' ? 'AIRTEL_MONEY' : 'TOKEN_UNLOCKED',
+      amountFcfa: currentPlan.priceFcfa,
+      tokensCost: method === 'TOKEN_UNLOCK' ? currentPlan.tokensCost : undefined,
     });
     onActivatePass(currentPlan.id, method, ref);
   };

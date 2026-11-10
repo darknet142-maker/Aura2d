@@ -9,7 +9,6 @@ export {
   type StatsBaseline,
 } from './royaltyLedgerStore';
 export { BugadaRoyaltiesAdminPanel } from './BugadaRoyaltiesAdminPanel';
-export { FinancialSimulator36M } from './FinancialSimulator36M';
 export { TelecomCemacCompliancePanel } from './TelecomCemacCompliancePanel';
 export { TrackRoyaltySplitBadge } from './TrackRoyaltySplitBadge';
 
