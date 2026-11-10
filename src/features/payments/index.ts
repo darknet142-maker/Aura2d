@@ -6,6 +6,7 @@
 export { ListenerPassAndDataSaverCard } from '../royalties/ListenerPassAndDataSaverCard';
 export { ArtistRoyaltyAndTipCard } from '../royalties/ArtistRoyaltyAndTipCard';
 export { SubscriptionCheckoutModal } from './components/SubscriptionCheckoutModal';
+export { SubscriptionPlanCard, type PlanTier, type PlanSpec } from './components/SubscriptionPlanCard';
 export { DirectMobileMoneyForm } from './components/DirectMobileMoneyForm';
 export { TokenUnlockForm } from './components/TokenUnlockForm';
 export { GABON_PASS_SPECS } from '../../utils/rankingEngine';

@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { X, Award, ShieldCheck, CheckCircle2, Coins, ArrowRight, Smartphone, Sparkles } from 'lucide-react';
+import { X, Award, CheckCircle2, Coins, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SPRING_SNAPPY } from '../../../shared/ui/springMotion';
-import { DirectMobileMoneyForm, type MobileOperator } from './DirectMobileMoneyForm';
+import { DirectMobileMoneyForm } from './DirectMobileMoneyForm';
 import { TokenUnlockForm } from './TokenUnlockForm';
+import {
+  SubscriptionPlanCard,
+  type PlanTier,
+  type PlanSpec,
+} from './SubscriptionPlanCard';
 
 export type SubscriptionMode = 'DIRECT_PAID' | 'TOKEN_UNLOCK';
-export type PlanTier = 'PASS_24H' | 'PASS_7J' | 'PREMIUM_MENSUEL';
+export type { PlanTier };
 
 export interface SubscriptionCheckoutModalProps {
   isOpen: boolean;
@@ -16,41 +21,36 @@ export interface SubscriptionCheckoutModalProps {
   onGoToMissions?: () => void;
 }
 
-interface PlanSpec {
-  id: PlanTier;
-  title: string;
-  duration: string;
-  priceFcfa: number;
-  tokensCost: number;
-  isPopular?: boolean;
-  features: string[];
-}
-
 const PLANS: PlanSpec[] = [
   {
     id: 'PASS_24H',
-    title: 'Pass Découverte 24h',
+    title: 'Pass 24H Découverte',
+    subtitle: 'Accès express 24h & Éco-Data',
     duration: '24 heures d’accès',
     priceFcfa: 150,
     tokensCost: 50,
-    features: ['Accès illimité 24h', 'Mode Éco-Data Opus 32k'],
+    badge: 'Flash 24H',
+    features: ['Accès illimité 24h', 'Mode Éco-Data Opus 32k', 'Zéro engagement'],
   },
   {
     id: 'PASS_7J',
-    title: 'Pass Semaine 7 Jours',
+    title: 'Pass Hebdo 7 Jours',
+    subtitle: 'Nomade & 25 titres hors-ligne',
     duration: '7 jours complets',
     priceFcfa: 500,
     tokensCost: 150,
-    features: ['Zéro publicité', '25 titres en cache hors-ligne', 'Qualité Standard 96k'],
+    badge: 'Nomade • Hors-Ligne',
+    features: ['25 titres hors-ligne DRM', 'Zéro coupure pub', 'Qualité Standard 96k'],
   },
   {
     id: 'PREMIUM_MENSUEL',
     title: 'Pass Mensuel Premium',
+    subtitle: 'Studio Hi-Res & Illimité',
     duration: '30 jours complets',
     priceFcfa: 1500,
     tokensCost: 500,
-    isPopular: true,
-    features: ['Téléchargements illimités', 'Zéro publicité', 'Qualité Hi-Res 256k', 'Streams 100% certifiés ECG'],
+    badge: 'Recommandé • DROP',
+    features: ['Téléchargements illimités', 'Qualité Hi-Res 256k', 'Streams certifiés ECG'],
   },
 ];
 
@@ -85,7 +85,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 10 }}
           transition={SPRING_SNAPPY}
-          className="relative w-full max-w-lg rounded-2xl bg-[#0D1017] border border-white/[0.1] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh] font-mono text-xs text-[#F8FAFC]"
+          className="relative w-full max-w-xl rounded-2xl bg-[#0D1017] border border-white/[0.1] shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col max-h-[92vh] font-mono text-xs text-[#F8FAFC]"
         >
           {/* 1. Header de Souscription */}
           <div className="flex items-center justify-between p-4 border-b border-white/[0.08] bg-[#07090E]">
@@ -98,7 +98,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                   Abonnements &amp; Pass DROP (+241)
                 </h3>
                 <p className="text-[10px] text-[#A3A9BA]">
-                  Deux modes d&apos;accès : Paiement direct ou Déblocage 100% Jetons
+                  Paiement Direct (Airtel/Moov) ou Déblocage 100% Jetons Sponsorisés
                 </p>
               </div>
             </div>
@@ -131,43 +131,16 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
               </div>
             ) : (
               <>
-                {/* 2. Sélection de Formule */}
-                <div className="grid grid-cols-3 gap-2">
-                  {PLANS.map((plan) => {
-                    const isSelected = selectedPlanId === plan.id;
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer relative ${
-                          isSelected
-                            ? 'bg-[#131722] border-emerald-500/60 shadow-sm'
-                            : 'bg-[#07090E] border-white/[0.06] text-[#A3A9BA] hover:text-white'
-                        }`}
-                      >
-                        {plan.isPopular && (
-                          <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-black bg-[#DE1B34] text-white uppercase tracking-wider">
-                            Populaire
-                          </span>
-                        )}
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#F8FAFC] block truncate">
-                            {plan.title.replace('Pass ', '')}
-                          </span>
-                          <span className="text-[9px] text-[#A3A9BA]">{plan.duration}</span>
-                        </div>
-                        <div className="mt-2 pt-1 border-t border-white/[0.05]">
-                          <span className="text-xs font-black text-emerald-400 block tabular-nums">
-                            {plan.priceFcfa} F
-                          </span>
-                          <span className="text-[8.5px] text-amber-400 block tabular-nums">
-                            ou {plan.tokensCost} JTN
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
+                {/* 2. Sélection de Formule : 3 Cartes Distinctes */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {PLANS.map((plan) => (
+                    <SubscriptionPlanCard
+                      key={plan.id}
+                      plan={plan}
+                      isSelected={selectedPlanId === plan.id}
+                      onSelect={() => setSelectedPlanId(plan.id)}
+                    />
+                  ))}
                 </div>
 
                 {/* 3. Sélecteur des Deux Modes d'Accès */}
@@ -175,7 +148,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                   <button
                     type="button"
                     onClick={() => setMode('DIRECT_PAID')}
-                    className={`p-2 rounded-lg font-bold flex items-center justify-center gap-2 cursor-pointer transition ${
+                    className={`p-2 rounded-lg font-bold flex items-center justify-center gap-2 cursor-pointer transition text-xs ${
                       mode === 'DIRECT_PAID'
                         ? 'bg-[#DE1B34] text-white shadow-sm'
                         : 'text-[#A3A9BA] hover:text-white'
@@ -188,7 +161,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                   <button
                     type="button"
                     onClick={() => setMode('TOKEN_UNLOCK')}
-                    className={`p-2 rounded-lg font-bold flex items-center justify-center gap-2 cursor-pointer transition ${
+                    className={`p-2 rounded-lg font-bold flex items-center justify-center gap-2 cursor-pointer transition text-xs ${
                       mode === 'TOKEN_UNLOCK'
                         ? 'bg-amber-400 text-[#080A0F] shadow-sm font-extrabold'
                         : 'text-[#A3A9BA] hover:text-white'

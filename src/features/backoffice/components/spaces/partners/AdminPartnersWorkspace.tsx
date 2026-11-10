@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Coins, Shield, ArrowUpRight, Workflow } from 'lucide-react';
+import { Coins, ShieldCheck, Activity, Plus } from 'lucide-react';
 import { CampaignsListTable } from './CampaignsListTable';
 import { CampaignDetailCard } from './CampaignDetailCard';
-import { CampaignLifecycleFlowCard } from './CampaignLifecycleFlowCard';
 import { AdminCreateCampaignModal } from '../../AdminCreateCampaignModal';
 import { getSponsorCampaigns, getSponsorAccounts, type SponsorCampaign } from '../../../../tokens';
 import type { ReturnTypeUseDropPlatformController } from '../../../../listener/hooks/useDropPlatformController';
@@ -12,7 +11,6 @@ export interface AdminPartnersWorkspaceProps {
 }
 
 export const AdminPartnersWorkspace: React.FC<AdminPartnersWorkspaceProps> = ({ ctrl }) => {
-  const [subTab, setSubTab] = useState<'CAMPAIGNS' | 'LIFECYCLE' | 'SPONSORS'>('CAMPAIGNS');
   const [campaigns, setCampaigns] = useState<SponsorCampaign[]>(() => getSponsorCampaigns());
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(() => campaigns[0]?.id || null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,73 +33,62 @@ export const AdminPartnersWorkspace: React.FC<AdminPartnersWorkspaceProps> = ({ 
     ctrl.pushNotification('Campagne Réservée', `${budget.toLocaleString('fr-FR')} jetons engagés et missions actives.`, 'COMMUNITY');
   };
 
+  const activeCount = campaigns.filter((c) => c.status === 'ACTIVE').length;
+
   return (
-    <div className="flex flex-col gap-4 w-full font-mono">
-      {/* 1. Barres de liquidité des Partenaires */}
+    <div className="flex flex-col gap-4 w-full font-mono text-xs">
+      {/* 1. Barre de Télémétrie Escrow Partenaires (Calme & Studio Broadcast) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]">
         <div className="p-3 rounded-xl bg-[#07090E] border border-white/[0.06] flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#A3A9BA] text-[10px] uppercase">
-            <span className="flex items-center gap-1.5 text-amber-400">
+            <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
               <Coins className="w-3.5 h-3.5" />
-              Pool de Liquidité Partenaire
+              Pool Escrow Partenaires
             </span>
-            <span className="text-emerald-400 font-bold">100% Sponsorisé</span>
+            <span className="text-[#A3A9BA] text-[9.5px]">100% Sponsorisé</span>
           </div>
-          <span className="text-2xl font-extrabold text-[#F8FAFC] my-1 tabular-nums">2 500 000 JTN</span>
-          <span className="text-[9.5px] text-[#A3A9BA]">Financé exclusivement par labels &amp; producteurs</span>
+          <span className="text-xl font-extrabold text-[#F8FAFC] my-1 tabular-nums">
+            2 500 000 JTN
+          </span>
+          <span className="text-[9.5px] text-[#A3A9BA]">
+            Financé exclusivement par labels &amp; producteurs
+          </span>
         </div>
 
         <div className="p-3 rounded-xl bg-[#07090E] border border-white/[0.06] flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#A3A9BA] text-[10px] uppercase">
-            <span className="flex items-center gap-1.5 text-cyan-400">
-              <Shield className="w-3.5 h-3.5" />
-              Sécurité Modèle A
+            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Modèle A Certifié
             </span>
-            <span className="text-cyan-300 font-bold">Conforme</span>
+            <span className="text-emerald-400/80 text-[9.5px]">Conforme</span>
           </div>
-          <p className="text-xs font-bold text-[#F8FAFC] my-1">Zéro Achat Utilisateur • Zéro Cashout</p>
-          <span className="text-[9.5px] text-emerald-400">Déblocage d&apos;abonnements 100% en jetons</span>
+          <p className="text-xs font-bold text-[#F8FAFC] my-1">
+            Zéro Achat Utilisateur • Zéro Cashout
+          </p>
+          <span className="text-[9.5px] text-[#A3A9BA]">
+            Déblocage d&apos;abonnements 100% en jetons
+          </span>
         </div>
 
         <div className="p-3 rounded-xl bg-[#07090E] border border-white/[0.06] flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#A3A9BA] text-[10px] uppercase">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              Missions Actives
+            <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
+              <Activity className="w-3.5 h-3.5" />
+              Missions ECG
             </span>
-            <span className="text-white/80 font-bold">Engagement</span>
+            <span className="text-emerald-400 font-bold">{activeCount} actives</span>
           </div>
-          <span className="text-2xl font-extrabold text-emerald-400 my-1">30s Écoute Validée</span>
-          <span className="text-[9.5px] text-[#A3A9BA]">Streams sponsorisés exclus de l&apos;assiette BUGADA</span>
+          <span className="text-xl font-extrabold text-[#F8FAFC] my-1 tabular-nums">
+            30s Écoute Validée
+          </span>
+          <span className="text-[9.5px] text-[#A3A9BA]">
+            Streams sponsorisés hors assiette BUGADA
+          </span>
         </div>
       </div>
 
-      {/* 2. Onglets de Navigation Partenaires */}
-      <div className="flex items-center gap-2 p-1 rounded-xl bg-[#0D1017] border border-white/10 w-fit text-xs">
-        <button
-          type="button"
-          onClick={() => setSubTab('CAMPAIGNS')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-            subTab === 'CAMPAIGNS' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          Campagnes Actives ({campaigns.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setSubTab('LIFECYCLE')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer transition ${
-            subTab === 'LIFECYCLE' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-[#A3A9BA] hover:text-white'
-          }`}
-        >
-          <Workflow className="w-3.5 h-3.5" />
-          <span>Parcours Dynamique &amp; Boucle Complète</span>
-        </button>
-      </div>
-
-      {subTab === 'LIFECYCLE' && <CampaignLifecycleFlowCard />}
-
-      {/* 3. Fiche Détaillée & Répertoire */}
+      {/* 2. Fiche Détaillée Campagne */}
       {selectedCampaign && (
         <CampaignDetailCard
           campaign={selectedCampaign}
@@ -110,6 +97,7 @@ export const AdminPartnersWorkspace: React.FC<AdminPartnersWorkspaceProps> = ({ 
         />
       )}
 
+      {/* 3. Répertoire des Campagnes */}
       <CampaignsListTable
         campaigns={campaigns}
         selectedCampaignId={selectedCampaign?.id || null}
