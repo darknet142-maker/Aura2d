@@ -86,6 +86,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     onToggleSubscribeArtist,
     onRecordLyricsOpen,
     onToggleDownload,
+    onOpenSubscriptionCheckout,
     onChangeMasterVolume,
     onChangeEqBand,
     onApplyEqPreset,
@@ -1309,6 +1310,7 @@ export function useImmersivePlayerState(props: Immersive3DPlayerProps) {
     currentRecsCount,
     isCurrentRecommended,
     currentLyricist,
+    onOpenSubscriptionCheckout,
   };
 }
 

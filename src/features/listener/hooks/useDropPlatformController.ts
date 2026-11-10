@@ -355,17 +355,18 @@ export function useDropPlatformController() {
   );
   const [supabaseHealthMsg, setSupabaseHealthMsg] = useState<string>('');
   const [isQrDownloadModalOpen, setIsQrDownloadModalOpen] = useState(false);
+  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
   const isRemoteSyncInProgressRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (isRemoteSyncInProgressRef.current) return;
-    syncAdBannersToCloud(adBanners, adBannerSettings).catch(() => {});
+    syncAdBannersToCloud(adBanners, adBannerSettings).catch(() => { });
   }, [adBanners, adBannerSettings]);
 
   useEffect(() => {
     verifySupabaseHealth()
       .then((res) => setSupabaseHealthMsg(res.message))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // --- Persistent Entity Database (Artistes, Labels, Beatmakers, Ingés Son, Auteurs) ---
@@ -590,13 +591,13 @@ export function useDropPlatformController() {
       ...prev,
       [role]: prev[role].filter((item) => item !== nameToRemove),
     }));
-    deleteStudioEntityFromCloud(role, nameToRemove).catch(() => {});
+    deleteStudioEntityFromCloud(role, nameToRemove).catch(() => { });
   }, []);
 
   // Synchronisation automatique du Répertoire des Métiers avec Supabase + Cache Local (sans boucle infinie)
   useEffect(() => {
     if (isRemoteSyncInProgressRef.current) return;
-    syncStudioEntities(entityDb).catch(() => {});
+    syncStudioEntities(entityDb).catch(() => { });
   }, [entityDb]);
 
   // État pour l'affichage / copie en 1 clic du Script SQL Supabase dans l'Admin
@@ -663,8 +664,8 @@ export function useDropPlatformController() {
                   t.waveformPeaks && t.waveformPeaks.length >= 32
                     ? t.waveformPeaks
                     : computeDeterministicWaveformPeaks(
-                        `${t.id}-${matchedRow.title}-${matchedRow.artist}`
-                      );
+                      `${t.id}-${matchedRow.title}-${matchedRow.artist}`
+                    );
                 const cid =
                   t.dropContentId ||
                   generateDropContentId(
@@ -975,7 +976,7 @@ export function useDropPlatformController() {
               : 'Synchronisation globale de la plateforme effectuée.',
             timestamp: new Date().toISOString(),
           },
-        }).catch(() => {});
+        }).catch(() => { });
 
         const timeStr = new Date().toLocaleTimeString('fr-FR', {
           hour: '2-digit',
@@ -1019,7 +1020,7 @@ export function useDropPlatformController() {
       royaltySettings: royaltyLedgerState.settings as unknown as Record<string, unknown>,
       taxStatusOverrides: royaltyLedgerState.taxStatusOverrides as Record<string, string>,
       updatedAt: new Date().toISOString(),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [
     enableAwardsCeremony,
     categories,
@@ -1066,8 +1067,8 @@ export function useDropPlatformController() {
           payload.action === 'CREATE'
             ? 'Nouvelle musique publiée'
             : payload.action === 'DELETE'
-            ? 'Piste retirée'
-            : 'Piste mise à jour en direct';
+              ? 'Piste retirée'
+              : 'Piste mise à jour en direct';
         const notifMsg =
           payload.message ||
           `Catalogue synchronisé en temps réel avec Supabase.`;
@@ -1158,7 +1159,7 @@ export function useDropPlatformController() {
       liked_track_ids: likedTrackIds,
       subscribed_artists: subscribedArtists,
       recommended_track_ids: recommendedTrackIds,
-    }).catch(() => {});
+    }).catch(() => { });
   }, [currentUser.id, likedTrackIds, subscribedArtists, recommendedTrackIds]);
 
   // --- Compute Live Ranks & Rank Deltas Across All Tracks ---
@@ -1278,7 +1279,7 @@ export function useDropPlatformController() {
               nextListenSessions = t.listenSessions + 1;
               nextAvgRetention = Math.round(
                 (t.avgRetentionPct * t.listenSessions + updates.newRetentionSessionPct) /
-                  nextListenSessions
+                nextListenSessions
               );
             }
 
@@ -1439,7 +1440,7 @@ export function useDropPlatformController() {
     return Math.pow(10, deltaDb / 20);
   }, []);
 
-  const ensureAudioGraphRef = useRef<() => void>(() => {});
+  const ensureAudioGraphRef = useRef<() => void>(() => { });
   const dsp = useStudioAudioDspEngine({
     audioCtxRef,
     preampGainRef,
@@ -1587,7 +1588,7 @@ export function useDropPlatformController() {
     }
 
     if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
+      audioCtxRef.current.resume().catch(() => { });
     }
   }, [
     masterVolume,
@@ -1797,23 +1798,23 @@ export function useDropPlatformController() {
         audio.volume = mediaSourceRef.current
           ? 1
           : Math.max(
-              0,
+            0,
+            Math.min(
+              1,
+              (masterVolume / 100) *
               Math.min(
-                1,
-                (masterVolume / 100) *
-                  Math.min(
-                    1.15,
-                    Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
-                  )
+                1.15,
+                Math.max(0.45, computeTrackLoudnessGain(currentTrack.lufsMasterLevel))
               )
-            );
+            )
+          );
         audio.play().catch(async () => {
           // Si l'URL blob: d'une session précédente a expiré, on tente de la réhydrater depuis IndexedDB
           const freshUrl = await getPersistentAudioBlobUrl(currentTrack.id);
           if (freshUrl && htmlAudioRef.current) {
             htmlAudioRef.current.src = freshUrl;
             htmlAudioRef.current.currentTime = currentTime;
-            htmlAudioRef.current.play().catch(() => {});
+            htmlAudioRef.current.play().catch(() => { });
           } else {
             // Si le binaire n'est plus présent (ex: uploadé avant la mise à jour IndexedDB), basculer sur le synthé pour garantir du son
             initAudioContext();
@@ -1866,18 +1867,18 @@ export function useDropPlatformController() {
               prev.map((alb, aIdx) =>
                 aIdx === safeAlbumIdx
                   ? {
-                      ...alb,
-                      tracks: alb.tracks.map((t, tIdx) =>
-                        tIdx === safeTrackIdx
-                          ? {
-                              ...t,
-                              duration: exactDuration,
-                              dropStart: safeDropStart,
-                              dropDuration: safeDropDuration,
-                            }
-                          : t
-                      ),
-                    }
+                    ...alb,
+                    tracks: alb.tracks.map((t, tIdx) =>
+                      tIdx === safeTrackIdx
+                        ? {
+                          ...t,
+                          duration: exactDuration,
+                          dropStart: safeDropStart,
+                          dropDuration: safeDropDuration,
+                        }
+                        : t
+                    ),
+                  }
                   : alb
               )
             );
@@ -1890,7 +1891,7 @@ export function useDropPlatformController() {
           const targetStart = isDropMode ? currentTrack.dropStart : 0;
           activeAudioEl.currentTime = targetStart;
           setCurrentTime(targetStart);
-          activeAudioEl.play().catch(() => {});
+          activeAudioEl.play().catch(() => { });
         } else {
           navigateTrack(1);
         }
@@ -1996,7 +1997,7 @@ export function useDropPlatformController() {
     return globalAudioCoordinator.register('MAIN_PLAYER', () => {
       setIsPlaying(false);
       if (htmlAudioRef.current) {
-        try { htmlAudioRef.current.pause(); } catch {}
+        try { htmlAudioRef.current.pause(); } catch { }
       }
       if (synthIntervalRef.current) {
         window.clearInterval(synthIntervalRef.current);
@@ -2283,7 +2284,7 @@ export function useDropPlatformController() {
                   trackId,
                   durationPlayedSeconds: listenedSec,
                 }),
-              }).catch(() => {});
+              }).catch(() => { });
             }
           }
           const prevDailyCount = dailyUserTrackPlaysRef.current[trackId] || 0;
@@ -2627,6 +2628,7 @@ export function useDropPlatformController() {
           'CERTIFICATION',
           currentTrack.id
         );
+        setIsSubscriptionCheckoutOpen(true);
         return;
       }
       const downloadedCount = allTracksFlat.filter((t) => t.downloadedOffline).length;
@@ -2637,6 +2639,7 @@ export function useDropPlatformController() {
           'CERTIFICATION',
           currentTrack.id
         );
+        setIsSubscriptionCheckoutOpen(true);
         return;
       }
       // Ouverture du flux sécurisé QR Code (Téléchargement exclusivement mobile)
@@ -2844,9 +2847,9 @@ export function useDropPlatformController() {
         tracks: alb.tracks.map((t) =>
           t.id === trackId
             ? {
-                ...t,
-                lyricsOpensCount: t.lyricsOpensCount + 1,
-              }
+              ...t,
+              lyricsOpensCount: t.lyricsOpensCount + 1,
+            }
             : t
         ),
       }))
@@ -3132,6 +3135,7 @@ export function useDropPlatformController() {
     handleSelectTrackIndex, handleSelectAlbumIndex, navigateTrack, navigateAlbum,
     handleCentralPlayToggle, toggleLike, handleToggleOfflineDownload,
     isQrDownloadModalOpen, setIsQrDownloadModalOpen, handleDownloadConfirmedByQr,
+    isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen,
     handleRecommendTrack, handleApplySocialPointsDelta, handleToggleSubscribeArtist, handleRecordLyricsOpen,
     handleConfirmCreditHandshake, handleOpenCreditDispute, handleResolveCreditDispute,
     handleToggleInPlaylist, handleSeekFromPlayer, handleQuickEnter,

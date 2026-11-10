@@ -21,6 +21,7 @@ export interface OptionsMenuModalProps {
   onToast: (msg: string, color?: string) => void;
   onOpenMissions?: () => void;
   availableMissionsCount?: number;
+  onOpenSubscriptionCheckout?: () => void;
 }
 
 export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
@@ -41,6 +42,7 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
   onToast,
   onOpenMissions,
   availableMissionsCount = 0,
+  onOpenSubscriptionCheckout,
 }) => {
   if (!isOpen) return null;
 
@@ -70,29 +72,22 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
 
         <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
           <div>
-            <span className="text-xs font-bold text-white block">Niveau de Compte DROP</span>
-            <span className="text-[11px] text-zinc-400">
+            <span className="text-xs font-bold text-white block">Formule d'Abonnement DROP</span>
+            <span className="text-[11px] text-[#A3A9BA]">
               {isPro
-                ? 'DROP Pro actif (Toutes les données analytiques débloquées)'
-                : 'Compte Basic (Fonctions Pro grisées)'}
+                ? 'Pass Actif (Qualité Studio Opus & Cache Hors-Ligne)'
+                : 'Mobile Money Gabon (+241) ou 100% Jetons'}
             </span>
           </div>
           <button
             type="button"
             onClick={() => {
-              onToggleUserPlan();
-              onToast(
-                !isPro ? 'Compte passé en DROP Pro' : 'Compte passé en DROP Basic',
-                !isPro ? 'bg-amber-400' : 'bg-zinc-400'
-              );
+              onClose();
+              if (onOpenSubscriptionCheckout) onOpenSubscriptionCheckout();
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 ${
-              isPro
-                ? 'bg-amber-400 text-black shadow-[0_0_16px_rgba(251,191,36,0.35)]'
-                : 'bg-white/10 text-white border border-white/20 hover:bg-white/15'
-            }`}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 bg-[#DE1B34] hover:bg-[#c0172c] text-white shadow-sm cursor-pointer"
           >
-            {isPro ? 'PRO Actif' : 'Passer en PRO'}
+            {isPro ? 'Gérer le Pass' : 'S\'abonner'}
           </button>
         </div>
 

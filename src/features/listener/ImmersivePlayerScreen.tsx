@@ -13,7 +13,6 @@ import type { ReturnTypeUseDropPlatformController } from './hooks/useDropPlatfor
 export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
   const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
   const [isTokenWalletOpen, setIsTokenWalletOpen] = useState(false);
-  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
   const {
     catalogue, safeAlbumIdx, safeTrackIdx, currentTrack, isPlaying, isDropMode, currentTime,
     isShuffle, repeatMode, isCurrentLiked, likedTrackIds, recommendedTrackIds, subscribedArtists,
@@ -33,6 +32,7 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     lastEcgValidationMsg, handleConfirmCreditHandshake, handleOpenCreditDispute,
     handleResolveCreditDispute, adBanners, adBannerSettings, enableAwardsCeremony,
     royaltyLedger, royaltyLedgerState,
+    isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen,
   } = ctrl;
 
   return (
@@ -81,6 +81,7 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             onToggleSubscribeArtist={handleToggleSubscribeArtist}
             onRecordLyricsOpen={handleRecordLyricsOpen}
             onToggleDownload={() => handleToggleOfflineDownload()}
+            onOpenSubscriptionCheckout={() => setIsSubscriptionCheckoutOpen(true)}
             onOpenAdminStudio={() => setAppView('ADMIN')}
             unreadNotificationsCount={unreadNotificationsCount}
             onOpenNotifications={() => {
@@ -176,10 +177,11 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
             onClose={() => setIsSubscriptionCheckoutOpen(false)}
             userBalance={getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens}
             onActivatePass={(tier, method, ref) => {
-              setSubscriptionPass('PASS_MENSUEL_HEBDO');
+              const passToSet = tier === 'PREMIUM_MENSUEL' ? 'PASS_MENSUEL_HEBDO' : 'PASS_JOURNALIER';
+              setSubscriptionPass(passToSet);
               ctrl.pushNotification(
                 'Abonnement DROP Activé',
-                `${tier === 'PREMIUM_MENSUEL' ? 'Pass Mensuel Premium' : 'Pass Streaming'} activé via ${method === 'DIRECT_PAID' ? 'Paiement Direct (Airtel/Moov)' : '100% Jetons (Modèle A)'} (Réf : ${ref}).`,
+                `${tier === 'PREMIUM_MENSUEL' ? 'Pass Mensuel Premium (1 500 FCFA)' : 'Pass Hebdo 7 Jours (500 FCFA)'} activé via ${method === 'DIRECT_PAID' ? 'Paiement Direct Mobile Money (+241)' : '100% Jetons Sponsorisés (Modèle A)'} (Réf : ${ref}).`,
                 'CERTIFICATION'
               );
             }}

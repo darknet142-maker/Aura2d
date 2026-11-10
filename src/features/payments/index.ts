@@ -9,6 +9,14 @@ export { SubscriptionCheckoutModal } from './components/SubscriptionCheckoutModa
 export { DirectMobileMoneyForm } from './components/DirectMobileMoneyForm';
 export { TokenUnlockForm } from './components/TokenUnlockForm';
 export { GABON_PASS_SPECS } from '../../utils/rankingEngine';
+export {
+  validateGabonMobileMoneyPhone,
+  validateAntiHybridRule,
+  processDirectMobileMoneyPayment,
+  type MobileMoneyOperator,
+  type DirectPaymentReceipt,
+  type GabonPhoneValidationResult,
+} from './services/payment-gateway.service';
 export type {
   GabonSubscriptionPass,
   GabonNetworkOperator,

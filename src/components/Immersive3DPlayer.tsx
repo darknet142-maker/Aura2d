@@ -147,6 +147,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
     currentRecsCount,
     isCurrentRecommended,
     currentLyricist,
+    onOpenSubscriptionCheckout,
   } = state;
 
   const [proGateFeature, setProGateFeature] = React.useState<{ title: string; reason?: string } | null>(null);
@@ -524,6 +525,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
                 (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
               ).length
             }
+            onOpenSubscriptionCheckout={onOpenSubscriptionCheckout}
           />
 
           {/* TIROIR CENTRAL SUR MOBILE / TABLETTE (OU DESKTOP HORS MODE SPLIT) */}

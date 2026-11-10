@@ -233,6 +233,7 @@ export interface Immersive3DPlayerProps {
   onToggleSubscribeArtist?: (artistName: string) => void;
   onRecordLyricsOpen?: (trackId: string) => void;
   onToggleDownload: (trackId: string) => void;
+  onOpenSubscriptionCheckout?: () => void;
   onChangeMasterVolume: (val: number) => void;
   onChangeEqBand: (bandIdx: number, gainDb: number) => void;
   onChangeBandQ?: (bandIdx: number, q: number, applyAll?: boolean) => void;

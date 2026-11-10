@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Smartphone, CheckCircle2, ShieldCheck, ArrowRight, Loader2, CreditCard } from 'lucide-react';
+import { Smartphone, CheckCircle2, ShieldCheck, ArrowRight, Loader2, CreditCard, AlertCircle } from 'lucide-react';
+import { validateGabonMobileMoneyPhone } from '../services/payment-gateway.service';
 
 export type MobileOperator = 'AIRTEL' | 'MOOV' | 'CARD';
 
@@ -16,19 +17,30 @@ export const DirectMobileMoneyForm: React.FC<DirectMobileMoneyFormProps> = ({
 }) => {
   const [operator, setOperator] = useState<MobileOperator>('AIRTEL');
   const [phone, setPhone] = useState('074 12 34 56');
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS'>('IDLE');
 
   const handlePay = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     if (!phone.trim()) return;
+
+    if (operator === 'AIRTEL' || operator === 'MOOV') {
+      const val = validateGabonMobileMoneyPhone(phone, operator);
+      if (!val.isValid) {
+        setValidationError(val.error || 'Numéro invalide');
+        return;
+      }
+    }
 
     setStatus('PROCESSING');
     setTimeout(() => {
       setStatus('SUCCESS');
-      const txnId = `TXN-${operator}-${Date.now().toString().slice(-6)}`;
+      const txnId = `TXN-${operator === 'AIRTEL' ? 'ATM' : operator === 'MOOV' ? 'MOV' : 'CRD'}-${Date.now().toString(36).toUpperCase()}`;
+      const normalized = operator === 'CARD' ? phone : (validateGabonMobileMoneyPhone(phone, operator as any).normalizedPhone || `+241 ${phone}`);
       onSuccess({
         operator,
-        phone: `+241 ${phone}`,
+        phone: normalized,
         txnId,
         amount: priceFcfa,
       });
@@ -97,6 +109,12 @@ export const DirectMobileMoneyForm: React.FC<DirectMobileMoneyFormProps> = ({
             required
           />
         </div>
+        {validationError && (
+          <div className="flex items-center gap-1.5 text-[10.5px] text-rose-400 font-bold bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
         <p className="text-[9.5px] text-[#A3A9BA]">
           {operator === 'CARD'
             ? 'Paiement SSL 256-bit chiffré conforme PCI-DSS.'
