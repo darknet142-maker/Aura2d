@@ -537,43 +537,6 @@
   -webkit-backdrop-filter: none;
 }
 
-/* Fond dynamique flouté prenant la couleur dominante de la pochette active */
-.ambient-bg {
-  position: absolute;
-  inset: -18%;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 28%, var(--ambient-primary) 0%, transparent 55%),
-    radial-gradient(circle at 24% 60%, var(--ambient-secondary) 0%, transparent 60%),
-    radial-gradient(circle at 78% 76%, var(--ambient-primary) 0%, transparent 52%);
-  opacity: 0.12;
-  filter: blur(48px) saturate(130%);
-  mix-blend-mode: screen;
-  transition: background 0.65s var(--ease-premium), opacity 0.5s ease;
-}
-
-.ambient-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 34%, transparent 0%, transparent 65%, rgb(6 5 7 / 0.40) 100%),
-    linear-gradient(180deg, rgb(8 7 9 / 0.20) 0%, transparent 20%, transparent 80%, rgb(6 6 8 / 0.45) 100%);
-}
-
-/* Fine texture de grain pour un rendu photographique, non interactif */
-.ambient-grain {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.06;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
 /* Scène carrousel 3D Cover Flow */
 .carousel-stage {
   --cover-size: min(76vw, 38dvh, 320px);

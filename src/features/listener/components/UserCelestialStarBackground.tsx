@@ -16,9 +16,6 @@ export const UserCelestialStarBackground: React.FC = memo(() => {
         <div id="stars" />
         <div id="stars2" />
         <div id="stars3" />
-        <div className="celestial-shooting-star" />
-        <div className="celestial-shooting-star" />
-        <div className="celestial-shooting-star" />
       </div>
     </div>
   );

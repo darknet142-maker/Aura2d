@@ -237,9 +237,6 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             desktopSplitMode ? 'lg:shrink-0 lg:w-[435px] xl:w-[450px] lg:h-full' : ''
           }`}
         >
-          <div className="ambient-bg" />
-          <div className="ambient-vignette" />
-
           {/* Notification Toast Interactive */}
           <div
             className={`pointer-events-none fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-[#0C0F17]/95 border border-white/20 text-[#F8FAFC] text-xs font-medium shadow-2xl flex items-center gap-2.5 transition-all duration-200 backdrop-blur-xl whitespace-nowrap ${
