@@ -12,8 +12,12 @@ export async function fetchServerCatalogue(): Promise<{
       headers: { Pragma: 'no-cache' },
     });
     if (!res.ok) return { hasData: false, catalogue: [] };
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return { hasData: false, catalogue: [] };
+    }
     const data = await res.json();
-    if (data.hasData && Array.isArray(data.catalogue)) {
+    if (data && data.hasData && Array.isArray(data.catalogue)) {
       return { hasData: true, catalogue: data.catalogue as AlbumNode[] };
     }
     return { hasData: false, catalogue: [] };

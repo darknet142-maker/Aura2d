@@ -37,6 +37,7 @@ import {
   saveFullCatalogueSnapshot,
   loadFullCatalogueSnapshot,
   sanitizeRealCatalogue,
+  REAL_CATALOGUE_SEED,
   isMockTrack,
   isMockAlbum,
   purgeLegacyMockLocalStorage,
@@ -141,9 +142,10 @@ export function useDropPlatformController() {
   const [appView, setAppView] = useState<'AUTH' | 'PLAYER' | 'ADMIN'>('PLAYER');
   const [catalogue, setCatalogue] = useState<AlbumNode[]>(() => {
     purgeLegacyMockLocalStorage();
-    const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>() || [];
-    const cleanCat = sanitizeRealCatalogue(rawCat);
-    return cleanCat.map((alb) => ({
+    const rawCat = loadFullCatalogueSnapshot<AlbumNode[]>();
+    const cleanCat = rawCat && rawCat.length > 0 ? sanitizeRealCatalogue(rawCat) : [];
+    const baseCat = cleanCat.length > 0 ? cleanCat : REAL_CATALOGUE_SEED;
+    return baseCat.map((alb) => ({
       ...alb,
       tracks: (alb.tracks || []).map((t) => {
         const peaks =
@@ -331,7 +333,7 @@ export function useDropPlatformController() {
     ecgValidatedAt30Sec: boolean;
     sessionPointsEarned: number;
   }>({
-    trackId: catalogue[0]?.tracks[0]?.id || '',
+    trackId: catalogue[0]?.tracks?.[0]?.id || '',
     active: false,
     listenedSeconds: 0,
     playCountedAtOneSec: false,
@@ -935,12 +937,12 @@ export function useDropPlatformController() {
     try {
       const [savedRows, cloudBanners, cloudSettings, cloudEntities, cloudAdminCfg, serverCatRes] =
         await Promise.all([
-          getAllTracks(),
-          getAdBannersFromCloud(),
-          getAdBannerSettingsFromCloud(),
-          getStudioEntitiesFromCloud(entityDb),
-          getAdminGlobalConfigFromCloud(),
-          fetchServerCatalogue(),
+          getAllTracks().catch(() => [] as SupabaseTrackRow[]),
+          getAdBannersFromCloud().catch(() => []),
+          getAdBannerSettingsFromCloud().catch(() => null),
+          getStudioEntitiesFromCloud(entityDb).catch(() => null),
+          getAdminGlobalConfigFromCloud().catch(() => null),
+          fetchServerCatalogue().catch(() => ({ hasData: false, catalogue: [] })),
         ]);
 
       if (serverCatRes.hasData && serverCatRes.catalogue.length > 0) {
@@ -2110,10 +2112,10 @@ export function useDropPlatformController() {
   // --- Select Specific Track Index within Active Album ---
   const handleSelectTrackIndex = useCallback(
     (nextT: number) => {
-      const tracksLen = currentAlbum.tracks.length;
+      const tracksLen = currentAlbum?.tracks?.length || 0;
       if (tracksLen === 0) return;
       const clampedT = ((nextT % tracksLen) + tracksLen) % tracksLen;
-      const targetTrack = currentAlbum.tracks[clampedT];
+      const targetTrack = currentAlbum?.tracks?.[clampedT];
       if (!targetTrack) return;
 
       initAudioContext();
@@ -2226,7 +2228,7 @@ export function useDropPlatformController() {
   // --- Navigate Track (Axe Y : Swipe Vertical Haut/Bas ET Boutons Suivant/Précédent dans l'album actif en boucle) ---
   const navigateTrack = useCallback(
     (dir: 1 | -1) => {
-      const tracksLen = currentAlbum.tracks.length;
+      const tracksLen = currentAlbum?.tracks?.length || 0;
       if (tracksLen === 0) return;
 
       if (tracksLen === 1) {
@@ -2243,7 +2245,7 @@ export function useDropPlatformController() {
 
       let nextT = (safeTrackIdx + dir + tracksLen) % tracksLen;
       if (isShuffle && tracksLen > 1) {
-        const candidates = currentAlbum.tracks
+        const candidates = (currentAlbum?.tracks || [])
           .map((_, idx) => idx)
           .filter((idx) => idx !== safeTrackIdx);
         nextT = candidates[Math.floor(Math.random() * candidates.length)];
@@ -2494,7 +2496,7 @@ export function useDropPlatformController() {
           if (
             playbackPrefs.chainingMode === 'CATALOGUE_NONSTOP' &&
             !isShuffle &&
-            safeTrackIdx + 1 >= currentAlbum.tracks.length &&
+            safeTrackIdx + 1 >= (currentAlbum?.tracks?.length || 0) &&
             catalogue.length > 1
           ) {
             handleSelectAlbumIndex((safeAlbumIdx + 1) % catalogue.length, 0, true);
@@ -2515,7 +2517,7 @@ export function useDropPlatformController() {
     isShuffle,
     safeAlbumIdx,
     safeTrackIdx,
-    currentAlbum.tracks.length,
+    (currentAlbum?.tracks?.length || 0),
     catalogue.length,
     playbackPrefs.autoTrimSilence,
     playbackPrefs.chainingMode,

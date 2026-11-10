@@ -24,6 +24,8 @@ import {
   saveAudioBlobToIndexedDb,
   deleteAudioBlobFromIndexedDb,
 } from './audioIndexedDbAndOpus.service';
+import { REAL_CATALOGUE_SEED } from './realCatalogueSeed';
+export { REAL_CATALOGUE_SEED } from './realCatalogueSeed';
 
 const MOCK_TRACK_ID_REGEX = /^(t-10[0-9]|t-20[0-9]|t-30[0-9]|t-main-|t-beat-|track-mock-)/;
 const MOCK_ALBUM_ID_REGEX = /^(alb-[0-9]|alb-main|alb-beats-|album-mock-)/;
