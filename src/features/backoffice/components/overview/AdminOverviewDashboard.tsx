@@ -58,7 +58,7 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
             </h2>
           </div>
           <p className="text-[10.5px] text-[#A3A9BA]">
-            Télémétrie en direct • Données consolidées plateforme DROP (+241)
+            Télémétrie en direct • Données consolidées plateforme DROP
           </p>
         </div>
 

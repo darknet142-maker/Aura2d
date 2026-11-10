@@ -160,7 +160,7 @@ export const B2bHorecaBugadaPanel: React.FC<B2bHorecaBugadaPanelProps> = ({
           <div className="lg:col-span-8 space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
               <Building2 className="w-3.5 h-3.5 shrink-0" />
-              <span>VERTICALE B2B HORECA • GUICHET UNIQUE DROP × BUGADA (+241)</span>
+              <span>VERTICALE B2B HORECA • GUICHET UNIQUE DROP × BUGADA</span>
             </div>
             <h3 className="text-base sm:text-lg font-black text-white">
               Offre Professionnelle Bars, Maquis, Snacks, Restaurants &amp; Hôtels

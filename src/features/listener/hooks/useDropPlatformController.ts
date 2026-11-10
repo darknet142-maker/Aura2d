@@ -462,7 +462,7 @@ export function useDropPlatformController() {
     return [
       {
         id: 'notif-welcome-beta',
-        title: 'Bienvenue sur DROP (+241)',
+        title: 'Bienvenue sur DROP',
         message: 'Plateforme de streaming haute-fidélité Gabon & CEMAC. Données réelles activées.',
         type: 'INFO',
         timestampIso: new Date().toISOString(),

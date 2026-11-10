@@ -1,12 +1,12 @@
-# DROP (+241) — Plateforme de Streaming Studio Haute-Fidélité & Broadcast Gabon
+# DROP — Plateforme de Streaming Studio Haute-Fidélité & Broadcast
 
-> **Écosystème Musical Gabonais & CEMAC** : Streaming Hi-Res Master (-14.0 LUFS), Carrousel 3D Cover Flow, Moteur de Royalties User-Centric 60/40, Intégration Mobile Money (+241) & Économie des Jetons Sponsorisés.
+> **Écosystème Musical** : Streaming Hi-Res Master (-14.0 LUFS), Carrousel 3D Cover Flow, Moteur de Royalties User-Centric 60/40, Intégration Mobile Money & Économie des Jetons Sponsorisés.
 
 ---
 
 ## 🎧 Présentation du Produit
 
-**DROP (+241)** est la première plateforme de streaming musicale conçue sur mesure pour l'Afrique Centrale et le Gabon :
+**DROP** est la plateforme de streaming musical studio conçue pour l'excellence acoustique :
 - **Lecteur Immersif 3D Cover Flow** avec navigation gestuelle fluide, carrousel d'albums matériellement accéléré et détection instantanée du Drop.
 - **Mastering Broadcast (-14.0 LUFS)** : Audio HD sans perte, égaliseur paramétrique 5 bandes, spatialisation binaurale et compresseur dynamique.
 - **Économie Circulaire & Double Accès** :
@@ -71,3 +71,4 @@ src/
 - **Anti-Hybride Absolu** : Séparation hermétique entre flux Mobile Money et jetons sponsorisés.
 - **Idempotence Stricte** : Journal comptable append-only empêchant toute double dépense.
 - **Conformité Réglementaire** : Décret BUGADA n°0282/PR/MCJSA et directives fiscales DGI.
+

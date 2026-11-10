@@ -138,7 +138,7 @@ export const ListenerPassAndDataSaverCard: React.FC<ListenerPassAndDataSaverCard
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
-              Tarification Officielle DROP × BUGADA (+241)
+              Tarification Officielle DROP × BUGADA
             </span>
             <h4 className="text-xs sm:text-sm font-bold text-[#F5F2EB]">
               Choisissez votre formule Mobile Money &amp; Cache Hors-Ligne

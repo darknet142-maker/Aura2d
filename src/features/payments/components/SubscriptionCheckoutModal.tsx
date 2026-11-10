@@ -104,7 +104,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-[#F8FAFC]">
-                  Abonnements &amp; Pass DROP (+241)
+                  Abonnements &amp; Pass DROP
                 </h3>
                 <p className="text-[10px] text-[#A3A9BA]">
                   Paiement Direct (Airtel/Moov) ou Déblocage 100% Jetons Sponsorisés

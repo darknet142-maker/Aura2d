@@ -39,7 +39,7 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     return (
       <main className="relative z-10 h-full w-full flex flex-col items-center justify-center bg-[#080A0F] text-[#F8FAFC] gap-3 font-mono">
         <div className="w-10 h-10 rounded-full border-2 border-[#DE1B34] border-t-transparent animate-spin" />
-        <p className="text-xs text-[#A3A9BA]">Initialisation du catalogue DROP (+241)...</p>
+        <p className="text-xs text-[#A3A9BA]">Initialisation du catalogue DROP...</p>
       </main>
     );
   }

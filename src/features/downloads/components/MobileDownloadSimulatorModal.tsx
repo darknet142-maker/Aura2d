@@ -47,7 +47,7 @@ export const MobileDownloadSimulatorModal: React.FC<MobileDownloadSimulatorModal
         <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-extrabold text-xs">Simulateur Mobile DROP (+241)</h3>
+            <h3 className="font-extrabold text-xs">Simulateur Mobile DROP</h3>
           </div>
           <button type="button" onClick={onClose} aria-label="Fermer" className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"><X className="w-3.5 h-3.5" /></button>
         </div>

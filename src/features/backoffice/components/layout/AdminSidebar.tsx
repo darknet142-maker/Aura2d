@@ -35,7 +35,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {!isCollapsed && (
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white border border-white/15">DROP (+241)</span>
+                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white border border-white/15">DROP</span>
                 <span className="text-xs font-extrabold text-[#F8FAFC] truncate">Tour de Contrôle</span>
               </div>
               <p className="text-[10px] text-[#A3A9BA] truncate">Central Management Console</p>
