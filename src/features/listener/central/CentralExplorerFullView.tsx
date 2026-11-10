@@ -53,34 +53,41 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
           {decoupledStudioRankings
             .filter((ent) => centralFullPageView.role === 'ALL' || ent.role === centralFullPageView.role)
             .map((ent) => (
-              <motion.button
-                key={ent.key}
-                type="button"
-                whileHover={{ y: -5, scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={SPRING_SNAPPY}
-                onClick={() => openUserEntitySheet(ent.name, ent.role)}
-                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 text-left cursor-pointer transition-colors"
-              >
-                <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
-                  <CoverArtwork artworkType={ent.artworkType} coverUrl={ent.cover} title={ent.name} artist={ent.name} />
-                </div>
+              <div key={ent.key} className="depth-3d-parent">
                 <div
-                  className="absolute inset-0"
+                  onClick={() => openUserEntitySheet(ent.name, ent.role)}
                   style={{
-                    background: `linear-gradient(to top, rgba(0,0,0,0.92) 12%, ${centralFullPageView.accentColor}44 55%, rgba(0,0,0,0.18) 100%)`,
-                  }}
-                />
-                <div className="absolute top-2.5 right-2.5">
-                  {ent.careerCertification && ent.careerCertification.level !== 'NONE' && (
-                    <CertificationBadgeSvg cert={ent.careerCertification} compact entityTitle={ent.name} />
-                  )}
+                    '--card-glow': `${centralFullPageView.accentColor}44`,
+                    '--circle-tint': `${centralFullPageView.accentColor}25`,
+                  } as React.CSSProperties}
+                  className="depth-3d-card group relative aspect-square rounded-2xl overflow-hidden border border-white/15 text-left cursor-pointer bg-[#0D1017] select-none"
+                >
+                  <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                    <CoverArtwork artworkType={ent.artworkType} coverUrl={ent.cover} title={ent.name} artist={ent.name} />
+                  </div>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `linear-gradient(to top, rgba(8,10,15,0.92) 12%, ${centralFullPageView.accentColor}44 55%, rgba(8,10,15,0.18) 100%)`,
+                    }}
+                  />
+                  <div className="depth-3d-glass" />
+                  <div className="depth-3d-rings">
+                    <span className="circle circle1" />
+                    <span className="circle circle2" />
+                    <span className="circle circle3" />
+                  </div>
+                  <div className="depth-3d-actions absolute top-2.5 right-2.5">
+                    {ent.careerCertification && ent.careerCertification.level !== 'NONE' && (
+                      <CertificationBadgeSvg cert={ent.careerCertification} compact entityTitle={ent.name} />
+                    )}
+                  </div>
+                  <div className="depth-3d-content absolute bottom-3 left-3 right-3">
+                    <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">{ent.name}</p>
+                    <span className="text-[11px] text-white/80 font-medium block truncate">{ent.primaryMetricValue}</span>
+                  </div>
                 </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">{ent.name}</p>
-                  <span className="text-[11px] text-white/80 font-medium block truncate">{ent.primaryMetricValue}</span>
-                </div>
-              </motion.button>
+              </div>
             ))}
         </div>
       )}
@@ -99,81 +106,89 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
               const isThisPlaying = currentTrack.id === t.id && isPlaying;
               const tCert = getTrackCertification(t.realPlays);
               return (
-                <motion.div
-                  key={t.id}
-                  whileHover={{ y: -5, scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={SPRING_SNAPPY}
-                  onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
-                >
-                  <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
-                    <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#07090E]/92 via-[#07090E]/35 to-black/15" />
-                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                    <CertificationBadgeSvg cert={tCert} compact entityTitle={t.title} entityArtist={t.artist} playsCount={t.realPlays} />
-                    <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
-                      {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
-                    <div className="flex items-end justify-between gap-1.5">
-                      <div className="min-w-0 flex-1">
+                <div key={t.id} className="depth-3d-parent">
+                  <div
+                    onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
+                    style={{
+                      '--card-glow': `${t.ambientPrimary || '#f59e0b'}44`,
+                      '--circle-tint': `${t.ambientPrimary || '#f59e0b'}25`,
+                    } as React.CSSProperties}
+                    className="depth-3d-card group relative aspect-square rounded-2xl overflow-hidden border border-white/15 cursor-pointer bg-[#0D1017] select-none"
+                  >
+                    <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                      <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#080A0F]/94 via-[#080A0F]/35 to-black/15" />
+                    <div className="depth-3d-glass" />
+                    <div className="depth-3d-rings">
+                      <span className="circle circle1" />
+                      <span className="circle circle2" />
+                      <span className="circle circle3" />
+                    </div>
+                    <div className="depth-3d-actions absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                      <CertificationBadgeSvg cert={tCert} compact entityTitle={t.title} entityArtist={t.artist} playsCount={t.realPlays} />
+                      <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs shadow-lg">
+                        {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                      </span>
+                    </div>
+                    <div className="depth-3d-content absolute bottom-3 left-3 right-3 space-y-1.5">
+                      <div className="flex items-end justify-between gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openUserTrackSheet(t.id);
+                            }}
+                            className="text-sm font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors cursor-pointer"
+                          >
+                            {t.title}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openUserEntitySheet(t.artist, 'ARTIST');
+                            }}
+                            className="text-xs text-amber-300 hover:underline font-semibold truncate block max-w-full text-left cursor-pointer"
+                          >
+                            {t.artist}
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             openUserTrackSheet(t.id);
                           }}
-                          className="text-sm font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors cursor-pointer"
+                          className="px-2 py-1 rounded-lg bg-[#07090E]/80 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition cursor-pointer"
                         >
-                          {t.title}
+                          Fiche
                         </button>
+                      </div>
+                      {(t.isInstrumental || t.category === 'Beats & Instrumentales') && (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openUserEntitySheet(t.artist, 'ARTIST');
+                            triggerBeatAudioDownload({
+                              title: t.title,
+                              artist: t.artist,
+                              bpm: t.bpm,
+                              duration: t.duration,
+                              audioUrl: t.audioUrl,
+                              dropContentId: t.dropContentId,
+                            });
+                            showToast(`Téléchargement du Beat « ${t.title} » lancé`, 'bg-cyan-400');
                           }}
-                          className="text-xs text-amber-300 hover:underline font-semibold truncate block max-w-full text-left cursor-pointer"
+                          className="w-full py-1.5 px-2 rounded-xl bg-cyan-500/85 hover:bg-cyan-400 text-black font-extrabold text-[10px] flex items-center justify-center gap-1 shadow-lg transition cursor-pointer"
                         >
-                          {t.artist}
+                          <span>⬇ Télécharger le Beat</span>
                         </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openUserTrackSheet(t.id);
-                        }}
-                        className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition cursor-pointer"
-                      >
-                        Fiche
-                      </button>
+                      )}
                     </div>
-                    {(t.isInstrumental || t.category === 'Beats & Instrumentales') && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerBeatAudioDownload({
-                            title: t.title,
-                            artist: t.artist,
-                            bpm: t.bpm,
-                            duration: t.duration,
-                            audioUrl: t.audioUrl,
-                            dropContentId: t.dropContentId,
-                          });
-                          showToast(`Téléchargement du Beat « ${t.title} » lancé`, 'bg-cyan-400');
-                        }}
-                        className="w-full py-1.5 px-2 rounded-xl bg-cyan-500/85 hover:bg-cyan-400 text-black font-extrabold text-[10px] flex items-center justify-center gap-1 shadow-lg transition cursor-pointer"
-                      >
-                        <span>⬇ Télécharger le Beat</span>
-                      </button>
-                    )}
                   </div>
-                </motion.div>
+                </div>
               );
             })}
         </div>
@@ -186,64 +201,72 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
             const isThisPlaying = currentTrack.id === t.id && isPlaying;
             const tCert = getTrackCertification(t.realPlays);
             return (
-              <motion.div
-                key={t.id}
-                whileHover={{ y: -5, scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={SPRING_SNAPPY}
-                onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
-                className="group relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
-              >
-                <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
-                  <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
-                </div>
+              <div key={t.id} className="depth-3d-parent">
                 <div
-                  className="absolute inset-0"
+                  onClick={() => handlePlayOrToggleSpecificTrack(albumIndex, trackIndex)}
                   style={{
-                    background: `linear-gradient(to top, rgba(0,0,0,0.92) 15%, ${t.ambientPrimary || '#e11d38'}55 60%, rgba(0,0,0,0.2) 100%)`,
-                  }}
-                />
-                <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                  <CertificationBadgeSvg cert={tCert} compact entityTitle={t.title} entityArtist={t.artist} playsCount={t.realPlays} />
-                  <span className="w-9 h-9 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                    {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                  </span>
-                </div>
-                <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
-                  <div className="min-w-0 flex-1">
+                    '--card-glow': `${t.ambientPrimary || '#e11d38'}44`,
+                    '--circle-tint': `${t.ambientPrimary || '#e11d38'}25`,
+                  } as React.CSSProperties}
+                  className="depth-3d-card group relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 cursor-pointer bg-[#0D1017] select-none"
+                >
+                  <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                    <CoverArtwork artworkType={t.artworkType} coverUrl={t.cover} title={t.title} artist={t.artist} />
+                  </div>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `linear-gradient(to top, rgba(8,10,15,0.94) 15%, ${t.ambientPrimary || '#e11d38'}55 60%, rgba(8,10,15,0.2) 100%)`,
+                    }}
+                  />
+                  <div className="depth-3d-glass" />
+                  <div className="depth-3d-rings">
+                    <span className="circle circle1" />
+                    <span className="circle circle2" />
+                    <span className="circle circle3" />
+                  </div>
+                  <div className="depth-3d-actions absolute top-3 left-3 right-3 flex items-center justify-between">
+                    <CertificationBadgeSvg cert={tCert} compact entityTitle={t.title} entityArtist={t.artist} playsCount={t.realPlays} />
+                    <span className="w-9 h-9 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
+                      {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                    </span>
+                  </div>
+                  <div className="depth-3d-content absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUserTrackSheet(t.id);
+                        }}
+                        className="text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors cursor-pointer"
+                      >
+                        {t.title}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUserEntitySheet(t.artist, 'ARTIST');
+                        }}
+                        className="text-xs text-amber-300 hover:underline font-bold truncate block max-w-full text-left cursor-pointer"
+                      >
+                        {t.artist}
+                      </button>
+                    </div>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         openUserTrackSheet(t.id);
                       }}
-                      className="text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-xl bg-[#080A0F]/80 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-xs font-bold text-white shrink-0 transition cursor-pointer"
                     >
-                      {t.title}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openUserEntitySheet(t.artist, 'ARTIST');
-                      }}
-                      className="text-xs text-amber-300 hover:underline font-bold truncate block max-w-full text-left cursor-pointer"
-                    >
-                      {t.artist}
+                      Fiche
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openUserTrackSheet(t.id);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-[#080A0F]/80 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-xs font-bold text-white shrink-0 transition cursor-pointer"
-                  >
-                    Fiche
-                  </button>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -255,31 +278,39 @@ export const CentralExplorerFullView: React.FC<CentralExplorerFullViewProps> = (
           {catalogue.map((alb, aIdx) => {
             const firstTrack = alb.tracks[0] || currentTrack;
             return (
-              <motion.div
-                key={alb.id}
-                whileHover={{ y: -5, scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={SPRING_SNAPPY}
-                onClick={() => handlePlayOrToggleSpecificTrack(aIdx, 0)}
-                className="group relative aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 cursor-pointer transition-colors"
-              >
-                <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
-                  <CoverArtwork artworkType={firstTrack.artworkType} coverUrl={firstTrack.cover} title={alb.albumTitle} artist={alb.artist} />
+              <div key={alb.id} className="depth-3d-parent">
+                <div
+                  onClick={() => handlePlayOrToggleSpecificTrack(aIdx, 0)}
+                  style={{
+                    '--card-glow': 'rgba(245, 158, 11, 0.4)',
+                    '--circle-tint': 'rgba(245, 158, 11, 0.2)',
+                  } as React.CSSProperties}
+                  className="depth-3d-card group relative aspect-square rounded-2xl overflow-hidden border border-white/15 cursor-pointer bg-[#0D1017] select-none"
+                >
+                  <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                    <CoverArtwork artworkType={firstTrack.artworkType} coverUrl={firstTrack.cover} title={alb.albumTitle} artist={alb.artist} />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080A0F]/94 via-[#080A0F]/35 to-[#080A0F]/15" />
+                  <div className="depth-3d-glass" />
+                  <div className="depth-3d-rings">
+                    <span className="circle circle1" />
+                    <span className="circle circle2" />
+                    <span className="circle circle3" />
+                  </div>
+                  <div className="depth-3d-actions absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-full bg-[#080A0F]/80 border border-white/20 text-[10px] font-mono text-white/90">
+                      {alb.tracks.length} titres
+                    </span>
+                    <span className="w-8 h-8 rounded-full bg-amber-400 text-[#080A0F] flex items-center justify-center font-bold text-xs shadow-lg">
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </span>
+                  </div>
+                  <div className="depth-3d-content absolute bottom-3 left-3 right-3 space-y-1">
+                    <p className="text-sm font-extrabold text-white truncate drop-shadow">{alb.albumTitle}</p>
+                    <p className="text-xs text-amber-300 truncate">{alb.artist}</p>
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07090E]/92 via-[#07090E]/35 to-[#07090E]/15" />
-                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full bg-[#080A0F]/80 border border-white/20 text-[10px] font-mono text-white/90">
-                    {alb.tracks.length} titres
-                  </span>
-                  <span className="w-8 h-8 rounded-full bg-amber-400 text-[#080A0F] flex items-center justify-center font-bold text-xs shadow-lg">
-                    <Play className="w-4 h-4 fill-current ml-0.5" />
-                  </span>
-                </div>
-                <div className="absolute bottom-3 left-3 right-3 space-y-1">
-                  <p className="text-sm font-extrabold text-white truncate drop-shadow">{alb.albumTitle}</p>
-                  <p className="text-xs text-amber-300 truncate">{alb.artist}</p>
-                </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

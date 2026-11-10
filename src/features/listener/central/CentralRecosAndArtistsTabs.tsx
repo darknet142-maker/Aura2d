@@ -96,53 +96,56 @@ export const CentralRecosAndArtistsTabs: React.FC<{ state: ReturnTypeUseImmersiv
             {decoupledStudioRankings
               .filter((ent) => hubTeamRoleFilter === 'ALL' || ent.role === hubTeamRoleFilter)
               .map((ent) => (
-                <button
-                  key={ent.key}
-                  type="button"
-                  onClick={() => openUserEntitySheet(ent.name, ent.role)}
-                  className="relative flex items-center justify-between p-3 rounded-2xl border bg-[#07090E]/90 hover:bg-white/[0.08] border-white/10 text-left transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                      <CoverArtwork
-                        artworkType={ent.artworkType}
-                        coverUrl={ent.cover}
-                        title={ent.name}
-                        artist={ent.name}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white truncate">{ent.name}</span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
-                            ent.role === 'ARTIST'
-                              ? 'bg-amber-400/20 text-amber-300'
-                              : ent.role === 'LABEL'
-                                ? 'bg-[#e11d38]/20 text-rose-300'
-                                : ent.role === 'BEATMAKER'
-                                  ? 'bg-emerald-500/20 text-emerald-300'
-                                  : 'bg-sky-500/20 text-sky-300'
-                          }`}
-                        >
-                          {ent.role === 'ARTIST'
-                            ? 'ARTISTE'
-                            : ent.role === 'LABEL'
-                              ? 'LABEL'
-                              : ent.role === 'BEATMAKER'
-                                ? 'BEATMAKER'
-                                : ent.role === 'LYRICIST'
-                                  ? 'PAROLIER'
-                                  : 'INGÉ SON'}
-                        </span>
+                <div key={ent.key} className="depth-3d-parent py-1">
+                  <div
+                    onClick={() => openUserEntitySheet(ent.name, ent.role)}
+                    className="depth-3d-card relative flex items-center justify-between p-3 rounded-2xl border bg-[#07090E]/90 hover:bg-white/[0.08] border-white/10 text-left transition cursor-pointer select-none"
+                  >
+                    <div className="depth-3d-glass" />
+                    <div className="depth-3d-content flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                        <CoverArtwork
+                          artworkType={ent.artworkType}
+                          coverUrl={ent.cover}
+                          title={ent.name}
+                          artist={ent.name}
+                        />
                       </div>
-                      <p className="text-[11px] text-[#A3A9BA] truncate mt-0.5 tabular-nums">
-                        {ent.primaryMetricLabel} : {ent.primaryMetricValue}
-                      </p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white truncate">{ent.name}</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
+                              ent.role === 'ARTIST'
+                                ? 'bg-amber-400/20 text-amber-300'
+                                : ent.role === 'LABEL'
+                                  ? 'bg-[#e11d38]/20 text-rose-300'
+                                  : ent.role === 'BEATMAKER'
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'bg-sky-500/20 text-sky-300'
+                            }`}
+                          >
+                            {ent.role === 'ARTIST'
+                              ? 'ARTISTE'
+                              : ent.role === 'LABEL'
+                                ? 'LABEL'
+                                : ent.role === 'BEATMAKER'
+                                  ? 'BEATMAKER'
+                                  : ent.role === 'LYRICIST'
+                                    ? 'PAROLIER'
+                                    : 'INGÉ SON'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#A3A9BA] truncate mt-0.5 tabular-nums">
+                          {ent.primaryMetricLabel} : {ent.primaryMetricValue}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="depth-3d-actions shrink-0 ml-2">
+                      <span className="text-xs font-bold text-amber-300">Ouvrir →</span>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-amber-300 shrink-0 ml-2">Ouvrir →</span>
-                </button>
+                </div>
               ))}
           </div>
         </div>

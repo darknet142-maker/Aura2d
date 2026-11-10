@@ -96,42 +96,45 @@ export const CentralMissionsTab: React.FC<CentralMissionsTabProps> = ({
           filteredCampaigns.map((c) => {
             const isDone = hasUserCompletedCampaign(userId, c.id);
             return (
-              <motion.div
-                key={c.id}
-                whileHover={{ y: -2 }}
-                transition={SPRING_SNAPPY}
-                className="p-3 rounded-2xl bg-[#0D1017] border border-white/[0.08] hover:border-amber-500/35 flex flex-wrap items-center justify-between gap-3 transition"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-xs text-[#F8FAFC] truncate">{c.title}</span>
-                    <span className="px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-300 font-mono font-bold text-[9.5px] border border-amber-500/30 shrink-0">
-                      +{c.rewardPerMission} JTN
-                    </span>
-                  </div>
-                  <p className="text-[10px] font-mono text-[#A3A9BA] truncate mt-0.5">
-                    {c.targetArtistName} • Condition : 30 secondes d&apos;écoute ECG
-                  </p>
-                </div>
-
-                <div className="shrink-0">
-                  {isDone ? (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Récompensé</span>
+              <div key={c.id} className="depth-3d-parent py-0.5">
+                <div
+                  style={{
+                    '--card-glow': 'rgba(245, 158, 11, 0.3)',
+                  } as React.CSSProperties}
+                  className="depth-3d-card p-3 rounded-2xl bg-[#0D1017] border border-white/[0.08] hover:border-amber-500/35 flex flex-wrap items-center justify-between gap-3 select-none cursor-pointer"
+                >
+                  <div className="depth-3d-glass" />
+                  <div className="depth-3d-content min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs text-[#F8FAFC] truncate">{c.title}</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-mono font-bold text-[9.5px] border border-amber-500/30 shrink-0">
+                        +{c.rewardPerMission} JTN
+                      </span>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleLaunchMission(c.targetTrackId)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#080A0F] font-mono text-xs font-black shadow-md cursor-pointer transition active:scale-95"
-                    >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>Écouter 30s &amp; Gagner</span>
-                    </button>
-                  )}
+                    <p className="text-[10px] font-mono text-[#A3A9BA] truncate mt-0.5">
+                      {c.targetArtistName} • Condition : 30 secondes d&apos;écoute ECG
+                    </p>
+                  </div>
+
+                  <div className="depth-3d-actions shrink-0">
+                    {isDone ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Récompensé</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchMission(c.targetTrackId)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#080A0F] font-mono text-xs font-black shadow-md cursor-pointer transition active:scale-95"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>Écouter 30s &amp; Gagner</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })
         )}

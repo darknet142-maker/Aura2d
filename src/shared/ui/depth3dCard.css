@@ -1,0 +1,158 @@
+/* ========================================================================== */
+/* EFFET DE PROFONDEUR 3D AU SURVOL — Cartes Utilisateur DROP Studio         */
+/* Inspiré par Smit-Prajapati (Uiverse.io), adapté à l'identité broadcast     */
+/* ========================================================================== */
+
+/* Scène perspective pour chaque carte individuelle */
+.depth-3d-parent {
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
+/* Carte articulée en 3D avec physics de ressort réaliste */
+.depth-3d-card {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow, border-color;
+  transition:
+    transform 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 0.35s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-3d-parent:hover .depth-3d-card {
+    transform: rotate3d(0.5, -0.6, 0, 14deg) translate3d(0, -6px, 14px);
+    box-shadow:
+      0 32px 64px -16px rgba(0, 0, 0, 0.9),
+      0 14px 28px -8px rgba(0, 0, 0, 0.65),
+      0 0 28px -6px var(--card-glow, rgba(222, 27, 52, 0.3));
+    border-color: rgba(255, 255, 255, 0.38) !important;
+  }
+}
+
+/* Couche 1 : Vitre & Halo spéculaire */
+.depth-3d-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  transform: translate3d(0, 0, 14px);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.35s ease;
+  opacity: 0.7;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-3d-parent:hover .depth-3d-glass {
+    transform: translate3d(0, 0, 20px);
+    opacity: 1;
+  }
+}
+
+/* Couche 2 : Anneaux concentriques spectraux 3D (Inspirés du logo broadcast DROP) */
+.depth-3d-rings {
+  position: absolute;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.depth-3d-rings .circle {
+  display: block;
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  top: 0;
+  right: 0;
+  box-shadow: -8px 8px 18px 0px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  background: var(--circle-tint, rgba(222, 27, 52, 0.15));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.35s ease;
+  opacity: 0.65;
+}
+
+.depth-3d-rings .circle1 {
+  width: 120px;
+  transform: translate3d(0, 0, 16px);
+  top: 6px;
+  right: 6px;
+}
+
+.depth-3d-rings .circle2 {
+  width: 90px;
+  transform: translate3d(0, 0, 30px);
+  top: 10px;
+  right: 10px;
+}
+
+.depth-3d-rings .circle3 {
+  width: 60px;
+  transform: translate3d(0, 0, 45px);
+  top: 14px;
+  right: 14px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-3d-parent:hover .depth-3d-rings .circle {
+    opacity: 1;
+  }
+  .depth-3d-parent:hover .depth-3d-rings .circle1 {
+    transform: translate3d(0, 0, 26px);
+  }
+  .depth-3d-parent:hover .depth-3d-rings .circle2 {
+    transform: translate3d(0, 0, 52px);
+  }
+  .depth-3d-parent:hover .depth-3d-rings .circle3 {
+    transform: translate3d(0, 0, 78px);
+  }
+}
+
+/* Couche 3 : Titres et métadonnées textuelles */
+.depth-3d-content {
+  transform-style: preserve-3d;
+  transform: translate3d(0, 0, 22px);
+  transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-3d-parent:hover .depth-3d-content {
+    transform: translate3d(0, 0, 34px);
+  }
+}
+
+/* Couche 4 : Contrôles d'actions, boutons Play et badges (flottent le plus haut) */
+.depth-3d-actions {
+  transform-style: preserve-3d;
+  transform: translate3d(0, 0, 28px);
+  transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.35s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-3d-parent:hover .depth-3d-actions {
+    transform: translate3d(0, 0, 52px);
+  }
+}
+
+/* Respect absolu de prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .depth-3d-card,
+  .depth-3d-glass,
+  .depth-3d-rings .circle,
+  .depth-3d-content,
+  .depth-3d-actions {
+    transition: none !important;
+    transform: none !important;
+  }
+}

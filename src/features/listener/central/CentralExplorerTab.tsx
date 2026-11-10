@@ -236,48 +236,66 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                   },
                                 ] as const
                               ).map((catCard) => (
-                                <motion.button
-                                  key={catCard.id}
-                                  type="button"
-                                  whileHover={{ y: -6, scale: 1.04 }}
-                                  whileTap={{ scale: 0.96 }}
-                                  transition={SPRING_SNAPPY}
-                                  onClick={() =>
-                                    setCentralFullPageView({
-                                      type: 'ROLE',
-                                      role: catCard.id,
-                                      title: catCard.title,
-                                      accentColor: catCard.color,
-                                    })
-                                  }
-                                  className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400/80 shrink-0 text-left shadow-lg cursor-pointer transition-colors"
-                                >
-                                  <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
-                                    <CoverArtwork
-                                      artworkType={catCard.artworkType}
-                                      coverUrl={catCard.cover}
-                                      title={catCard.title}
-                                      artist={catCard.title}
-                                    />
-                                  </div>
+                                <div key={catCard.id} className="depth-3d-parent shrink-0 py-2">
                                   <div
-                                    className="absolute inset-0"
+                                    onClick={() =>
+                                      setCentralFullPageView({
+                                        type: 'ROLE',
+                                        role: catCard.id,
+                                        title: catCard.title,
+                                        accentColor: catCard.color,
+                                      })
+                                    }
                                     style={{
-                                      background: `linear-gradient(145deg, ${catCard.color}66 0%, rgba(0,0,0,0.88) 90%)`,
-                                    }}
-                                  />
-                                  <span
-                                    className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
-                                    style={{ backgroundColor: catCard.color }}
+                                      '--card-glow': `${catCard.color}44`,
+                                      '--circle-tint': `${catCard.color}25`,
+                                    } as React.CSSProperties}
+                                    className="depth-3d-card group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 text-left shadow-lg cursor-pointer bg-[#0D1017] select-none"
                                   >
-                                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                                  </span>
-                                  <div className="absolute bottom-3 left-3 right-3">
-                                    <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
-                                      {catCard.title}
-                                    </span>
+                                    {/* Base Artwork */}
+                                    <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                      <CoverArtwork
+                                        artworkType={catCard.artworkType}
+                                        coverUrl={catCard.cover}
+                                        title={catCard.title}
+                                        artist={catCard.title}
+                                      />
+                                    </div>
+                                    <div
+                                      className="absolute inset-0"
+                                      style={{
+                                        background: `linear-gradient(145deg, ${catCard.color}66 0%, rgba(8,10,15,0.92) 90%)`,
+                                      }}
+                                    />
+
+                                    {/* Couche 1 : Vitre & Halo spéculaire 3D */}
+                                    <div className="depth-3d-glass" />
+
+                                    {/* Couche 2 : Anneaux orbitaux 3D */}
+                                    <div className="depth-3d-rings">
+                                      <span className="circle circle1" />
+                                      <span className="circle circle2" />
+                                      <span className="circle circle3" />
+                                    </div>
+
+                                    {/* Couche 4 : Bouton d'action flottant au 1er plan */}
+                                    <div className="depth-3d-actions absolute top-2.5 right-2.5">
+                                      <span
+                                        className="w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow-md"
+                                        style={{ backgroundColor: catCard.color }}
+                                      >
+                                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                      </span>
+                                    </div>
+
+                                    {/* Couche 3 : Titre flottant en 3D */}
+                                    <div className="depth-3d-content absolute bottom-3 left-3 right-3">
+                                      <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
+                                        {catCard.title}
+                                      </span>
+                                    </div>
                                   </div>
-                                </motion.button>
+                                </div>
                               ))}
 
                               {/* Cartes carrées des Genres musicaux à la suite dans le défilement */}
@@ -295,50 +313,67 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                 ];
                                 const gColor = palette[gIdx % palette.length];
                                 return (
-                                  <motion.button
-                                    key={genre}
-                                    type="button"
-                                    whileHover={{ y: -6, scale: 1.04 }}
-                                    whileTap={{ scale: 0.96 }}
-                                    transition={SPRING_SNAPPY}
-                                    onClick={() =>
-                                      setCentralFullPageView({
-                                        type: 'GENRE',
-                                        genre,
-                                        title: genre,
-                                        accentColor: gColor,
-                                      })
-                                    }
-                                    className="group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 hover:border-white/50 shrink-0 text-left shadow-lg cursor-pointer transition-colors"
-                                  >
-                                    {genreTrack && (
-                                      <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-300">
-                                        <CoverArtwork
-                                          artworkType={genreTrack.artworkType}
-                                          coverUrl={genreTrack.cover}
-                                          title={genre}
-                                          artist={genreTrack.artist}
-                                        />
-                                      </div>
-                                    )}
+                                  <div key={genre} className="depth-3d-parent shrink-0 py-2">
                                     <div
-                                      className="absolute inset-0"
+                                      onClick={() =>
+                                        setCentralFullPageView({
+                                          type: 'GENRE',
+                                          genre,
+                                          title: genre,
+                                          accentColor: gColor,
+                                        })
+                                      }
                                       style={{
-                                        background: `linear-gradient(145deg, ${gColor}66 0%, rgba(0,0,0,0.9) 90%)`,
-                                      }}
-                                    />
-                                    <span
-                                      className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow"
-                                      style={{ backgroundColor: gColor }}
+                                        '--card-glow': `${gColor}44`,
+                                        '--circle-tint': `${gColor}25`,
+                                      } as React.CSSProperties}
+                                      className="depth-3d-card group relative w-32 h-32 sm:w-36 sm:h-36 aspect-square rounded-2xl overflow-hidden border border-white/15 text-left shadow-lg cursor-pointer bg-[#0D1017] select-none"
                                     >
-                                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                                    </span>
-                                    <div className="absolute bottom-3 left-3 right-3">
-                                      <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
-                                        {genre}
-                                      </span>
+                                      {genreTrack && (
+                                        <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                          <CoverArtwork
+                                            artworkType={genreTrack.artworkType}
+                                            coverUrl={genreTrack.cover}
+                                            title={genre}
+                                            artist={genreTrack.artist}
+                                          />
+                                        </div>
+                                      )}
+                                      <div
+                                        className="absolute inset-0"
+                                        style={{
+                                          background: `linear-gradient(145deg, ${gColor}66 0%, rgba(8,10,15,0.92) 90%)`,
+                                        }}
+                                      />
+
+                                      {/* Couche 1 : Vitre & Halo spéculaire 3D */}
+                                      <div className="depth-3d-glass" />
+
+                                      {/* Couche 2 : Anneaux orbitaux 3D */}
+                                      <div className="depth-3d-rings">
+                                        <span className="circle circle1" />
+                                        <span className="circle circle2" />
+                                        <span className="circle circle3" />
+                                      </div>
+
+                                      {/* Couche 4 : Bouton d'action flottant au 1er plan */}
+                                      <div className="depth-3d-actions absolute top-2.5 right-2.5">
+                                        <span
+                                          className="w-6 h-6 rounded-full flex items-center justify-center text-black font-extrabold text-xs shadow-md"
+                                          style={{ backgroundColor: gColor }}
+                                        >
+                                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                        </span>
+                                      </div>
+
+                                      {/* Couche 3 : Titre flottant en 3D */}
+                                      <div className="depth-3d-content absolute bottom-3 left-3 right-3">
+                                        <span className="text-sm sm:text-base font-extrabold text-white leading-tight block drop-shadow">
+                                          {genre}
+                                        </span>
+                                      </div>
                                     </div>
-                                  </motion.button>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -386,87 +421,100 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                     accentColors[idx % accentColors.length];
 
                                   return (
-                                    <motion.div
-                                      key={t.id}
-                                      whileHover={{ y: -5, scale: 1.03 }}
-                                      whileTap={{ scale: 0.97 }}
-                                      transition={SPRING_SNAPPY}
-                                      onClick={() =>
-                                        handlePlayOrToggleSpecificTrack(
-                                          albumIndex,
-                                          trackIndex
-                                        )
-                                      }
-                                      className="group relative w-64 sm:w-72 aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 hover:border-amber-400 shrink-0 cursor-pointer shadow-xl transition-colors"
-                                    >
-                                      <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
-                                        <CoverArtwork
-                                          artworkType={t.artworkType}
-                                          coverUrl={t.cover}
-                                          title={t.title}
-                                          artist={t.artist}
-                                        />
-                                      </div>
+                                    <div key={t.id} className="depth-3d-parent shrink-0 py-2">
                                       <div
-                                        className="absolute inset-0"
+                                        onClick={() =>
+                                          handlePlayOrToggleSpecificTrack(
+                                            albumIndex,
+                                            trackIndex
+                                          )
+                                        }
                                         style={{
-                                          background: `linear-gradient(to top, rgba(0,0,0,0.92) 12%, ${cardColor}55 58%, rgba(0,0,0,0.18) 100%)`,
-                                        }}
-                                      />
-
-                                      <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between">
-                                        <CertificationBadgeSvg
-                                          cert={tCert}
-                                          compact
-                                          entityTitle={t.title}
-                                          entityArtist={t.artist}
-                                          playsCount={t.realPlays}
+                                          '--card-glow': `${cardColor}44`,
+                                          '--circle-tint': `${cardColor}25`,
+                                        } as React.CSSProperties}
+                                        className="depth-3d-card group relative w-64 sm:w-72 aspect-[16/9] rounded-2xl overflow-hidden border border-white/15 text-left cursor-pointer shadow-xl bg-[#0D1017] select-none"
+                                      >
+                                        <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-300">
+                                          <CoverArtwork
+                                            artworkType={t.artworkType}
+                                            coverUrl={t.cover}
+                                            title={t.title}
+                                            artist={t.artist}
+                                          />
+                                        </div>
+                                        <div
+                                          className="absolute inset-0"
+                                          style={{
+                                            background: `linear-gradient(to top, rgba(8,10,15,0.94) 14%, ${cardColor}55 58%, rgba(8,10,15,0.2) 100%)`,
+                                          }}
                                         />
-                                        <span className="w-8 h-8 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                                          {isThisPlaying ? (
-                                            <Pause className="w-4 h-4 fill-current" />
-                                          ) : (
-                                            <Play className="w-4 h-4 fill-current ml-0.5" />
-                                          )}
-                                        </span>
-                                      </div>
 
-                                      {/* Titre & artiste cliquables directement sur la carte rectangulaire */}
-                                      <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
-                                        <div className="min-w-0 flex-1">
+                                        {/* Couche 1 : Vitre & Halo spéculaire 3D */}
+                                        <div className="depth-3d-glass" />
+
+                                        {/* Couche 2 : Anneaux orbitaux 3D */}
+                                        <div className="depth-3d-rings">
+                                          <span className="circle circle1" />
+                                          <span className="circle circle2" />
+                                          <span className="circle circle3" />
+                                        </div>
+
+                                        {/* Couche 4 : Badges & Bouton Play au 1er plan */}
+                                        <div className="depth-3d-actions absolute top-2.5 left-3 right-3 flex items-center justify-between">
+                                          <CertificationBadgeSvg
+                                            cert={tCert}
+                                            compact
+                                            entityTitle={t.title}
+                                            entityArtist={t.artist}
+                                            playsCount={t.realPlays}
+                                          />
+                                          <span className="w-8 h-8 rounded-full bg-[#e11d38] text-white flex items-center justify-center font-bold text-xs shadow-lg">
+                                            {isThisPlaying ? (
+                                              <Pause className="w-4 h-4 fill-current" />
+                                            ) : (
+                                              <Play className="w-4 h-4 fill-current ml-0.5" />
+                                            )}
+                                          </span>
+                                        </div>
+
+                                        {/* Couche 3 : Titre & artiste cliquables directement */}
+                                        <div className="depth-3d-content absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2">
+                                          <div className="min-w-0 flex-1">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserTrackSheet(t.id);
+                                              }}
+                                              className="text-sm sm:text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                            >
+                                              {t.title}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openUserEntitySheet(t.artist, 'ARTIST');
+                                              }}
+                                              className="text-xs font-bold text-amber-300 hover:underline truncate block max-w-full text-left"
+                                            >
+                                              {t.artist}
+                                            </button>
+                                          </div>
                                           <button
                                             type="button"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               openUserTrackSheet(t.id);
                                             }}
-                                            className="text-sm sm:text-base font-extrabold text-white hover:text-amber-300 truncate drop-shadow block max-w-full text-left transition-colors"
+                                            className="px-2 py-1 rounded-lg bg-[#07090E]/80 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
                                           >
-                                            {t.title}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openUserEntitySheet(t.artist, 'ARTIST');
-                                            }}
-                                            className="text-xs font-bold text-amber-300 hover:underline truncate block max-w-full text-left"
-                                          >
-                                            {t.artist}
+                                            Fiche
                                           </button>
                                         </div>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openUserTrackSheet(t.id);
-                                          }}
-                                          className="px-2 py-1 rounded-lg bg-[#07090E]/75 hover:bg-amber-400 hover:text-[#080A0F] border border-white/20 text-[10px] font-bold text-white shrink-0 transition"
-                                        >
-                                          Fiche
-                                        </button>
                                       </div>
-                                    </motion.div>
+                                    </div>
                                   );
                                 }
                               )}
@@ -517,110 +565,124 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                                     const isThisPlaying =
                                       currentTrack.id === t.id && isPlaying;
                                     return (
-                                      <motion.div
-                                        key={t.id}
-                                        whileHover={{ y: -5, scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        transition={SPRING_SNAPPY}
-                                        onClick={() =>
-                                          handlePlayOrToggleSpecificTrack(
-                                            albumIndex,
-                                            trackIndex
-                                          )
-                                        }
-                                        className="group relative w-64 sm:w-72 rounded-2xl overflow-hidden border border-cyan-400/35 hover:border-cyan-300 bg-zinc-900/90 p-3 shrink-0 cursor-pointer shadow-xl flex flex-col justify-between gap-2.5 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-white/15 shrink-0">
-                                            <CoverArtwork
-                                              artworkType={t.artworkType}
-                                              coverUrl={t.cover}
-                                              title={t.title}
-                                              artist={t.artist}
-                                            />
-                                            <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white font-bold text-xs">
-                                              {isThisPlaying ? (
-                                                <Pause className="w-4 h-4 fill-current" />
-                                              ) : (
-                                                <Play className="w-4 h-4 fill-current ml-0.5" />
-                                              )}
-                                            </span>
+                                      <div key={t.id} className="depth-3d-parent shrink-0 py-2">
+                                        <div
+                                          onClick={() =>
+                                            handlePlayOrToggleSpecificTrack(
+                                              albumIndex,
+                                              trackIndex
+                                            )
+                                          }
+                                          style={{
+                                            '--card-glow': 'rgba(6, 182, 212, 0.4)',
+                                            '--circle-tint': 'rgba(6, 182, 212, 0.2)',
+                                          } as React.CSSProperties}
+                                          className="depth-3d-card group relative w-64 sm:w-72 rounded-2xl overflow-hidden border border-cyan-400/35 hover:border-cyan-300 bg-zinc-900/90 p-3 cursor-pointer shadow-xl flex flex-col justify-between gap-2.5 select-none"
+                                        >
+                                          {/* Couche 1 : Vitre & Halo spéculaire 3D */}
+                                          <div className="depth-3d-glass" />
+
+                                          {/* Couche 2 : Anneaux orbitaux 3D */}
+                                          <div className="depth-3d-rings">
+                                            <span className="circle circle1" />
+                                            <span className="circle circle2" />
+                                            <span className="circle circle3" />
                                           </div>
-                                          <div className="min-w-0 flex-1">
+
+                                          {/* Couche 3 : Contenu & métadonnées */}
+                                          <div className="depth-3d-content flex items-center gap-3">
+                                            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-white/15 shrink-0">
+                                              <CoverArtwork
+                                                artworkType={t.artworkType}
+                                                coverUrl={t.cover}
+                                                title={t.title}
+                                                artist={t.artist}
+                                              />
+                                              <span className="absolute inset-0 bg-[#07090E]/45 flex items-center justify-center text-white font-bold text-xs">
+                                                {isThisPlaying ? (
+                                                  <Pause className="w-4 h-4 fill-current" />
+                                                ) : (
+                                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                                )}
+                                              </span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openUserTrackSheet(t.id);
+                                                }}
+                                                className="text-xs sm:text-sm font-extrabold text-white hover:text-amber-300 truncate block max-w-full text-left transition-colors"
+                                              >
+                                                {t.title}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openUserEntitySheet(
+                                                    t.beatmakerName || t.artist,
+                                                    'BEATMAKER'
+                                                  );
+                                                }}
+                                                className="text-[11px] text-cyan-300 hover:underline font-bold truncate block max-w-full text-left"
+                                              >
+                                                Prod. {t.beatmakerName || t.artist}
+                                              </button>
+                                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 text-[9px] font-mono font-bold">
+                                                  {t.bpm || 120} BPM
+                                                </span>
+                                                {t.musicalKey && (
+                                                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-zinc-200 text-[9px] font-mono font-bold">
+                                                    {t.musicalKey}
+                                                  </span>
+                                                )}
+                                                <span className="text-[9px] font-mono text-emerald-300/90 truncate">
+                                                  {t.dropContentId}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Couche 4 : Boutons d'actions au 1er plan */}
+                                          <div className="depth-3d-actions flex items-center gap-2 pt-1 border-t border-white/10">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                triggerBeatAudioDownload({
+                                                  title: t.title,
+                                                  artist: t.artist,
+                                                  bpm: t.bpm,
+                                                  duration: t.duration,
+                                                  audioUrl: t.audioUrl,
+                                                  dropContentId: t.dropContentId,
+                                                });
+                                                showToast(
+                                                  `Téléchargement du Beat « ${t.title} » lancé !`,
+                                                  'bg-cyan-400'
+                                                );
+                                              }}
+                                              className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-extrabold text-[11px] flex items-center justify-center gap-1.5 shadow-md transition"
+                                            >
+                                              <span>⬇</span>
+                                              <span>Télécharger le Beat</span>
+                                            </button>
                                             <button
                                               type="button"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 openUserTrackSheet(t.id);
                                               }}
-                                              className="text-xs sm:text-sm font-extrabold text-white hover:text-amber-300 truncate block max-w-full text-left transition-colors"
+                                              className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
                                             >
-                                              {t.title}
+                                              Fiche
                                             </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openUserEntitySheet(
-                                                  t.beatmakerName || t.artist,
-                                                  'BEATMAKER'
-                                                );
-                                              }}
-                                              className="text-[11px] text-cyan-300 hover:underline font-bold truncate block max-w-full text-left"
-                                            >
-                                              Prod. {t.beatmakerName || t.artist}
-                                            </button>
-                                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                              <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 text-[9px] font-mono font-bold">
-                                                {t.bpm || 120} BPM
-                                              </span>
-                                              {t.musicalKey && (
-                                                <span className="px-1.5 py-0.5 rounded bg-white/10 text-zinc-200 text-[9px] font-mono font-bold">
-                                                  {t.musicalKey}
-                                                </span>
-                                              )}
-                                              <span className="text-[9px] font-mono text-emerald-300/90 truncate">
-                                                {t.dropContentId}
-                                              </span>
-                                            </div>
                                           </div>
                                         </div>
-
-                                        <div className="flex items-center gap-2 pt-1 border-t border-white/10">
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              triggerBeatAudioDownload({
-                                                title: t.title,
-                                                artist: t.artist,
-                                                bpm: t.bpm,
-                                                duration: t.duration,
-                                                audioUrl: t.audioUrl,
-                                                dropContentId: t.dropContentId,
-                                              });
-                                              showToast(
-                                                `Téléchargement du Beat « ${t.title} » lancé !`,
-                                                'bg-cyan-400'
-                                              );
-                                            }}
-                                            className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-extrabold text-[11px] flex items-center justify-center gap-1.5 shadow-md transition"
-                                          >
-                                            <span>⬇</span>
-                                            <span>Télécharger le Beat</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openUserTrackSheet(t.id);
-                                            }}
-                                            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
-                                          >
-                                            Fiche
-                                          </button>
-                                        </div>
-                                      </motion.div>
+                                      </div>
                                     );
                                   })}
                               </div>
