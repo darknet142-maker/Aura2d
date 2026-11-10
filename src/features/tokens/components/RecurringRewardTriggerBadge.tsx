@@ -58,3 +58,4 @@ export const RecurringRewardTriggerBadge: React.FC<RecurringRewardTriggerBadgePr
     </button>
   );
 };
+

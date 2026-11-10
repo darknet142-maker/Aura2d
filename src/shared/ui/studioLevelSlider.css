@@ -1,0 +1,136 @@
+/* ==========================================================================
+   DROP BROADCAST - POTENTIOMÈTRE STUDIO BROADCAST (Uiverse.io by Stavros2410)
+   Curseur de niveau physique avec bouton rotatif en métal usiné biseauté.
+   ========================================================================== */
+
+.studio-slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Gorge encastrée extérieure (recessed groove) */
+.studio-slider-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  height: 36px;
+  background: linear-gradient(180deg, #131722 0%, #1c2230 100%);
+  border-radius: 30px;
+  padding: 4px;
+  box-sizing: border-box;
+  box-shadow:
+    inset 2px 2px 6px rgba(0, 0, 0, 0.8),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+}
+
+/* Entrée range native sans bordure parasite */
+.studio-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  outline: none;
+  margin: 0;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+  background: transparent;
+}
+
+/* Variantes de gradients de piste de mixage broadcast */
+.studio-slider-gradient-master {
+  background: linear-gradient(to right, #de1b34 0%, #f59e0b 60%, #ffea00 100%);
+}
+
+.studio-slider-gradient-cyan {
+  background: linear-gradient(to right, #008080 0%, #00a8cc 50%, #00d2ff 100%);
+}
+
+.studio-slider-gradient-emerald {
+  background: linear-gradient(to right, #047857 0%, #10b981 50%, #34d399 100%);
+}
+
+.studio-slider-gradient-gold {
+  background: linear-gradient(to right, #b45309 0%, #f59e0b 60%, #fde68a 100%);
+}
+
+/* --- BOUTON POTENTIOMÈTRE EN MÉTAL USINÉ (CONIC GRADIENT MACHINED ALUMINUM) --- */
+
+/* Chrome, Safari, Edge, Opera */
+.studio-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #7a8088 0deg,
+    #c4c9cf 45deg,
+    #eef1f5 90deg,
+    #7a8088 135deg,
+    #4a4e54 180deg,
+    #c4c9cf 225deg,
+    #eef1f5 270deg,
+    #7a8088 315deg,
+    #7a8088 360deg
+  );
+  border: 2px solid #5a5e63;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.85),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.studio-slider::-webkit-slider-thumb:hover {
+  filter: brightness(1.08);
+}
+
+.studio-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Firefox */
+.studio-slider::-moz-range-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #7a8088 0deg,
+    #c4c9cf 45deg,
+    #eef1f5 90deg,
+    #7a8088 135deg,
+    #4a4e54 180deg,
+    #c4c9cf 225deg,
+    #eef1f5 270deg,
+    #7a8088 315deg,
+    #7a8088 360deg
+  );
+  border: 2px solid #5a5e63;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.85),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.studio-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}

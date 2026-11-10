@@ -50,3 +50,4 @@ if (doubleClaim.success) {
 }
 
 console.log('✅ Tous les tests du service de récompenses récurrentes sont validés avec succès !');
+

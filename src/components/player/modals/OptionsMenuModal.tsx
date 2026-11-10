@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Zap } from 'lucide-react';
+import { X, Zap, Volume2 } from 'lucide-react';
 import { ProLockBadgeSvg } from '../PlayerIcons';
 import { DropOfficialLogo } from '../../CoverArtwork';
+import { StudioLevelSlider } from '../../../shared/ui/StudioLevelSlider';
 
 export interface OptionsMenuModalProps {
   isOpen: boolean;
@@ -91,21 +92,16 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
           </button>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-zinc-200 font-semibold">Volume Master Temps Réel</span>
-            <span className="font-mono text-amber-400 font-bold">
-              {Math.round(masterVolume)}%
-            </span>
-          </div>
-          <input
-            type="range"
+        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center">
+          <StudioLevelSlider
+            value={masterVolume}
             min={0}
             max={100}
             step={0.5}
-            value={masterVolume}
-            onChange={(e) => onChangeMasterVolume(parseFloat(e.target.value))}
-            className="w-full fat-slider cursor-pointer"
+            onChange={onChangeMasterVolume}
+            label="Volume Master Temps Réel"
+            variant="master"
+            icon={<Volume2 className="w-4 h-4 text-amber-400" />}
             aria-label="Volume Master"
           />
         </div>

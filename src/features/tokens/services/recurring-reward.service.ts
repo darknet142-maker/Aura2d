@@ -235,3 +235,4 @@ export function claimDailyRecurringReward(userId: string): ClaimRewardResult {
     txId: tx.entry?.transactionId,
   };
 }
+

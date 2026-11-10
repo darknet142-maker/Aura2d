@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sliders, Volume2 } from 'lucide-react';
 import { PRECISION_EQ_PRESETS } from '../services/mastering-presets.service';
+import { StudioLevelSlider } from '../../../shared/ui/StudioLevelSlider';
 import type { PrecisionEqPreset } from '../types/audio-dsp.types';
 
 export interface EqPreampMasterCardProps {
@@ -124,22 +125,18 @@ export const EqPreampMasterCard: React.FC<EqPreampMasterCardProps> = ({
       </div>
 
       {/* 3. Volume Master Temps Réel */}
-      <div className="p-2.5 rounded-2xl bg-[#080A0F] border border-white/[0.09] flex items-center gap-2.5">
-        <Volume2 className="w-4 h-4 text-amber-300 shrink-0" />
-        <span className="text-xs font-semibold text-[#F8FAFC] shrink-0">Master</span>
-        <input
-          type="range"
+      <div className="p-3 rounded-2xl bg-[#080A0F] border border-white/[0.09] flex flex-col items-center">
+        <StudioLevelSlider
+          value={masterVolume}
           min={0}
           max={100}
           step={0.5}
-          value={masterVolume}
-          onChange={(e) => onChangeMasterVolume(parseFloat(e.target.value))}
-          className="flex-1 fat-slider cursor-pointer"
+          onChange={onChangeMasterVolume}
+          label="Volume Master Écoute Studio"
+          variant="master"
+          icon={<Volume2 className="w-4 h-4 text-amber-300" />}
           aria-label="Volume Master"
         />
-        <span className="font-mono text-xs font-bold text-amber-300 w-10 text-right shrink-0">
-          {Math.round(masterVolume)}%
-        </span>
       </div>
     </div>
   );
