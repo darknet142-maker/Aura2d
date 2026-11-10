@@ -35,8 +35,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {!isCollapsed && (
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">DROP 2.0</span>
-                <span className="text-xs font-extrabold text-[#F8FAFC] truncate">Studio SaaS</span>
+                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white border border-white/15">DROP (+241)</span>
+                <span className="text-xs font-extrabold text-[#F8FAFC] truncate">Tour de Contrôle</span>
               </div>
               <p className="text-[10px] text-[#A3A9BA] truncate">Central Management Console</p>
             </div>
@@ -80,7 +80,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-xs truncate flex items-center gap-1.5">
-                        <span className={`font-mono text-[10px] ${isActive ? 'text-white/80' : 'text-emerald-400'}`}>{space.code}</span>
+                        <span className={`font-mono text-[10px] ${isActive ? 'text-white/80' : 'text-[#A3A9BA]/70'}`}>{space.code}</span>
                         <span className="truncate">{space.name}</span>
                       </span>
                       {space.badge && (

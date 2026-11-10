@@ -60,10 +60,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             whileTap={{ scale: 0.96 }}
             transition={SPRING_SNAPPY}
             onClick={onGoBack}
-            className="px-2.5 py-1.5 rounded-xl bg-[#131722] hover:bg-white/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0 transition"
+            className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[#CBD5E1] hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shrink-0 transition"
             title={`Revenir sur vos pas : ${previousLabel} (Raccourci: Alt + ←)`}
           >
-            <ChevronLeft className="w-4 h-4 text-emerald-400" />
+            <ChevronLeft className="w-4 h-4 text-[#A3A9BA]" />
             <span className="hidden sm:inline truncate max-w-[160px]">← {previousLabel}</span>
           </motion.button>
         )}
@@ -102,7 +102,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           transition={SPRING_SNAPPY}
           onClick={() => onSaveAndSyncAll(currentSpace.name)}
           disabled={isSavingAdmin}
-          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-[#080A0F] text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/20"
+          className="px-3 py-1.5 rounded-xl bg-[#DE1B34] hover:bg-[#FF4D64] disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition"
         >
           {isSavingAdmin ? <CheckCircle2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
           <span>{isSavingAdmin ? 'Synchronisation...' : 'Sauvegarder & Sync'}</span>

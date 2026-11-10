@@ -52,9 +52,9 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
         <button
           type="button"
           onClick={() => onSaveAndSyncAll('Profils & Statistiques Auditeurs')}
-          className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#07080C] font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition cursor-pointer shrink-0"
+          className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5 border border-white/15 transition cursor-pointer shrink-0"
         >
-          <CheckCircle2 className="w-3.5 h-3.5" />
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
           <span>Sauvegarder &amp; Sync Auditeurs</span>
         </button>
       </div>
@@ -72,13 +72,13 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 bg-[#07090E] p-1 rounded-xl border border-white/10 text-xs">
+        <div className="flex items-center gap-1 bg-[#07090E] p-1 rounded-xl border border-white/[0.06] text-xs">
           {(['ALL', 'TOP_LISTENERS'] as const).map((mode) => (
             <button
               key={mode}
               type="button"
               onClick={() => setFilter(mode)}
-              className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition ${filter === mode ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+              className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition ${filter === mode ? 'bg-white/10 text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
                 }`}
             >
               {mode === 'ALL' ? `Tous (${users.length})` : 'Top Écoutes'}
@@ -93,7 +93,7 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
           <div
             key={u.id}
             onClick={() => onSelectUser(u.id)}
-            className="flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07090E] border border-white/[0.06] hover:border-emerald-500/40 cursor-pointer transition group"
+            className="flex items-center justify-between gap-2.5 p-3 rounded-xl bg-[#07090E] border border-white/[0.06] hover:border-white/20 cursor-pointer transition group"
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center font-bold text-base shrink-0 group-hover:scale-105 transition-transform">
@@ -114,7 +114,7 @@ export const AdminUsersDirectory: React.FC<AdminUsersDirectoryProps> = ({
 
             <div className="flex items-center gap-1.5 shrink-0">
               <RankBadge rank={idx + 1} delta={0} />
-              <ChevronRight className="w-4 h-4 text-[#A3A9BA] group-hover:text-emerald-400 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#A3A9BA] group-hover:text-white transition-colors" />
             </div>
           </div>
         ))}

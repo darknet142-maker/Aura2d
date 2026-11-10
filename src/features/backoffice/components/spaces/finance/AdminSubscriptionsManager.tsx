@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, Smartphone, Coins, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, XCircle, Search } from 'lucide-react';
+import { Award, Smartphone, Coins, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Search, FileText } from 'lucide-react';
 import type { AppUser } from '../../../../../shared/types/domain.types';
 
 export interface AdminSubscriptionsManagerProps {
@@ -82,7 +82,20 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
     },
   ]);
 
-  const handleAction = (subId: string, action: 'SUSPEND' | 'ACTIVATE' | 'REFUND') => {
+  const handleAction = (subId: string, action: 'SUSPEND' | 'ACTIVATE' | 'EXTEND' | 'RECEIPT') => {
+    if (action === 'EXTEND') {
+      setSubscriptions((prev) =>
+        prev.map((s) => (s.id === subId ? { ...s, expiresInDays: s.expiresInDays + 7, status: 'ACTIVE' } : s))
+      );
+      onToast?.(`Geste commercial : Abonnement #${subId} prolongé de 7 jours.`);
+      return;
+    }
+
+    if (action === 'RECEIPT') {
+      onToast?.(`Bordereau fiscal & reçu dématérialisé #${subId} généré (PDF DGI).`);
+      return;
+    }
+
     setSubscriptions((prev) =>
       prev.map((s) => {
         if (s.id !== subId) return s;
@@ -91,7 +104,7 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
         return s;
       })
     );
-    onToast?.(`Action ${action} exécutée avec succès sur l'abonnement #${subId}.`);
+    onToast?.(`Statut mis à jour sur l'abonnement #${subId}.`);
   };
 
   const filtered = subscriptions.filter((s) => {
@@ -101,45 +114,45 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
     if (filter === 'FAILED' && s.status !== 'FAILED') return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      return s.userName.toLowerCase().includes(q) || s.planTitle.toLowerCase().includes(q);
+      return s.userName.toLowerCase().includes(q) || s.planTitle.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
     }
     return true;
   });
 
   const directCount = subscriptions.filter((s) => s.method !== 'TOKEN_UNLOCKED').length;
   const tokenCount = subscriptions.filter((s) => s.method === 'TOKEN_UNLOCKED').length;
+  const failedCount = subscriptions.filter((s) => s.status === 'FAILED').length;
 
   return (
     <div className="p-4 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] space-y-3.5 font-mono text-xs">
-      {/* 1. En-tête & KPIs de Synthèse */}
+      {/* 1. En-tête & Synthèse Calme */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-emerald-400" />
+            <Award className="w-4 h-4 text-[#A3A9BA]" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#F8FAFC]">
               Gestionnaire du Cycle de Vie des Abonnements
             </h3>
           </div>
           <p className="text-[10px] text-[#A3A9BA]">
-            Distinction certifiée : Abonnements payants directs ({directCount}) vs Abonnements débloqués par jetons ({tokenCount})
+            Paiements directs Mobile Money ({directCount}) • Déblocages 100% Jetons Sponsorisés ({tokenCount})
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-            Zéro Double Comptage
-          </span>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] text-[#A3A9BA]">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Zéro Double Comptage</span>
         </div>
       </div>
 
-      {/* 2. Filtres & Recherche */}
+      {/* 2. Filtres & Recherche Sobre */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#07090E] border border-white/10 text-[10.5px]">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#07090E] border border-white/[0.06] text-[10.5px] flex-wrap">
           <button
             type="button"
             onClick={() => setFilter('ALL')}
-            className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              filter === 'ALL' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
+              filter === 'ALL' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Tous ({subscriptions.length})
@@ -147,8 +160,8 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
           <button
             type="button"
             onClick={() => setFilter('DIRECT')}
-            className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              filter === 'DIRECT' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
+              filter === 'DIRECT' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Paiements Directs ({directCount})
@@ -156,8 +169,8 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
           <button
             type="button"
             onClick={() => setFilter('TOKENS')}
-            className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              filter === 'TOKENS' ? 'bg-amber-400 text-[#080A0F]' : 'text-[#A3A9BA] hover:text-white'
+            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
+              filter === 'TOKENS' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             100% Jetons ({tokenCount})
@@ -165,12 +178,23 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
           <button
             type="button"
             onClick={() => setFilter('EXPIRING')}
-            className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              filter === 'EXPIRING' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
+              filter === 'EXPIRING' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
-            Expirant &lt; 5j
+            Échéance &lt; 5j
           </button>
+          {failedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilter('FAILED')}
+              className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
+                filter === 'FAILED' ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30' : 'text-rose-400/80 hover:text-rose-300'
+              }`}
+            >
+              Échecs ({failedCount})
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 bg-[#07090E] border border-white/10 rounded-xl px-2.5 py-1 text-xs">
@@ -179,8 +203,8 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrer un abonné..."
-            className="bg-transparent outline-none text-[#F8FAFC] placeholder:text-[#A3A9BA]/50 text-xs w-36"
+            placeholder="Filtrer par nom..."
+            className="bg-transparent outline-none text-[#F8FAFC] placeholder:text-[#A3A9BA]/50 text-xs w-32 sm:w-36"
           />
         </div>
       </div>
@@ -201,29 +225,52 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-[#F8FAFC] truncate">{sub.userName}</span>
-                    <span
-                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
-                        isDirect
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                      }`}
-                    >
-                      {sub.method.replace('_', ' ')}
+                    <span className="font-bold text-[#F8FAFC] truncate">{sub.userName}</span>
+                    <span className="flex items-center gap-1.5 text-[10px] text-[#A3A9BA]">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          sub.status === 'ACTIVE'
+                            ? 'bg-emerald-400'
+                            : sub.status === 'EXPIRING_SOON'
+                            ? 'bg-amber-400'
+                            : sub.status === 'FAILED'
+                            ? 'bg-rose-400'
+                            : 'bg-slate-400'
+                        }`}
+                      />
+                      <span>{sub.method.replace('_', ' ')}</span>
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#A3A9BA] block">
-                    {sub.planTitle} • Échéance dans {sub.expiresInDays} jours {sub.autoRenew ? '(Reconduction auto)' : ''}
+                  <span className="text-[10.5px] text-[#A3A9BA] block">
+                    {sub.planTitle} • {sub.status === 'FAILED' ? 'Échec prélèvement (Période de grâce 48h)' : `Échéance dans ${sub.expiresInDays}j ${sub.autoRenew ? '(Reconduction auto)' : ''}`}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="font-extrabold text-white tabular-nums">
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className="font-bold text-[#F8FAFC] tabular-nums">
                   {isDirect ? `${sub.amountFcfa.toLocaleString()} F` : `${sub.tokensCost} JTN`}
                 </span>
 
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAction(sub.id, 'RECEIPT')}
+                    title="Générer reçu fiscal"
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#A3A9BA] hover:text-white border border-white/10 cursor-pointer transition"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAction(sub.id, 'EXTEND')}
+                    title="Geste commercial (+7j)"
+                    className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[#A3A9BA] hover:text-white border border-white/10 text-[10px] cursor-pointer transition"
+                  >
+                    +7j
+                  </button>
+
                   {sub.status === 'ACTIVE' ? (
                     <button
                       type="button"
@@ -236,7 +283,7 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
                     <button
                       type="button"
                       onClick={() => handleAction(sub.id, 'ACTIVATE')}
-                      className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] cursor-pointer transition"
+                      className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] cursor-pointer transition"
                     >
                       Réactiver
                     </button>
@@ -250,4 +297,3 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
     </div>
   );
 };
-

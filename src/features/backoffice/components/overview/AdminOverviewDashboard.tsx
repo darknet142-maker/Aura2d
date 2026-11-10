@@ -86,9 +86,9 @@ export const AdminOverviewDashboard: React.FC<AdminOverviewDashboardProps> = ({
             key={sp.id}
             type="button"
             onClick={() => onNavigateToSpace(sp.id)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#0D1017] hover:bg-white/10 border border-white/[0.07] hover:border-emerald-500/40 text-[11px] text-[#A3A9BA] hover:text-white shrink-0 cursor-pointer transition group"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#0D1017] hover:bg-white/10 border border-white/[0.07] hover:border-white/20 text-[11px] text-[#A3A9BA] hover:text-white shrink-0 cursor-pointer transition group"
           >
-            <span className="px-1.5 py-0.5 rounded text-[9.5px] bg-[#07090E] text-emerald-400 font-bold border border-white/10 group-hover:border-emerald-500/30">
+            <span className="px-1.5 py-0.5 rounded text-[9.5px] bg-[#07090E] text-white/80 font-bold border border-white/10">
               {sp.code}
             </span>
             <span>{sp.label}</span>

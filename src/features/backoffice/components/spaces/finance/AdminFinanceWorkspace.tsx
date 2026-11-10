@@ -20,12 +20,12 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0D1017] border border-white/10 text-xs flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0D1017] border border-white/10 text-xs flex-wrap font-mono">
           <button
             type="button"
             onClick={() => setActiveTab('ANALYTICS')}
             className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              activeTab === 'ANALYTICS' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+              activeTab === 'ANALYTICS' ? 'bg-white/10 text-white border border-white/15 shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Vue d&apos;Ensemble &amp; Canaux
@@ -34,7 +34,7 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
             type="button"
             onClick={() => setActiveTab('INDIVIDUAL')}
             className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              activeTab === 'INDIVIDUAL' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-[#A3A9BA] hover:text-white'
+              activeTab === 'INDIVIDUAL' ? 'bg-white/10 text-white border border-white/15 shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Suivi Individuel (Artiste/Label/Projet)
@@ -43,7 +43,7 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
             type="button"
             onClick={() => setActiveTab('SUBSCRIPTIONS')}
             className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              activeTab === 'SUBSCRIPTIONS' ? 'bg-[#DE1B34] text-white shadow-sm' : 'text-[#A3A9BA] hover:text-white'
+              activeTab === 'SUBSCRIPTIONS' ? 'bg-white/10 text-white border border-white/15 shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Gestion des Abonnements
@@ -52,7 +52,7 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
             type="button"
             onClick={() => setActiveTab('BUGADA_PANEL')}
             className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
-              activeTab === 'BUGADA_PANEL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-[#A3A9BA] hover:text-white'
+              activeTab === 'BUGADA_PANEL' ? 'bg-white/10 text-white border border-white/15 shadow-sm' : 'text-[#A3A9BA] hover:text-white'
             }`}
           >
             Clôture BUGADA 12% &amp; Fisc DGI
@@ -71,36 +71,36 @@ export const AdminFinanceWorkspace: React.FC<AdminFinanceWorkspaceProps> = ({ ct
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-3 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-3 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] font-mono">
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Total Généré</span>
-              <span className="text-sm font-mono font-extrabold text-[#F8FAFC]">198 400 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +240% MoM</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">Total Généré</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">198 400 F</span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +240% MoM</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Airtel Money</span>
-              <span className="text-sm font-mono font-extrabold text-emerald-400">122 500 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +223%</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">Airtel Money</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">122 500 F</span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +223%</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Moov Money</span>
-              <span className="text-sm font-mono font-extrabold text-red-400">48 900 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +198%</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">Moov Money</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">48 900 F</span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">▲ +198%</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Sponsors JTN</span>
-              <span className="text-sm font-mono font-extrabold text-amber-300">19 300 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">▲ +143%</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">Sponsors JTN</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">19 300 F</span>
+              <span className="text-[9.5px] text-amber-400 block mt-0.5">100% Sponsorisé</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">BUGADA 12%</span>
-              <span className="text-sm font-mono font-extrabold text-amber-400">23 808 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">Reversé DGI</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">BUGADA 12%</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">23 808 F</span>
+              <span className="text-[9.5px] text-[#A3A9BA] block mt-0.5">Reversé DGI</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#07090E] border border-white/[0.06]">
-              <span className="text-[10px] font-mono uppercase text-[#A3A9BA] block">Master 48%</span>
-              <span className="text-sm font-mono font-extrabold text-emerald-300">95 232 F</span>
-              <span className="text-[9.5px] font-mono text-emerald-400 block mt-0.5">Ayants-droit</span>
+              <span className="text-[10px] uppercase text-[#A3A9BA] block">Master 48%</span>
+              <span className="text-sm font-extrabold text-[#F8FAFC] tabular-nums">95 232 F</span>
+              <span className="text-[9.5px] text-emerald-400 block mt-0.5">Ayants-droit</span>
             </div>
           </div>
         </div>
