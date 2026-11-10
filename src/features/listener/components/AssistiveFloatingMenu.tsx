@@ -255,3 +255,4 @@ export const AssistiveFloatingMenu: React.FC<AssistiveFloatingMenuProps> = ({
     </>
   );
 };
+

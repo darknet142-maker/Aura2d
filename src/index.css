@@ -532,6 +532,9 @@
   max-height: 100dvh;
   height: 100dvh;
   border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Fond dynamique flouté prenant la couleur dominante de la pochette active */
@@ -544,8 +547,9 @@
     radial-gradient(circle at 50% 28%, var(--ambient-primary) 0%, transparent 55%),
     radial-gradient(circle at 24% 60%, var(--ambient-secondary) 0%, transparent 60%),
     radial-gradient(circle at 78% 76%, var(--ambient-primary) 0%, transparent 52%);
-  opacity: 0.32;
-  filter: blur(64px) saturate(140%);
+  opacity: 0.12;
+  filter: blur(48px) saturate(130%);
+  mix-blend-mode: screen;
   transition: background 0.65s var(--ease-premium), opacity 0.5s ease;
 }
 
@@ -555,8 +559,8 @@
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 34%, rgb(12 10 8 / 0.02) 0%, rgb(10 8 7 / 0.25) 70%, rgb(6 5 7 / 0.55) 100%),
-    linear-gradient(180deg, rgb(8 7 9 / 0.40) 0%, rgb(14 11 8 / 0.08) 24%, rgb(14 11 8 / 0.18) 58%, rgb(6 6 8 / 0.60) 100%);
+    radial-gradient(circle at 50% 34%, transparent 0%, transparent 65%, rgb(6 5 7 / 0.40) 100%),
+    linear-gradient(180deg, rgb(8 7 9 / 0.20) 0%, transparent 20%, transparent 80%, rgb(6 6 8 / 0.45) 100%);
 }
 
 /* Fine texture de grain pour un rendu photographique, non interactif */

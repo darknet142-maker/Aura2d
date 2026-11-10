@@ -176,7 +176,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
   }, [currentTrack.id, currentTrack.artist, currentUser?.id]);
 
   return (
-    <div className="relative h-[100dvh] w-screen bg-[#080A0F] flex items-center justify-center overflow-hidden">
+    <div className="relative h-[100dvh] w-screen bg-transparent flex items-center justify-center overflow-hidden">
       {/* Commutateur Architectural Bureau : Station Studio Split 2D vs Scène Focus */}
       <div className="hidden lg:flex fixed top-3.5 right-5 z-50 items-center gap-2">
         <motion.button
