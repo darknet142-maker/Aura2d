@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./shared/ui/depth3dCard.css";
 @import "./shared/ui/assistiveFloatingMenu.css";
+@import "./shared/ui/bottomPillMenu.css";
 
 /* ========================================================================== */
 /* DESIGN TOKENS — DROP Premium Design System                                 */
@@ -619,7 +620,17 @@
 
 /* Dock de contrôle */
 .glass-dock {
-  border-radius: 28px;
+  position: relative;
+  border-radius: 36px;
+  background: rgba(13, 16, 23, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    inset 2px 2px 5px -2px rgba(255, 255, 255, 0.35),
+    inset -2px -2px 5px 2px rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.18),
+    0 14px 34px -8px rgba(0, 0, 0, 0.8);
 }
 
 /* Boutons utilitaires carrés du dock */

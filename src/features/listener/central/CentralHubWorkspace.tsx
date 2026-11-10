@@ -409,92 +409,85 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
           )}
         </div>
 
-        {/* Navigation Principale Central */}
-        <nav
-          aria-label="Navigation principale Central"
-          className={`grid ${
-            enableAwardsCeremony ? 'grid-cols-6' : 'grid-cols-5'
-          } gap-1.5 pt-1 pb-0.5`}
-        >
-          {(
-            [
-              {
-                id: 'EXPLORER',
-                label: 'Explorer',
-                icon: <Compass className="w-4 h-4 stroke-[2]" />,
-              },
-              {
-                id: 'RANGS',
-                label: 'Classements',
-                icon: <ChartNoAxesColumn className="w-4 h-4 stroke-[2]" />,
-              },
-              {
-                id: 'MISSIONS' as const,
-                label: 'Missions',
-                icon: <Zap className="w-4 h-4 stroke-[2]" />,
-                badgeCount: availableMissionsCount,
-              },
-              ...(enableAwardsCeremony
-                ? [
-                    {
-                      id: 'AWARDS' as const,
-                      label: 'Awards',
-                      icon: <Trophy className="w-4 h-4 stroke-[2]" />,
-                    },
-                  ]
-                : []),
-              {
-                id: 'RECOS',
-                label: 'Fil Recos',
-                icon: <MessageCircle className="w-4 h-4 stroke-[2]" />,
-              },
-              {
-                id: 'PROFIL',
-                label: 'Mon Profil',
-                icon: <UserRound className="w-4 h-4 stroke-[2]" />,
-              },
-            ] as const
-          ).map((item) => {
-            const isActive =
-              hubTab === item.id &&
-              !instantSearchResults &&
-              !hasOpenAnalyticsSheet;
-            return (
-              <motion.button
-                key={item.id}
-                type="button"
-                whileHover={{ y: -1.5 }}
-                whileTap={{ scale: 0.96 }}
-                transition={SPRING_SNAPPY}
-                onClick={() => {
-                  closeAllAnalyticsSheets();
-                  setCentralFullPageView(null);
-                  setHubSearchQuery('');
-                  setHubTab(item.id);
-                }}
-                className={`relative flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer ${
-                  isActive
-                    ? item.id === 'MISSIONS'
-                      ? 'bg-amber-500 border-amber-300 text-[#080A0F] font-bold shadow-[0_6px_16px_rgba(245,158,11,0.38)]'
-                      : 'bg-[#DE1B34] border-[#FF4D64] text-white font-bold shadow-[0_6px_16px_rgba(222,27,52,0.38)]'
-                    : 'bg-[#07090E]/80 border-white/[0.06] text-[#A3A9BA] hover:text-[#F8FAFC] hover:border-white/15'
-                }`}
-              >
-                <div className="relative flex items-center justify-center">
-                  {item.icon}
-                  {'badgeCount' in item && typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black flex items-center justify-center shadow-md border border-[#080A0F]">
-                      {item.badgeCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] leading-none truncate max-w-full">
-                  {item.label}
-                </span>
-              </motion.button>
-            );
-          })}
-        </nav>
+        {/* Navigation Principale Central (Capsule Pill Glassmorphic conforme Uiverse.io mymiamo) */}
+        <div className="pt-2 pb-1 flex justify-center w-full">
+          <nav
+            aria-label="Navigation principale Central"
+            className="bottom-pill-menu"
+          >
+            {(
+              [
+                {
+                  id: 'EXPLORER',
+                  label: 'Explorer',
+                  icon: <Compass className="w-5 h-5 stroke-[2]" />,
+                },
+                {
+                  id: 'RANGS',
+                  label: 'Classements',
+                  icon: <ChartNoAxesColumn className="w-5 h-5 stroke-[2]" />,
+                },
+                {
+                  id: 'MISSIONS' as const,
+                  label: 'Missions',
+                  icon: <Zap className="w-5 h-5 stroke-[2]" />,
+                  badgeCount: availableMissionsCount,
+                },
+                ...(enableAwardsCeremony
+                  ? [
+                      {
+                        id: 'AWARDS' as const,
+                        label: 'Awards',
+                        icon: <Trophy className="w-5 h-5 stroke-[2]" />,
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'RECOS',
+                  label: 'Fil Recos',
+                  icon: <MessageCircle className="w-5 h-5 stroke-[2]" />,
+                },
+                {
+                  id: 'PROFIL',
+                  label: 'Mon Profil',
+                  icon: <UserRound className="w-5 h-5 stroke-[2]" />,
+                },
+              ] as const
+            ).map((item) => {
+              const isActive =
+                hubTab === item.id &&
+                !instantSearchResults &&
+                !hasOpenAnalyticsSheet;
+              const isGold = isActive && item.id === 'MISSIONS';
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    closeAllAnalyticsSheets();
+                    setCentralFullPageView(null);
+                    setHubSearchQuery('');
+                    setHubTab(item.id);
+                  }}
+                  className={`bottom-pill-item ${
+                    isActive ? (isGold ? 'active-gold' : 'active') : ''
+                  }`}
+                  title={item.label}
+                >
+                  <div className="relative flex items-center justify-center">
+                    {item.icon}
+                    {'badgeCount' in item && typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black flex items-center justify-center shadow-md border border-[#080A0F]">
+                        {item.badgeCount}
+                      </span>
+                    )}
+                  </div>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
       <UserTokenWalletModal

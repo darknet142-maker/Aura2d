@@ -1,0 +1,124 @@
+/* ========================================================================== */
+/* MENU BAS PILL CAPSULE GLASSMORPHISM — DROP Studio Broadcast               */
+/* Inspiré par mymiamo (Uiverse.io), adapté à l'architecture studio DROP      */
+/* ========================================================================== */
+
+.bottom-pill-menu {
+  position: relative;
+  width: calc(100% - 12px);
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(13, 16, 23, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 14px 34px -8px rgba(0, 0, 0, 0.75),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  padding: 6px 8px;
+  border-radius: 99rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 40;
+}
+
+.bottom-pill-menu::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 2px 2px 5px -2px rgba(255, 255, 255, 0.35),
+    inset -2px -2px 5px 2px rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.bottom-pill-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  color: #A3A9BA;
+  text-decoration: none;
+  padding: 8px 4px;
+  border-radius: 999rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition:
+    background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease-in-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bottom-pill-item:hover:not(.active):not(.active-gold) {
+    background-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 2px 2px 5px -2px rgba(255, 255, 255, 0.35),
+      inset -2px -1px 5px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -2px 0 rgba(255, 255, 255, 0.15);
+    transform: rotate(2.2deg) translateY(-1px);
+    color: #F8FAFC;
+  }
+}
+
+.bottom-pill-item svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, stroke 0.2s ease;
+}
+
+.bottom-pill-item span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.bottom-pill-item.active {
+  background: linear-gradient(135deg, #DE1B34 0%, #B91C1C 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow:
+    0 4px 16px rgba(222, 27, 52, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.bottom-pill-item.active-gold {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: #080A0F;
+  font-weight: 800;
+  box-shadow:
+    0 4px 16px rgba(245, 158, 11, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.bottom-pill-item:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-pill-item,
+  .bottom-pill-item:hover,
+  .bottom-pill-item:active {
+    transform: none !important;
+    transition: none !important;
+  }
+}
