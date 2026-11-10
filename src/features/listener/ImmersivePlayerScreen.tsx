@@ -35,6 +35,15 @@ export const ImmersivePlayerScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
     isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen,
   } = ctrl;
 
+  if (!catalogue || catalogue.length === 0) {
+    return (
+      <main className="relative z-10 h-full w-full flex flex-col items-center justify-center bg-[#080A0F] text-[#F8FAFC] gap-3 font-mono">
+        <div className="w-10 h-10 rounded-full border-2 border-[#DE1B34] border-t-transparent animate-spin" />
+        <p className="text-xs text-[#A3A9BA]">Initialisation du catalogue DROP (+241)...</p>
+      </main>
+    );
+  }
+
   return (
         <main className="relative z-10 h-full w-full flex items-center justify-center bg-[#080A0F] overflow-hidden">
           <Immersive3DPlayer

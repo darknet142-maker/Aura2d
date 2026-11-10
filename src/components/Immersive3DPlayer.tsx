@@ -260,8 +260,8 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             albumIdx={albumIdx}
             albumsTotal={catalogue.length}
             trackIdx={trackIdx}
-            tracksTotal={currentAlbum?.tracks.length || 1}
-            lufsLevel={currentTrack.lufsMasterLevel ?? -14.0}
+            tracksTotal={currentAlbum?.tracks?.length || 1}
+            lufsLevel={currentTrack?.lufsMasterLevel ?? -14.0}
           />
 
           {/* 2. CARROUSEL 3D COVERFLOW & PAROLES SYNCHRONISÉES */}
