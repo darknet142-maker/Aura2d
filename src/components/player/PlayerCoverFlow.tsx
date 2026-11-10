@@ -204,15 +204,72 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
               className={`cover-card group cursor-pointer ${isDragging ? 'dragging' : ''}`}
             >
               <div className="cover-card-inner">
-                <CoverArtwork
-                  artworkType={displayedTrack.artworkType}
-                  coverUrl={displayedTrack.cover}
-                  title={displayedTrack.title}
-                  artist={displayedTrack.artist}
-                />
+                {displayedTrack.isSponsoredAnnouncement ? (
+                  <div className="w-full h-full relative overflow-hidden bg-gradient-to-br from-[#1A060A] via-[#0D1017] to-[#080A0F] p-4 flex flex-col justify-between text-left select-none border border-[#DE1B34]/30 rounded-2xl">
+                    <div className="flex items-center justify-between z-10">
+                      <span className="px-2.5 py-1 rounded-full bg-[#DE1B34] text-white text-[10px] font-black uppercase tracking-wider shadow-md">
+                        ✦ Annonce Sponsorisée
+                      </span>
+                      <span className="text-[10px] font-mono text-[#A3A9BA]">
+                        DROP Broadcast
+                      </span>
+                    </div>
+
+                    {displayedTrack.cover ? (
+                      <div className="relative my-2 flex-1 rounded-xl overflow-hidden border border-white/10">
+                        <img
+                          src={displayedTrack.cover}
+                          alt={displayedTrack.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#080A0F] via-transparent to-transparent opacity-80" />
+                      </div>
+                    ) : (
+                      <div className="my-2 flex-1 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-3 text-center">
+                        <div className="space-y-1">
+                          <p className="text-sm font-black text-rose-400">
+                            {displayedTrack.sponsoredCampaign?.brandName || displayedTrack.artist}
+                          </p>
+                          <p className="text-xs text-[#F8FAFC]">
+                            {displayedTrack.sponsoredCampaign?.tagline || displayedTrack.title}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 pt-1 z-10">
+                      <div className="min-w-0">
+                        <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider truncate">
+                          {displayedTrack.sponsoredCampaign?.brandName || displayedTrack.artist}
+                        </span>
+                        <p className="text-xs font-bold text-[#F8FAFC] line-clamp-2">
+                          {displayedTrack.sponsoredCampaign?.tagline || displayedTrack.title}
+                        </p>
+                      </div>
+
+                      <a
+                        href={displayedTrack.sponsoredCampaign?.ctaUrl || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full py-2 px-3 rounded-xl bg-[#DE1B34] hover:bg-[#FF4D64] text-white font-extrabold text-xs text-center flex items-center justify-center gap-1.5 shadow-lg shadow-[#DE1B34]/30 transition cursor-pointer"
+                      >
+                        <span>{displayedTrack.sponsoredCampaign?.ctaText || 'Découvrir'}</span>
+                        <span>→</span>
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <CoverArtwork
+                    artworkType={displayedTrack.artworkType}
+                    coverUrl={displayedTrack.cover}
+                    title={displayedTrack.title}
+                    artist={displayedTrack.artist}
+                  />
+                )}
                 <div className="cover-glare" />
 
-                {isActiveCard && onOpenActiveTrackSheet && (
+                {isActiveCard && !displayedTrack.isSponsoredAnnouncement && onOpenActiveTrackSheet && (
                   <button
                     type="button"
                     onClick={(e) => {

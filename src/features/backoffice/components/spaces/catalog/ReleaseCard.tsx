@@ -44,9 +44,33 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-[#080A0F] via-transparent to-transparent opacity-80" />
 
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 backdrop-blur-md">
-            En ligne
-          </span>
+          {track.releaseStatus === 'DRAFT' ? (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-700/60 border border-zinc-500/40 text-zinc-200 backdrop-blur-md">
+              Brouillon
+            </span>
+          ) : track.releaseStatus === 'PENDING' ? (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/30 border border-amber-500/50 text-amber-200 backdrop-blur-md">
+              En attente
+            </span>
+          ) : track.releaseStatus === 'SCHEDULED' ? (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-cyan-500/30 border border-cyan-500/50 text-cyan-200 backdrop-blur-md">
+              Programmé
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 backdrop-blur-md">
+              En ligne
+            </span>
+          )}
+          {track.isSponsoredAnnouncement && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#DE1B34]/30 border border-[#DE1B34]/60 text-rose-300 backdrop-blur-md shadow-sm">
+              ✦ Sponsorisé
+            </span>
+          )}
+          {Boolean(track.isSpatialAudio || track.category === 'Immersif 3D') && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 border border-sky-500/40 text-sky-300 backdrop-blur-md">
+              3D
+            </span>
+          )}
           {isBeat && (
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-300 backdrop-blur-md">
               Beat

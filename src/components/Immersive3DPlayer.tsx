@@ -314,82 +314,134 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             />
           </PlayerCoverFlow>
 
-          {/* 3. MÉTADONNÉES, BOUTON CUE [DROP] & SCRUBBER */}
-          <PlayerMetadataBar
-            currentTrack={currentTrack}
-            currentTrackCert={currentTrackCert}
-            isPro={isPro}
-            currentArtistSubscribed={currentArtistSubscribed}
-            currentArtistSubscribersCount={currentArtistSubscribersCount}
-            onToggleSubscribeArtist={onToggleSubscribeArtist}
-            isCurrentRecommended={isCurrentRecommended}
-            currentRecsCount={currentRecsCount}
-            onOpenRecommendModal={() => setActiveModal('RECOMMEND')}
-            isCurrentLiked={isCurrentLiked}
-            onToggleLike={(e) => onToggleLike(currentTrack.id, e)}
-            onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
-            onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
-            onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
-            safeRankInfo={safeRankInfo}
-            isDropMode={isDropMode}
-            currentTime={currentTime}
-            onSeek={onSeek}
-            formatTime={formatTime}
-            formatCompactPlays={formatCompactPlays}
-            onToast={showToast}
-            activeMission={activeMission}
-          />
+          {/* 3 & 4. PANNEAU ANNONCE SPONSORISÉE — COMMANDES DU LECTEUR MASQUÉES */}
+          {currentTrack.isSponsoredAnnouncement ? (
+            <div className="mx-4 my-3 p-4 rounded-2xl bg-[#0D1017]/90 border border-[#DE1B34]/30 backdrop-blur-xl shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] flex flex-col gap-3 font-mono">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-[11px] font-bold text-rose-300 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#DE1B34] animate-pulse" />
+                  ✦ Annonce Sponsorisée Broadcast
+                </span>
+                <span className="text-[10px] text-[#A3A9BA]">
+                  {currentTrack.sponsoredCampaign?.brandName || currentTrack.artist}
+                </span>
+              </div>
 
-          {/* 4. DOCK DE CONTRÔLE GLASSMORPHIQUE & REC TREND 30S */}
-          <PlayerPlaybackDock
-            isPlaying={isPlaying}
-            isDropMode={isDropMode}
-            isShuffle={isShuffle}
-            repeatMode={repeatMode}
-            onTogglePlay={onTogglePlay}
-            onNavigateTrack={onNavigateTrack}
-            onToggleShuffle={onToggleShuffle}
-            onCycleRepeat={onCycleRepeat}
-            onToast={showToast}
-            isPro={isPro}
-            lyricsOpen={lyricsOpen}
-            onToggleLyrics={() => {
-              if (!isPro) {
-                setProGateFeature({
-                  title: 'Paroles Plein Écran',
-                  reason: 'Profitez de l\'affichage immersif synchronisé en plein écran avec le compte DROP PRO (Airtel & Moov Money).',
-                });
-                return;
-              }
-              const nextOpen = !lyricsOpen;
-              setLyricsOpen(nextOpen);
-              if (nextOpen) {
-                onRecordLyricsOpen?.(currentTrack.id);
-              }
-            }}
-            onOpenPlaylistModal={() => setActiveModal('PLAYLIST')}
-            onOpenTrendStudio={() => openTrendStudioWithConfig('DROP_MUSIC_30S')}
-            isTrendStudioOpen={showTrendStudioModal}
-            onOpenEqModal={() => setActiveModal('EQ')}
-            isEqCustomOrActive={isEqCustomOrActive}
-            isDownloadedOffline={Boolean(currentTrack.downloadedOffline)}
-            onToggleDownload={() => {
-              if (!isPro) {
-                setProGateFeature({
-                  title: 'Téléchargement Hors-Ligne',
-                  reason: 'Écoutez sans connexion data grâce au chiffrement audio local réservé aux membres DROP PRO (Airtel Money & Moov Money).',
-                });
-                return;
-              }
-              onToggleDownload(currentTrack.id);
-            }}
-            onNotifyProRequired={(feat) => {
-              setProGateFeature({
-                title: feat,
-                reason: `${feat} est une fonctionnalité avancée réservée aux membres DROP PRO (Airtel & Moov Money).`,
-              });
-            }}
-          />
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-[#F8FAFC]">
+                  {currentTrack.sponsoredCampaign?.tagline || currentTrack.title}
+                </h3>
+                <p className="text-[11px] text-[#A3A9BA]">
+                  Contenu publicitaire officiel • Les commandes de lecture sont momentanément masquées.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <a
+                  href={currentTrack.sponsoredCampaign?.ctaUrl || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#DE1B34] hover:bg-[#FF4D64] text-white font-extrabold text-xs text-center flex items-center justify-center gap-2 shadow-lg shadow-[#DE1B34]/30 transition cursor-pointer"
+                >
+                  <span>{currentTrack.sponsoredCampaign?.ctaText || "Profiter de l'offre"}</span>
+                  <span>→</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigateAlbum(1)}
+                  className="py-2.5 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5 border border-white/10 transition cursor-pointer shrink-0"
+                  title="Passer à la musique suivante"
+                >
+                  <span>Passer</span>
+                  <span>⏭</span>
+                </button>
+              </div>
+
+              <p className="text-[10px] text-center text-[#A3A9BA]/70">
+                Balayez vers la gauche pour continuer l&apos;écoute
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* 3. MÉTADONNÉES, BOUTON CUE [DROP] & SCRUBBER */}
+              <PlayerMetadataBar
+                currentTrack={currentTrack}
+                currentTrackCert={currentTrackCert}
+                isPro={isPro}
+                currentArtistSubscribed={currentArtistSubscribed}
+                currentArtistSubscribersCount={currentArtistSubscribersCount}
+                onToggleSubscribeArtist={onToggleSubscribeArtist}
+                isCurrentRecommended={isCurrentRecommended}
+                currentRecsCount={currentRecsCount}
+                onOpenRecommendModal={() => setActiveModal('RECOMMEND')}
+                isCurrentLiked={isCurrentLiked}
+                onToggleLike={(e) => onToggleLike(currentTrack.id, e)}
+                onOpenTrackSheet={() => openUserTrackSheet(currentTrack.id)}
+                onOpenArtistProfile={() => openUserEntitySheet(currentTrack.artist, 'ARTIST')}
+                onOpenEntityProfile={(name, role) => openUserEntitySheet(name, role)}
+                safeRankInfo={safeRankInfo}
+                isDropMode={isDropMode}
+                currentTime={currentTime}
+                onSeek={onSeek}
+                formatTime={formatTime}
+                formatCompactPlays={formatCompactPlays}
+                onToast={showToast}
+                activeMission={activeMission}
+              />
+
+              {/* 4. DOCK DE CONTRÔLE GLASSMORPHIQUE & REC TREND 30S */}
+              <PlayerPlaybackDock
+                isPlaying={isPlaying}
+                isDropMode={isDropMode}
+                isShuffle={isShuffle}
+                repeatMode={repeatMode}
+                onTogglePlay={onTogglePlay}
+                onNavigateTrack={onNavigateTrack}
+                onToggleShuffle={onToggleShuffle}
+                onCycleRepeat={onCycleRepeat}
+                onToast={showToast}
+                isPro={isPro}
+                lyricsOpen={lyricsOpen}
+                onToggleLyrics={() => {
+                  if (!isPro) {
+                    setProGateFeature({
+                      title: 'Paroles Plein Écran',
+                      reason: 'Profitez de l\'affichage immersif synchronisé en plein écran avec le compte DROP PRO (Airtel & Moov Money).',
+                    });
+                    return;
+                  }
+                  const nextOpen = !lyricsOpen;
+                  setLyricsOpen(nextOpen);
+                  if (nextOpen) {
+                    onRecordLyricsOpen?.(currentTrack.id);
+                  }
+                }}
+                onOpenPlaylistModal={() => setActiveModal('PLAYLIST')}
+                onOpenTrendStudio={() => openTrendStudioWithConfig('DROP_MUSIC_30S')}
+                isTrendStudioOpen={showTrendStudioModal}
+                onOpenEqModal={() => setActiveModal('EQ')}
+                isEqCustomOrActive={isEqCustomOrActive}
+                isDownloadedOffline={Boolean(currentTrack.downloadedOffline)}
+                onToggleDownload={() => {
+                  if (!isPro) {
+                    setProGateFeature({
+                      title: 'Téléchargement Hors-Ligne',
+                      reason: 'Écoutez sans connexion data grâce au chiffrement audio local réservé aux membres DROP PRO (Airtel Money & Moov Money).',
+                    });
+                    return;
+                  }
+                  onToggleDownload(currentTrack.id);
+                }}
+                onNotifyProRequired={(feat) => {
+                  setProGateFeature({
+                    title: feat,
+                    reason: `${feat} est une fonctionnalité avancée réservée aux membres DROP PRO (Airtel & Moov Money).`,
+                  });
+                }}
+              />
+            </>
+          )}
 
           {/* 5. PIED DE PAGE STUDIO */}
           <footer className="relative z-20 pb-2 pt-0.5 text-center shrink-0">

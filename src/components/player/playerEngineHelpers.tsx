@@ -100,6 +100,18 @@ export interface PlayerTrackItem {
   inPlaylist?: boolean;
   lyrics?: LyricLine[];
   trackAnalysis?: TrackAnalysis;
+  releaseStatus?: 'PUBLISHED' | 'SCHEDULED' | 'PENDING' | 'DRAFT';
+  scheduledPublishDate?: string;
+  isSpatialAudio?: boolean;
+  isSponsoredAnnouncement?: boolean;
+  sponsoredCampaign?: {
+    brandName: string;
+    tagline: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    badgeLabel?: string;
+    interstitialCoverUrl?: string;
+  };
 }
 
 export interface PlayerAlbumNode {

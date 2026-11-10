@@ -13,13 +13,11 @@ import type { Track, UserTrackStat } from '../../../../shared/types/domain.types
 
 export interface AdminStudio2LayoutProps {
   ctrl: ReturnTypeUseDropPlatformController;
-  adminLayoutMode: 'SAAS_2' | 'CLASSIC';
-  onToggleLayoutMode: () => void;
   nav: UseAdminNavigationHistoryReturn;
 }
 
 export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
-  ctrl, adminLayoutMode, onToggleLayoutMode, nav,
+  ctrl, nav,
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -152,8 +150,6 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
           lastAdminSavedAt={ctrl.lastAdminSavedAt}
           isSavingAdmin={ctrl.isSavingAdmin}
           onSaveAndSyncAll={ctrl.handleSaveAndSyncAllAdmin}
-          adminLayoutMode={adminLayoutMode}
-          onToggleLayoutMode={onToggleLayoutMode}
           onExitToPlayer={() => ctrl.setAppView('PLAYER')}
           canGoBack={nav.canGoBack}
           previousLabel={nav.previousLabel}

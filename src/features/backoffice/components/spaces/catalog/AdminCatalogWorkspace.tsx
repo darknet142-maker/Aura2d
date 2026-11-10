@@ -31,6 +31,18 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({
   const [viewMode, setViewMode] = useState<CatalogViewMode>('GRID');
   const [sortKey, setSortKey] = useState<CatalogSortKey>('DATE');
 
+  const filterCounts = useMemo(() => {
+    const all = ctrl.allTracksFlat;
+    return {
+      ALL: all.length,
+      OUT_NOW: all.filter((t) => t.releaseStatus === 'PUBLISHED' || (!t.releaseStatus && !t.isInstrumental)).length,
+      PENDING: all.filter((t) => t.releaseStatus === 'PENDING' || t.releaseStatus === 'SCHEDULED' || Boolean(t.scheduledPublishDate && new Date(t.scheduledPublishDate).getTime() > Date.now())).length,
+      IMMERSIVE: all.filter((t) => Boolean(t.isSpatialAudio || t.category === 'Immersif 3D')).length,
+      BEATS: all.filter((t) => Boolean(t.isInstrumental || t.category === 'Beats & Instrumentales')).length,
+      DRAFTS: all.filter((t) => t.releaseStatus === 'DRAFT').length,
+    };
+  }, [ctrl.allTracksFlat]);
+
   const filteredTracks = useMemo(() => {
     let list = [...ctrl.allTracksFlat];
 
@@ -44,9 +56,15 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({
     }
 
     if (activeFilter === 'OUT_NOW') {
-      list = list.filter((t) => !t.isInstrumental);
+      list = list.filter((t) => t.releaseStatus === 'PUBLISHED' || (!t.releaseStatus && !t.isInstrumental));
+    } else if (activeFilter === 'PENDING') {
+      list = list.filter((t) => t.releaseStatus === 'PENDING' || t.releaseStatus === 'SCHEDULED' || Boolean(t.scheduledPublishDate && new Date(t.scheduledPublishDate).getTime() > Date.now()));
+    } else if (activeFilter === 'IMMERSIVE') {
+      list = list.filter((t) => Boolean(t.isSpatialAudio || t.category === 'Immersif 3D'));
     } else if (activeFilter === 'BEATS') {
-      list = list.filter((t) => Boolean(t.isInstrumental));
+      list = list.filter((t) => Boolean(t.isInstrumental || t.category === 'Beats & Instrumentales'));
+    } else if (activeFilter === 'DRAFTS') {
+      list = list.filter((t) => t.releaseStatus === 'DRAFT');
     }
 
     if (sortKey === 'TITLE') {
@@ -108,6 +126,7 @@ export const AdminCatalogWorkspace: React.FC<AdminCatalogWorkspaceProps> = ({
             onSortChange={setSortKey}
             totalCount={ctrl.allTracksFlat.length}
             filteredCount={filteredTracks.length}
+            filterCounts={filterCounts}
             onCreateRelease={() => onNavigateToSpace('02_STUDIO')}
           />
 

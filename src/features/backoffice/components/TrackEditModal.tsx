@@ -68,6 +68,206 @@ export const TrackEditModal: React.FC<TrackEditModalProps> = ({
           />
         </label>
 
+        {/* Cycle de Vie & Statut de Publication */}
+        <div className="p-3 rounded-xl bg-[#07080C] border border-white/10 space-y-2.5">
+          <label className="block text-[11px] font-bold text-[#F8FAFC]">
+            Statut de Publication &amp; Diffusion
+          </label>
+          <div className="grid grid-cols-4 gap-1.5 text-[11px]">
+            {(
+              [
+                { id: 'PUBLISHED', label: 'En ligne' },
+                { id: 'SCHEDULED', label: 'Programmé' },
+                { id: 'PENDING', label: 'En attente' },
+                { id: 'DRAFT', label: 'Brouillon' },
+              ] as const
+            ).map((st) => {
+              const active = (editingTrack.track.releaseStatus || 'PUBLISHED') === st.id;
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() =>
+                    setEditingTrack({
+                      ...editingTrack,
+                      track: { ...editingTrack.track, releaseStatus: st.id },
+                    })
+                  }
+                  className={`py-1.5 px-2 rounded-lg font-bold text-center cursor-pointer transition ${
+                    active
+                      ? st.id === 'PUBLISHED'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : st.id === 'SCHEDULED'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                        : st.id === 'PENDING'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-zinc-700/60 text-zinc-200 border border-zinc-600/40'
+                      : 'bg-white/5 text-[#A3A9BA] hover:text-white border border-white/5'
+                  }`}
+                >
+                  {st.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {editingTrack.track.releaseStatus === 'SCHEDULED' && (
+            <div className="pt-1">
+              <label className="block text-[10.5px] text-[#A3A9BA] mb-1">
+                Date &amp; Heure de publication programmée
+              </label>
+              <input
+                type="datetime-local"
+                value={
+                  editingTrack.track.scheduledPublishDate
+                    ? editingTrack.track.scheduledPublishDate.slice(0, 16)
+                    : ''
+                }
+                onChange={(e) =>
+                  setEditingTrack({
+                    ...editingTrack,
+                    track: {
+                      ...editingTrack.track,
+                      scheduledPublishDate: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                    },
+                  })
+                }
+                className="w-full bg-[#0E1118] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-[#F5F2EB]"
+              />
+            </div>
+          )}
+
+          <label className="flex items-center justify-between pt-1 cursor-pointer">
+            <span className="text-[11px] text-[#CBD5E1]">Master Audio Immersif 3D / Spatial</span>
+            <input
+              type="checkbox"
+              checked={Boolean(editingTrack.track.isSpatialAudio || editingTrack.track.category === 'Immersif 3D')}
+              onChange={(e) =>
+                setEditingTrack({
+                  ...editingTrack,
+                  track: {
+                    ...editingTrack.track,
+                    isSpatialAudio: e.target.checked,
+                  },
+                })
+              }
+              className="w-3.5 h-3.5 accent-[#DE1B34]"
+            />
+          </label>
+        </div>
+
+        {/* Annonce Sponsorisée sur le Lecteur (Cover Flow) */}
+        <div className="p-3 rounded-xl bg-[#DE1B34]/10 border border-[#DE1B34]/30 space-y-2">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="text-xs font-bold text-rose-300 block">
+                ✦ Annonce Sponsorisée Broadcast (Cover Flow)
+              </span>
+              <span className="text-[10px] text-[#A3A9BA]">
+                Affiche une publicité au balayage sur le lecteur avec boutons masqués
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={Boolean(editingTrack.track.isSponsoredAnnouncement)}
+              onChange={(e) =>
+                setEditingTrack({
+                  ...editingTrack,
+                  track: {
+                    ...editingTrack.track,
+                    isSponsoredAnnouncement: e.target.checked,
+                    sponsoredCampaign: e.target.checked
+                      ? editingTrack.track.sponsoredCampaign || {
+                          brandName: editingTrack.track.labelName || 'Airtel Gabon',
+                          tagline: 'Offre Spéciale Broadcast • Écoute sans modération',
+                          ctaText: 'Découvrir',
+                          ctaUrl: 'https://drop.ga',
+                        }
+                      : undefined,
+                  },
+                })
+              }
+              className="w-4 h-4 accent-[#DE1B34]"
+            />
+          </label>
+
+          {editingTrack.track.isSponsoredAnnouncement && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#DE1B34]/20 text-[11px]">
+              <div>
+                <label className="block text-[10px] text-[#A3A9BA] mb-1">Nom de la marque / Annonceur</label>
+                <input
+                  type="text"
+                  value={editingTrack.track.sponsoredCampaign?.brandName || ''}
+                  onChange={(e) =>
+                    setEditingTrack({
+                      ...editingTrack,
+                      track: {
+                        ...editingTrack.track,
+                        sponsoredCampaign: {
+                          brandName: e.target.value,
+                          tagline: editingTrack.track.sponsoredCampaign?.tagline || '',
+                          ctaText: editingTrack.track.sponsoredCampaign?.ctaText || 'Découvrir',
+                          ctaUrl: editingTrack.track.sponsoredCampaign?.ctaUrl || '',
+                        },
+                      },
+                    })
+                  }
+                  placeholder="Ex: Airtel Gabon, Canal+, Gloss"
+                  className="w-full bg-[#07080C] border border-white/10 rounded-xl px-2 py-1 text-xs text-[#F5F2EB]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#A3A9BA] mb-1">Texte du Bouton CTA</label>
+                <input
+                  type="text"
+                  value={editingTrack.track.sponsoredCampaign?.ctaText || ''}
+                  onChange={(e) =>
+                    setEditingTrack({
+                      ...editingTrack,
+                      track: {
+                        ...editingTrack.track,
+                        sponsoredCampaign: {
+                          brandName: editingTrack.track.sponsoredCampaign?.brandName || '',
+                          tagline: editingTrack.track.sponsoredCampaign?.tagline || '',
+                          ctaText: e.target.value,
+                          ctaUrl: editingTrack.track.sponsoredCampaign?.ctaUrl || '',
+                        },
+                      },
+                    })
+                  }
+                  placeholder="Ex: Activer le Pass, Découvrir"
+                  className="w-full bg-[#07080C] border border-white/10 rounded-xl px-2 py-1 text-xs text-[#F5F2EB]"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-[10px] text-[#A3A9BA] mb-1">Message / Accroche promotionnelle</label>
+                <input
+                  type="text"
+                  value={editingTrack.track.sponsoredCampaign?.tagline || ''}
+                  onChange={(e) =>
+                    setEditingTrack({
+                      ...editingTrack,
+                      track: {
+                        ...editingTrack.track,
+                        sponsoredCampaign: {
+                          brandName: editingTrack.track.sponsoredCampaign?.brandName || '',
+                          tagline: e.target.value,
+                          ctaText: editingTrack.track.sponsoredCampaign?.ctaText || 'Découvrir',
+                          ctaUrl: editingTrack.track.sponsoredCampaign?.ctaUrl || '',
+                        },
+                      },
+                    })
+                  }
+                  placeholder="Ex: Forfait Nuit Illimité 500F • Écoutez sans modération"
+                  className="w-full bg-[#07080C] border border-white/10 rounded-xl px-2 py-1 text-xs text-[#F5F2EB]"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-2.5">
           <div>
             <label className="block text-[11px] text-[#A3A9BA] mb-1">

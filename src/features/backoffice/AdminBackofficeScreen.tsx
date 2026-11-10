@@ -1,16 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
-import { SUBTLE_ENTRANCE_VARIANTS } from '../../shared/ui/springMotion';
+import React, { useEffect, useRef } from 'react';
 import {
   AdminStudio2Layout,
-  AdminClassicBackofficeView,
   TrackEditModal,
 } from './index';
 import { useAdminNavigationHistory } from './hooks/useAdminNavigationHistory';
 import type { ReturnTypeUseDropPlatformController } from '../listener/hooks/useDropPlatformController';
 
 export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformController }> = ({ ctrl }) => {
-  const [adminLayoutMode, setAdminLayoutMode] = useState<'SAAS_2' | 'CLASSIC'>('SAAS_2');
   const nav = useAdminNavigationHistory('00_OVERVIEW');
   const isNavigatingRef = useRef(false);
 
@@ -76,26 +72,10 @@ export const AdminBackofficeScreen: React.FC<{ ctrl: ReturnTypeUseDropPlatformCo
 
   return (
     <>
-      {adminLayoutMode === 'SAAS_2' ? (
-        <AdminStudio2Layout
-          ctrl={ctrl}
-          adminLayoutMode={adminLayoutMode}
-          onToggleLayoutMode={() => setAdminLayoutMode('CLASSIC')}
-          nav={nav}
-        />
-      ) : (
-        <motion.main
-          variants={SUBTLE_ENTRANCE_VARIANTS}
-          initial="initial"
-          animate="animate"
-          className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 overflow-y-auto overflow-x-hidden flex flex-col gap-3.5"
-        >
-          <AdminClassicBackofficeView
-            ctrl={ctrl}
-            onSwitchToSaaSMode={() => setAdminLayoutMode('SAAS_2')}
-          />
-        </motion.main>
-      )}
+      <AdminStudio2Layout
+        ctrl={ctrl}
+        nav={nav}
+      />
 
       <TrackEditModal
         editingTrack={ctrl.editingTrack}

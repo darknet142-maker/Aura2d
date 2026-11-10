@@ -67,13 +67,37 @@ export const ReleaseTableView: React.FC<ReleaseTableViewProps> = ({
                   {track.album || 'Single Broadcast'}
                 </td>
                 <td className="py-2.5 px-4 hidden sm:table-cell">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    track.isInstrumental
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                      : 'bg-white/10 text-white/80'
-                  }`}>
-                    {track.isInstrumental ? 'Beat / Instru' : 'Standard'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {track.releaseStatus === 'DRAFT' ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-zinc-700/60 text-zinc-300 border border-zinc-600/40">
+                        Brouillon
+                      </span>
+                    ) : track.releaseStatus === 'PENDING' ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        En attente
+                      </span>
+                    ) : track.releaseStatus === 'SCHEDULED' ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                        Programmé
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        En ligne
+                      </span>
+                    )}
+                    {track.isSponsoredAnnouncement && (
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-[#DE1B34]/25 text-rose-300 border border-[#DE1B34]/40">
+                        ✦ Sponso
+                      </span>
+                    )}
+                    <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                      track.isInstrumental
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                        : 'bg-white/10 text-white/80'
+                    }`}>
+                      {track.isInstrumental ? 'Beat' : 'Vocal'}
+                    </span>
+                  </div>
                 </td>
                 <td className="py-2.5 px-4 font-mono font-bold text-[11px]">
                   <span className={isLufsCompliant ? 'text-emerald-400' : 'text-amber-400'}>

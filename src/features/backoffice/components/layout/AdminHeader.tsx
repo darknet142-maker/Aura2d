@@ -12,8 +12,6 @@ export interface AdminHeaderProps {
   lastAdminSavedAt: string | null;
   isSavingAdmin: boolean;
   onSaveAndSyncAll: (label?: string) => void;
-  adminLayoutMode: 'SAAS_2' | 'CLASSIC';
-  onToggleLayoutMode: () => void;
   onExitToPlayer: () => void;
   onToggleMobileSidebar?: () => void;
   canGoBack?: boolean;
@@ -23,7 +21,7 @@ export interface AdminHeaderProps {
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   currentSpace, subSection, isRealtimeConnected, lastAdminSavedAt,
-  isSavingAdmin, onSaveAndSyncAll, adminLayoutMode, onToggleLayoutMode,
+  isSavingAdmin, onSaveAndSyncAll,
   onExitToPlayer, onToggleMobileSidebar, canGoBack = false, previousLabel = 'Précédent', onGoBack,
 }) => {
   // Navigation clavier intelligente : Alt+Flèche Gauche ou Échap pour revenir sur ses pas
@@ -84,16 +82,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             </span>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={onToggleLayoutMode}
-          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[#CBD5E1] hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition"
-          title="Basculer entre la Vue SaaS Studio 2.0 et la Vue Classique"
-        >
-          <LayoutGrid className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden md:inline">{adminLayoutMode === 'SAAS_2' ? 'Mode Classique' : 'Mode SaaS 2.0'}</span>
-        </button>
 
         <motion.button
           type="button"

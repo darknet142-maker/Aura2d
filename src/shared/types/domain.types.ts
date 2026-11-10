@@ -90,6 +90,18 @@ export interface Track {
   acousticEnergy?: number;
   grooveScore?: number;
   trackAnalysis?: TrackAnalysis;
+  releaseStatus?: 'PUBLISHED' | 'SCHEDULED' | 'PENDING' | 'DRAFT';
+  scheduledPublishDate?: string;
+  isSpatialAudio?: boolean;
+  isSponsoredAnnouncement?: boolean;
+  sponsoredCampaign?: {
+    brandName: string;
+    tagline: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    badgeLabel?: string;
+    interstitialCoverUrl?: string;
+  };
 }
 
 export interface AlbumNode {
@@ -119,6 +131,8 @@ export interface AppUser {
   name: string;
   email: string;
   role: 'USER' | 'ADMIN';
+  plan?: 'FREE' | 'PRO';
+  activeSubscriptionPass?: boolean;
   joinedAt: string;
   avatar: string;
   totalLikes: number;

@@ -26,4 +26,3 @@ export { AdminSidebar } from './components/layout/AdminSidebar';
 export { AdminHeader } from './components/layout/AdminHeader';
 export { AdminBreadcrumb } from './components/layout/AdminBreadcrumb';
 export { AdminOverviewDashboard } from './components/overview/AdminOverviewDashboard';
-export { AdminClassicBackofficeView } from './components/layout/AdminClassicBackofficeView';

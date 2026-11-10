@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Award, Smartphone, Coins, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Search, FileText } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Award, Smartphone, Coins, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Search, FileText, LayoutGrid, List, SlidersHorizontal, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
+import { SPRING_SNAPPY } from '../../../../../shared/ui/springMotion';
 import type { AppUser } from '../../../../../shared/types/domain.types';
 import { loadSubscriptions, type SubscriptionRecord } from '../../../../payments/services/subscription-store.service';
 
@@ -8,9 +10,14 @@ export interface AdminSubscriptionsManagerProps {
   onToast?: (msg: string) => void;
 }
 
+type SubscriptionSortKey = 'EXPIRES' | 'USER' | 'DATE';
+type SubscriptionViewMode = 'TABLE' | 'GRID';
+
 export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps> = ({ users, onToast }) => {
   const [filter, setFilter] = useState<'ALL' | 'DIRECT' | 'TOKENS' | 'EXPIRING' | 'FAILED'>('ALL');
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SubscriptionSortKey>('EXPIRES');
+  const [viewMode, setViewMode] = useState<SubscriptionViewMode>('TABLE');
 
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(loadSubscriptions);
 
@@ -39,21 +46,43 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
     onToast?.(`Statut mis à jour sur l'abonnement #${subId}.`);
   };
 
-  const filtered = subscriptions.filter((s) => {
-    if (filter === 'DIRECT' && s.method === 'TOKEN_UNLOCKED') return false;
-    if (filter === 'TOKENS' && s.method !== 'TOKEN_UNLOCKED') return false;
-    if (filter === 'EXPIRING' && s.status !== 'EXPIRING_SOON') return false;
-    if (filter === 'FAILED' && s.status !== 'FAILED') return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return s.userName.toLowerCase().includes(q) || s.planTitle.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
-    }
-    return true;
-  });
+  const filterCounts = useMemo(() => {
+    return {
+      ALL: subscriptions.length,
+      DIRECT: subscriptions.filter((s) => s.method !== 'TOKEN_UNLOCKED').length,
+      TOKENS: subscriptions.filter((s) => s.method === 'TOKEN_UNLOCKED').length,
+      EXPIRING: subscriptions.filter((s) => s.status === 'EXPIRING_SOON' || s.expiresInDays <= 5).length,
+      FAILED: subscriptions.filter((s) => s.status === 'FAILED').length,
+    };
+  }, [subscriptions]);
 
-  const directCount = subscriptions.filter((s) => s.method !== 'TOKEN_UNLOCKED').length;
-  const tokenCount = subscriptions.filter((s) => s.method === 'TOKEN_UNLOCKED').length;
-  const failedCount = subscriptions.filter((s) => s.status === 'FAILED').length;
+  const filtered = useMemo(() => {
+    let list = subscriptions.filter((s) => {
+      if (filter === 'DIRECT' && s.method === 'TOKEN_UNLOCKED') return false;
+      if (filter === 'TOKENS' && s.method !== 'TOKEN_UNLOCKED') return false;
+      if (filter === 'EXPIRING' && s.status !== 'EXPIRING_SOON' && s.expiresInDays > 5) return false;
+      if (filter === 'FAILED' && s.status !== 'FAILED') return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        return (
+          s.userName.toLowerCase().includes(q) ||
+          s.planTitle.toLowerCase().includes(q) ||
+          s.id.toLowerCase().includes(q) ||
+          s.userId.toLowerCase().includes(q) ||
+          s.method.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
+    if (sortKey === 'EXPIRES') {
+      list.sort((a, b) => a.expiresInDays - b.expiresInDays);
+    } else if (sortKey === 'USER') {
+      list.sort((a, b) => a.userName.localeCompare(b.userName));
+    }
+
+    return list;
+  }, [subscriptions, filter, search, sortKey]);
 
   return (
     <div className="p-4 rounded-2xl bg-[#0D1017] border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)] space-y-3.5 font-mono text-xs">
@@ -67,7 +96,7 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
             </h3>
           </div>
           <p className="text-[10px] text-[#A3A9BA]">
-            Paiements directs Mobile Money ({directCount}) • Déblocages 100% Jetons Sponsorisés ({tokenCount})
+            Paiements directs Mobile Money ({filterCounts.DIRECT}) • Déblocages 100% Jetons Sponsorisés ({filterCounts.TOKENS})
           </p>
         </div>
 
@@ -88,67 +117,96 @@ export const AdminSubscriptionsManager: React.FC<AdminSubscriptionsManagerProps>
         </div>
       </div>
 
-      {/* 2. Filtres & Recherche Sobre */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#07090E] border border-white/[0.06] text-[10.5px] flex-wrap">
-          <button
-            type="button"
-            onClick={() => setFilter('ALL')}
-            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-              filter === 'ALL' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-            }`}
-          >
-            Tous ({subscriptions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('DIRECT')}
-            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-              filter === 'DIRECT' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-            }`}
-          >
-            Paiements Directs ({directCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('TOKENS')}
-            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-              filter === 'TOKENS' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-            }`}
-          >
-            100% Jetons ({tokenCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('EXPIRING')}
-            className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-              filter === 'EXPIRING' ? 'bg-white/10 text-white font-bold shadow-sm' : 'text-[#A3A9BA] hover:text-white'
-            }`}
-          >
-            Échéance &lt; 5j
-          </button>
-          {failedCount > 0 && (
-            <button
+      {/* 2. Barre Universelle de Recherche, Tri et Vues (Conforme Capture) */}
+      <div className="flex flex-col gap-3 w-full bg-[#07090E] p-3 rounded-2xl border border-white/[0.08]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md bg-[#0D1017] border border-white/10 rounded-xl px-3 py-2 text-sm text-[#F8FAFC] focus-within:border-[#DE1B34] transition">
+            <Search className="w-4 h-4 text-[#A3A9BA] shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher par auditeur, ID, téléphone, pass..."
+              className="w-full bg-transparent outline-none text-xs text-[#F8FAFC] placeholder:text-[#A3A9BA]/60"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center bg-[#0D1017] p-1 rounded-xl border border-white/10">
+              <button
+                type="button"
+                onClick={() => setViewMode('TABLE')}
+                className={`p-1.5 rounded-lg cursor-pointer transition ${viewMode === 'TABLE' ? 'bg-white/15 text-white' : 'text-[#A3A9BA] hover:text-white'}`}
+                title="Vue Tableau"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('GRID')}
+                className={`p-1.5 rounded-lg cursor-pointer transition ${viewMode === 'GRID' ? 'bg-white/15 text-white' : 'text-[#A3A9BA] hover:text-white'}`}
+                title="Vue Cartes"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-[#0D1017] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-[#A3A9BA]">
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SubscriptionSortKey)}
+                aria-label="Trier les abonnements"
+                className="bg-transparent text-[#F8FAFC] outline-none text-xs cursor-pointer font-medium"
+              >
+                <option value="EXPIRES" className="bg-[#0D1017] text-white">Échéance (Plus Proche)</option>
+                <option value="USER" className="bg-[#0D1017] text-white">Auditeur (A-Z)</option>
+              </select>
+            </div>
+
+            <motion.button
               type="button"
-              onClick={() => setFilter('FAILED')}
-              className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-                filter === 'FAILED' ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30' : 'text-rose-400/80 hover:text-rose-300'
-              }`}
+              whileHover={{ y: -1.5 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING_SNAPPY}
+              onClick={() => onToast?.('Console de souscription manuelle pass activée.')}
+              className="px-3.5 py-2 rounded-xl bg-[#DE1B34] hover:bg-[#FF4D64] text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#DE1B34]/30 cursor-pointer"
             >
-              Échecs ({failedCount})
-            </button>
-          )}
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="truncate">+ Créer un Pass</span>
+            </motion.button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#07090E] border border-white/10 rounded-xl px-2.5 py-1 text-xs">
-          <Search className="w-3.5 h-3.5 text-[#A3A9BA]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrer par nom..."
-            className="bg-transparent outline-none text-[#F8FAFC] placeholder:text-[#A3A9BA]/50 text-xs w-32 sm:w-36"
-          />
+        {/* Pilules de Filtrage avec Compteurs */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/[0.05]">
+          {(
+            [
+              { id: 'ALL', label: 'Tous', count: filterCounts.ALL },
+              { id: 'DIRECT', label: 'Direct Mobile Money', count: filterCounts.DIRECT },
+              { id: 'TOKENS', label: '100% Jetons', count: filterCounts.TOKENS },
+              { id: 'EXPIRING', label: 'Échéance ≤ 5j', count: filterCounts.EXPIRING },
+              { id: 'FAILED', label: 'Échecs', count: filterCounts.FAILED },
+            ] as const
+          ).map((pill) => (
+            <button
+              key={pill.id}
+              type="button"
+              onClick={() => setFilter(pill.id)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
+                filter === pill.id
+                  ? 'bg-[#DE1B34]/20 text-[#F8FAFC] border border-[#DE1B34]/40 shadow-sm'
+                  : 'bg-[#0D1017] text-[#A3A9BA] hover:text-white border border-white/[0.06]'
+              }`}
+            >
+              <span>{pill.label}</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                filter === pill.id ? 'bg-[#DE1B34] text-white' : 'bg-white/10 text-[#A3A9BA]'
+              }`}>
+                {pill.count}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 

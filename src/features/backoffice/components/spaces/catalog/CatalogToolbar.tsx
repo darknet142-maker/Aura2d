@@ -18,6 +18,7 @@ export interface CatalogToolbarProps {
   onSortChange: (s: CatalogSortKey) => void;
   totalCount: number;
   filteredCount: number;
+  filterCounts?: Record<CatalogFilterTab, number>;
   onCreateRelease: () => void;
 }
 
@@ -33,7 +34,7 @@ const FILTER_PILLS: { id: CatalogFilterTab; label: string }[] = [
 export const CatalogToolbar: React.FC<CatalogToolbarProps> = ({
   searchQuery, onSearchChange, activeFilter, onFilterChange,
   viewMode, onViewModeChange, sortKey, onSortChange,
-  totalCount, filteredCount, onCreateRelease,
+  totalCount, filteredCount, filterCounts, onCreateRelease,
 }) => {
   return (
     <div className="flex flex-col gap-3 w-full bg-[#0D1017] p-3 sm:p-4 rounded-2xl border border-white/[0.08] shadow-[0_14px_34px_-12px_rgba(6,8,14,0.88)]">
@@ -99,25 +100,30 @@ export const CatalogToolbar: React.FC<CatalogToolbarProps> = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/[0.05]">
-        {FILTER_PILLS.map((pill) => (
-          <button
-            key={pill.id}
-            type="button"
-            onClick={() => onFilterChange(pill.id)}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
-              activeFilter === pill.id
-                ? 'bg-white/15 text-[#F8FAFC] border border-white/20'
-                : 'bg-[#07090E] text-[#A3A9BA] hover:text-white border border-white/[0.06]'
-            }`}
-          >
-            <span>{pill.label}</span>
-            {pill.id === 'ALL' && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-[#07090E] text-white/80">
-                {filteredCount}
-              </span>
-            )}
-          </button>
-        ))}
+        {FILTER_PILLS.map((pill) => {
+          const count = filterCounts ? filterCounts[pill.id] : pill.id === 'ALL' ? filteredCount : undefined;
+          return (
+            <button
+              key={pill.id}
+              type="button"
+              onClick={() => onFilterChange(pill.id)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
+                activeFilter === pill.id
+                  ? 'bg-[#DE1B34]/20 text-[#F8FAFC] border border-[#DE1B34]/40 shadow-sm'
+                  : 'bg-[#07090E] text-[#A3A9BA] hover:text-white border border-white/[0.06]'
+              }`}
+            >
+              <span>{pill.label}</span>
+              {typeof count === 'number' && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  activeFilter === pill.id ? 'bg-[#DE1B34] text-white' : 'bg-white/10 text-[#A3A9BA]'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
