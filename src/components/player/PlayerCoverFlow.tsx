@@ -341,28 +341,34 @@ export const PlayerCoverFlow: React.FC<PlayerCoverFlowProps> = ({
 
                 {/* Track switcher indicator dots (min 44px tap zone) */}
                 {isActiveCard && currentAlbum && currentAlbum.tracks.length > 1 && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 py-2 px-1.5 rounded-full bg-[#07090E]/60 backdrop-blur-md border border-white/15">
-                    {currentAlbum.tracks.map((t, tIdx) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectTrackIndex(tIdx);
-                        }}
-                        aria-label={`Piste ${tIdx + 1}: ${t.title}`}
-                        className={`min-w-[20px] min-h-[20px] flex items-center justify-center p-1 rounded-full transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400`}
-                      >
-                        <span
-                          className={`w-1.5 rounded-full transition-all ${
-                            tIdx === trackIdx
-                              ? 'h-4 bg-amber-400 shadow-[0_0_8px_#fbbf24]'
-                              : 'h-1.5 bg-white/45 hover:bg-white/80'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  currentAlbum.tracks.length <= 8 ? (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 py-2 px-1.5 rounded-full bg-[#07090E]/60 backdrop-blur-md border border-white/15">
+                      {currentAlbum.tracks.map((t, tIdx) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectTrackIndex(tIdx);
+                          }}
+                          aria-label={`Piste ${tIdx + 1}: ${t.title}`}
+                          className={`min-w-[20px] min-h-[20px] flex items-center justify-center p-1 rounded-full transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400`}
+                        >
+                          <span
+                            className={`w-1.5 rounded-full transition-all ${
+                              tIdx === trackIdx
+                                ? 'h-4 bg-amber-400 shadow-[0_0_8px_#fbbf24]'
+                                : 'h-1.5 bg-white/45 hover:bg-white/80'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 px-2 py-1 rounded-full bg-[#07090E]/75 backdrop-blur-md border border-white/15 text-[10px] font-mono font-bold text-amber-300 shadow-md">
+                      {trackIdx + 1}/{currentAlbum.tracks.length}
+                    </div>
+                  )
                 )}
               </div>
             </div>
