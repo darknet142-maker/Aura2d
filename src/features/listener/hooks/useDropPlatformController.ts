@@ -83,6 +83,11 @@ import {
   hasUserCompletedCampaign,
   validateAndRewardMission,
 } from '../../tokens';
+import {
+  fetchServerCatalogue,
+  syncCatalogueToServer,
+} from '../../../services/cloud/serverCatalogueSync.service';
+import { subscribeToRemoteLiveEvents } from '../../../services/remoteServerSync';
 
 // --- Architecture Modulaire par Domaine Métier (Feature-Based Architecture) ---
 import type {
@@ -885,16 +890,20 @@ export function useDropPlatformController() {
   // --- Rafraîchissement global de toutes les données Supabase (Pistes, Bannières, Réglages, Entités, Config Admin) ---
   const refreshAllCloudData = useCallback(async () => {
     try {
-      const [savedRows, cloudBanners, cloudSettings, cloudEntities, cloudAdminCfg] =
+      const [savedRows, cloudBanners, cloudSettings, cloudEntities, cloudAdminCfg, serverCatRes] =
         await Promise.all([
           getAllTracks(),
           getAdBannersFromCloud(),
           getAdBannerSettingsFromCloud(),
           getStudioEntitiesFromCloud(entityDb),
           getAdminGlobalConfigFromCloud(),
+          fetchServerCatalogue(),
         ]);
 
-      if (savedRows && savedRows.length > 0) {
+      if (serverCatRes.hasData && serverCatRes.catalogue.length > 0) {
+        setCatalogue(serverCatRes.catalogue);
+        saveFullCatalogueSnapshot(serverCatRes.catalogue);
+      } else if (savedRows && savedRows.length > 0) {
         reconcileCatalogueWithCloudTracks(savedRows);
       }
 
@@ -931,8 +940,9 @@ export function useDropPlatformController() {
     async (sectionLabel?: string) => {
       setIsSavingAdmin(true);
       try {
-        // 1. Sauvegarder le snapshot complet du catalogue
+        // 1. Sauvegarder le snapshot complet du catalogue (Local & Serveur Centralisé)
         saveFullCatalogueSnapshot(catalogue);
+        await syncCatalogueToServer(catalogue, true);
 
         // 2. Synchroniser les bannières publicitaires (et supprimer celles retirées)
         await syncAdBannersToCloud(adBanners, adBannerSettings);
@@ -1104,7 +1114,26 @@ export function useDropPlatformController() {
       },
     });
 
-    // 4. Réveil instantané lors du déverrouillage du téléphone ou retour sur l'onglet
+    // 4. Écouteur universel SSE du serveur Node (Synchronisation inter-appareils Wi-Fi & Réseau Local)
+    const unsubscribeSse = subscribeToRemoteLiveEvents((ev) => {
+      if (!mounted) return;
+      if (ev.type === 'CATALOGUE_UPDATED' || ev.type === 'TRACK_SAVED') {
+        fetchServerCatalogue().then((serverRes) => {
+          if (!mounted) return;
+          if (serverRes.hasData && serverRes.catalogue.length > 0) {
+            setCatalogue(serverRes.catalogue);
+            saveFullCatalogueSnapshot(serverRes.catalogue);
+            pushNotification(
+              'Catalogue en direct',
+              'Le catalogue s\'est synchronisé instantanément avec les autres appareils.',
+              'PUBLISH'
+            );
+          }
+        });
+      }
+    });
+
+    // 5. Réveil instantané lors du déverrouillage du téléphone ou retour sur l'onglet
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         refreshAllCloudData();
@@ -1116,6 +1145,7 @@ export function useDropPlatformController() {
     return () => {
       mounted = false;
       unsubscribe();
+      unsubscribeSse();
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleVisibilityChange);
     };

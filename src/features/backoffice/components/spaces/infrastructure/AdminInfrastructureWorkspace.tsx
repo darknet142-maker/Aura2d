@@ -40,7 +40,7 @@ export const AdminInfrastructureWorkspace: React.FC<AdminInfrastructureWorkspace
           ctrl.refreshAllCloudData();
           ctrl.pushNotification(
             'Cache purgé avec succès',
-            'Toutes les pistes et métadonnées ont été rechargées depuis Supabase.',
+            'Toutes les pistes et métadonnées ont été rechargées depuis le serveur central et Supabase.',
             'DATABASE'
           );
         }}

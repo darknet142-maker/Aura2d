@@ -2,7 +2,14 @@ import type { SocialFeedPost, UserStatusStory } from '../features/social-feed/ty
 import type { SponsorCampaign } from '../features/tokens/types/token-economy.types';
 
 export interface RemoteSyncEvent {
-  type: 'POST_CREATED' | 'STATUS_CREATED' | 'CAMPAIGN_CREATED' | 'PING' | 'CONNECTED';
+  type:
+    | 'POST_CREATED'
+    | 'STATUS_CREATED'
+    | 'CAMPAIGN_CREATED'
+    | 'CATALOGUE_UPDATED'
+    | 'TRACK_SAVED'
+    | 'PING'
+    | 'CONNECTED';
   payload?: any;
 }
 

@@ -7,6 +7,7 @@ import {
   UserCheck,
   ArrowDownToLine,
   Flame,
+  Zap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -43,6 +44,7 @@ export interface PlayerMetadataBarProps {
   formatTime: (sec: number) => string;
   formatCompactPlays: (count: number, fallback?: string) => string;
   onToast: (msg: string, color?: string) => void;
+  activeMission?: { rewardPerMission: number; isCompleted: boolean } | null;
 }
 
 export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
@@ -67,6 +69,7 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
   formatTime,
   formatCompactPlays,
   onToast,
+  activeMission,
 }) => {
   const [heartAnimKey, setHeartAnimKey] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -391,6 +394,25 @@ export const PlayerMetadataBar: React.FC<PlayerMetadataBarProps> = ({
             <Flame className="w-2.5 h-2.5 fill-current shrink-0" />
             <span>DROP {formatTime(currentTrack.dropStart)}</span>
           </motion.button>
+
+          {/* Badge Dynamique d'Écoute Sponsorisée ECG (Zéro pollution d'en-tête) */}
+          {activeMission && (
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold inline-flex items-center gap-1 border shrink-0 transition ${
+                activeMission.isCompleted || currentTime >= 30
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                  : 'bg-amber-400/15 text-amber-300 border-amber-400/35'
+              }`}
+              title={`Mission Label : Écoutez 30s complètes pour remporter +${activeMission.rewardPerMission} Jetons`}
+            >
+              <Zap className="w-2.5 h-2.5 fill-current shrink-0" />
+              <span>
+                {activeMission.isCompleted || currentTime >= 30
+                  ? `+${activeMission.rewardPerMission} JTN Gagnés ✅`
+                  : `Mission 30s (${Math.min(30, Math.floor(currentTime))}s/30s)`}
+              </span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 text-[#A3A9BA] shrink-0">

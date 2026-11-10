@@ -151,6 +151,28 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
 
   const [proGateFeature, setProGateFeature] = React.useState<{ title: string; reason?: string } | null>(null);
 
+  const availableMissionsCount = React.useMemo(() => {
+    return getSponsorCampaigns('ACTIVE').filter(
+      (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
+    ).length;
+  }, [currentUser?.id]);
+
+  const activeMission = React.useMemo(() => {
+    const campaigns = getSponsorCampaigns('ACTIVE');
+    const target = campaigns.find(
+      (c) =>
+        c.targetTrackId === currentTrack.id ||
+        (c.targetArtistName &&
+          c.targetArtistName.toLowerCase() === currentTrack.artist.toLowerCase())
+    );
+    if (!target) return null;
+    const isDone = hasUserCompletedCampaign(currentUser?.id || 'usr-default', target.id);
+    return {
+      rewardPerMission: target.rewardPerMission,
+      isCompleted: isDone,
+    };
+  }, [currentTrack.id, currentTrack.artist, currentUser?.id]);
+
   return (
     <div className="relative h-[100dvh] w-screen bg-[#080A0F] flex items-center justify-center overflow-hidden">
       {/* Commutateur Architectural Bureau : Station Studio Split 2D vs Scène Focus */}
@@ -233,6 +255,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             onOpenOptions={() => setActiveModal('OPTIONS')}
             onOpenNotifications={onOpenNotifications}
             unreadNotificationsCount={unreadNotificationsCount}
+            availableMissionsCount={availableMissionsCount}
             albumIdx={albumIdx}
             albumsTotal={catalogue.length}
             trackIdx={trackIdx}
@@ -313,6 +336,7 @@ export const Immersive3DPlayer: React.FC<Immersive3DPlayerProps> = (props) => {
             formatTime={formatTime}
             formatCompactPlays={formatCompactPlays}
             onToast={showToast}
+            activeMission={activeMission}
           />
 
           {/* 4. DOCK DE CONTRÔLE GLASSMORPHIQUE & REC TREND 30S */}

@@ -30,6 +30,7 @@ const STORAGE_DIR = path.join(__dirname, 'server_storage');
 const MEDIA_DIR = path.join(STORAGE_DIR, 'media');
 const POSTS_FILE = path.join(STORAGE_DIR, 'feed_posts.json');
 const STATUSES_FILE = path.join(STORAGE_DIR, 'user_statuses.json');
+const CATALOGUE_FILE = path.join(STORAGE_DIR, 'catalogue.json');
 
 try {
   if (!fs.existsSync(STORAGE_DIR)) fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -41,6 +42,7 @@ try {
 // Store centralisé des publications et statuts partagés
 let serverFeedPosts: any[] = [];
 let serverUserStatuses: any[] = [];
+let serverCatalogue: any[] | null = null;
 
 try {
   if (fs.existsSync(POSTS_FILE)) {
@@ -60,6 +62,18 @@ try {
   serverUserStatuses = [];
 }
 
+try {
+  if (fs.existsSync(CATALOGUE_FILE)) {
+    const raw = fs.readFileSync(CATALOGUE_FILE, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      serverCatalogue = parsed;
+    }
+  }
+} catch {
+  serverCatalogue = null;
+}
+
 function persistPosts() {
   try {
     fs.writeFileSync(POSTS_FILE, JSON.stringify(serverFeedPosts.slice(0, 200), null, 2));
@@ -73,6 +87,15 @@ function persistStatuses() {
     fs.writeFileSync(STATUSES_FILE, JSON.stringify(serverUserStatuses.slice(0, 100), null, 2));
   } catch (err) {
     console.warn('Persist statuses error:', err);
+  }
+}
+
+function persistCatalogue() {
+  if (!serverCatalogue) return;
+  try {
+    fs.writeFileSync(CATALOGUE_FILE, JSON.stringify(serverCatalogue, null, 2));
+  } catch (err) {
+    console.warn('Persist catalogue error:', err);
   }
 }
 
@@ -570,6 +593,103 @@ async function startServer() {
       return res.status(200).json({ status: 'ok', campaign: result.campaign });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur création campagne';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  // ============================================================================
+  // CATALOGUE MUSICAL CENTRALISÉ & RÉHYDRATATION MULTI-APPAREILS
+  // ============================================================================
+
+  app.get('/api/catalogue', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.status(200).json({
+      status: 'ok',
+      hasData: Boolean(serverCatalogue && serverCatalogue.length > 0),
+      catalogue: serverCatalogue || [],
+      updatedAt: new Date().toISOString(),
+    });
+  });
+
+  app.post('/api/catalogue', (req, res) => {
+    try {
+      const { catalogue } = req.body;
+      if (!Array.isArray(catalogue)) {
+        return res.status(400).json({ status: 'error', message: 'Format catalogue invalide (tableau attendu)' });
+      }
+      serverCatalogue = catalogue;
+      persistCatalogue();
+      broadcastSse({
+        type: 'CATALOGUE_UPDATED',
+        payload: {
+          albumsCount: catalogue.length,
+          tracksCount: catalogue.reduce((acc: number, a: any) => acc + (a.tracks?.length || 0), 0),
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return res.status(200).json({ status: 'ok', count: catalogue.length });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur sauvegarde catalogue';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  app.post('/api/catalogue/track', (req, res) => {
+    try {
+      const { track } = req.body;
+      if (!track || !track.id || !track.title) {
+        return res.status(400).json({ status: 'error', message: 'Titre ou identifiant de piste manquant' });
+      }
+      if (!serverCatalogue) {
+        serverCatalogue = [];
+      }
+
+      const albumIdx = serverCatalogue.findIndex(
+        (a: any) => a.artist?.toLowerCase() === track.artist?.toLowerCase() &&
+               a.albumTitle?.toLowerCase() === (track.album || 'Single')?.toLowerCase()
+      );
+
+      if (albumIdx >= 0) {
+        const trkIdx = serverCatalogue[albumIdx].tracks.findIndex((t: any) => t.id === track.id);
+        if (trkIdx >= 0) {
+          serverCatalogue[albumIdx].tracks[trkIdx] = { ...serverCatalogue[albumIdx].tracks[trkIdx], ...track };
+        } else {
+          serverCatalogue[albumIdx].tracks.unshift(track);
+        }
+      } else {
+        serverCatalogue.unshift({
+          id: `alb-${Date.now()}-${track.id}`,
+          artist: track.artist,
+          albumTitle: track.album || 'Single',
+          category: track.category || 'Ntcham',
+          year: '2026',
+          tracks: [track],
+        });
+      }
+
+      persistCatalogue();
+      broadcastSse({
+        type: 'TRACK_SAVED',
+        payload: {
+          trackId: track.id,
+          title: track.title,
+          artist: track.artist,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      broadcastSse({
+        type: 'CATALOGUE_UPDATED',
+        payload: {
+          albumsCount: serverCatalogue.length,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      return res.status(200).json({ status: 'ok', track });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur sauvegarde piste';
       return res.status(500).json({ status: 'error', message: msg });
     }
   });

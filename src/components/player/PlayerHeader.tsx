@@ -10,6 +10,7 @@ export interface PlayerHeaderProps {
   onOpenOptions: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationsCount?: number;
+  availableMissionsCount?: number;
   albumIdx?: number;
   albumsTotal?: number;
   trackIdx?: number;
@@ -23,6 +24,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
   onOpenOptions,
   onOpenNotifications,
   unreadNotificationsCount = 0,
+  availableMissionsCount = 0,
   albumIdx = 0,
   albumsTotal = 1,
   trackIdx = 0,
@@ -96,11 +98,20 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
             whileTap={{ scale: 0.92 }}
             transition={SPRING_SNAPPY}
             onClick={onOpenOptions}
-            className="w-9 h-9 rounded-full bg-[#0C0F17]/85 hover:bg-[#131824] border border-white/[0.1] flex items-center justify-center text-[#F8FAFC] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            className="relative w-9 h-9 rounded-full bg-[#0C0F17]/85 hover:bg-[#131824] border border-white/[0.1] flex items-center justify-center text-[#F8FAFC] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
             aria-label="Options et Paramètres"
-            title="Options et Paramètres"
+            title={
+              availableMissionsCount > 0
+                ? `Options et Paramètres (${availableMissionsCount} mission${
+                    availableMissionsCount > 1 ? 's' : ''
+                  } sponsorisée${availableMissionsCount > 1 ? 's' : ''})`
+                : 'Options et Paramètres'
+            }
           >
             <Ellipsis className="w-4 h-4" />
+            {availableMissionsCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-[#0C0F17] shadow-sm" />
+            )}
           </motion.button>
         </div>
       </div>

@@ -14,6 +14,7 @@ import {
   type WaveformConcordanceResult,
 } from '../../../services/musicService';
 import { broadcastLiveSync } from '../../../services/realtimeSync';
+import { syncTrackToServer } from '../../../services/cloud/serverCatalogueSync.service';
 import type { AlbumNode, AppNotification, EntityDatabase, Track } from '../../../shared/types/domain.types';
 import { formatTime, parseDurationInput, extractExternalStreamId } from '../../../shared/utils/mediaFormatters';
 import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
@@ -1038,6 +1039,9 @@ export function useAdminUploadController(params: {
         },
       }).catch(() => {});
     }
+
+    // Persistance et réplication centralisée sur le serveur (tous les appareils connectés)
+    syncTrackToServer(createdTrack).catch(() => {});
 
     pushNotification(
       'Titre publié et sauvegardé (Opus -14 LUFS) !',
