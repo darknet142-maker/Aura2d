@@ -65,3 +65,43 @@ export async function syncTrackToServer(track: Track): Promise<boolean> {
     return false;
   }
 }
+
+export async function deleteTrackOnServer(trackId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/catalogue/track/${encodeURIComponent(trackId)}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function uploadMediaFileToServer(
+  file: File,
+  type: 'audio' | 'cover'
+): Promise<string> {
+  const base64Data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const res = await fetch('/api/media/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: file.name,
+      base64Data,
+      type,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Échec du téléversement du média sur le serveur');
+  }
+
+  const data = await res.json();
+  return data.url as string;
+}

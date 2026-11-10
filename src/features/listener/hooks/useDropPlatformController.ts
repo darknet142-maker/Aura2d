@@ -1119,6 +1119,17 @@ export function useDropPlatformController() {
     const unsubscribeSse = subscribeToRemoteLiveEvents((ev) => {
       if (!mounted) return;
       if (ev.type === 'CATALOGUE_UPDATED' || ev.type === 'TRACK_SAVED') {
+        const payloadCat = (ev.payload as any)?.catalogue;
+        if (Array.isArray(payloadCat) && payloadCat.length > 0) {
+          setCatalogue(payloadCat);
+          saveFullCatalogueSnapshot(payloadCat);
+          pushNotification(
+            'Catalogue synchronisé en direct',
+            'Mise à jour instantanée reçue du serveur.',
+            'PUBLISH'
+          );
+          return;
+        }
         fetchServerCatalogue().then((serverRes) => {
           if (!mounted) return;
           if (serverRes.hasData && serverRes.catalogue.length > 0) {

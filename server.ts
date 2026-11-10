@@ -22,6 +22,12 @@ import {
   resolveDownloadTicket,
   confirmDownloadTicket,
 } from './src/features/downloads/services/qr-download.service';
+import { initServerCatalogue } from './src/services/cloud/serverCatalogueManager';
+import {
+  getServerSupabase,
+  upsertTrackToSupabase,
+  deleteTrackFromSupabase,
+} from './src/services/cloud/serverSupabaseBridge';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -530,6 +536,27 @@ async function startServer() {
     }
   });
 
+  app.post('/api/media/upload', (req, res) => {
+    try {
+      const { fileName, base64Data, type } = req.body || {};
+      if (!fileName || !base64Data) {
+        return res.status(400).json({ status: 'error', message: 'fileName et base64Data requis' });
+      }
+      const ext = path.extname(fileName) || (type === 'cover' ? '.webp' : '.opus');
+      const cleanBaseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const mediaId = `${Date.now()}_${cleanBaseName}${ext}`;
+      const cleanBase64 = base64Data.replace(/^data:.*?;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const filePath = path.join(MEDIA_DIR, mediaId);
+      fs.writeFileSync(filePath, buffer);
+      const mediaUrl = `/api/media/${mediaId}`;
+      return res.status(200).json({ status: 'ok', mediaId, url: mediaUrl });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur téléversement média';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
   app.get('/api/media/:mediaId', (req, res) => {
     const { mediaId } = req.params;
     const filePath = path.join(MEDIA_DIR, mediaId);
@@ -540,13 +567,25 @@ async function startServer() {
     const fileSize = stat.size;
     const range = req.headers.range;
 
-    const mimeType = mediaId.endsWith('.mp4')
-      ? 'video/mp4'
-      : mediaId.endsWith('.mp3')
-      ? 'audio/mpeg'
-      : mediaId.endsWith('.wav')
-      ? 'audio/wav'
-      : 'video/webm';
+    const ext = path.extname(mediaId).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.opus': 'audio/ogg',
+      '.ogg': 'audio/ogg',
+      '.m4a': 'audio/mp4',
+      '.aac': 'audio/aac',
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.webp': 'image/webp',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+    };
+    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
@@ -670,18 +709,22 @@ async function startServer() {
       }
 
       persistCatalogue();
+      upsertTrackToSupabase(track).catch(() => {});
+
       broadcastSse({
         type: 'TRACK_SAVED',
         payload: {
           trackId: track.id,
           title: track.title,
           artist: track.artist,
+          catalogue: serverCatalogue,
           timestamp: new Date().toISOString(),
         },
       });
       broadcastSse({
         type: 'CATALOGUE_UPDATED',
         payload: {
+          catalogue: serverCatalogue,
           albumsCount: serverCatalogue.length,
           timestamp: new Date().toISOString(),
         },
@@ -693,6 +736,70 @@ async function startServer() {
       return res.status(500).json({ status: 'error', message: msg });
     }
   });
+
+  app.delete('/api/catalogue/track/:trackId', (req, res) => {
+    try {
+      const { trackId } = req.params;
+      if (!trackId) {
+        return res.status(400).json({ status: 'error', message: 'trackId manquant' });
+      }
+
+      if (serverCatalogue) {
+        serverCatalogue = serverCatalogue
+          .map((alb: any) => ({
+            ...alb,
+            tracks: alb.tracks.filter((t: any) => t.id !== trackId),
+          }))
+          .filter((alb: any) => alb.tracks.length > 0);
+        persistCatalogue();
+      }
+
+      deleteTrackFromSupabase(trackId).catch(() => {});
+
+      broadcastSse({
+        type: 'CATALOGUE_UPDATED',
+        payload: {
+          catalogue: serverCatalogue,
+          albumsCount: serverCatalogue?.length || 0,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      return res.status(200).json({ status: 'ok', trackId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur suppression piste';
+      return res.status(500).json({ status: 'error', message: msg });
+    }
+  });
+
+  // Hydratation complète et synchrone du catalogue au démarrage du serveur
+  try {
+    serverCatalogue = await initServerCatalogue(CATALOGUE_FILE);
+    console.log(`[MasterHub] Prêt avec ${serverCatalogue.length} albums synchronisés.`);
+  } catch (err) {
+    console.warn('[MasterHub] Erreur hydratation catalogue:', err);
+  }
+
+  // Écouteur Supabase Realtime (CDC) pour synchroniser toute modification externe
+  try {
+    const sb = getServerSupabase();
+    sb.channel('server-tracks-cdc')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tracks' }, async (payload) => {
+        console.log('[CDC] Changement Supabase détecté sur table tracks:', payload.eventType);
+        serverCatalogue = await initServerCatalogue(CATALOGUE_FILE);
+        broadcastSse({
+          type: 'CATALOGUE_UPDATED',
+          payload: {
+            catalogue: serverCatalogue,
+            albumsCount: serverCatalogue.length,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn('[CDC] Avertissement souscription Supabase CDC:', err);
+  }
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

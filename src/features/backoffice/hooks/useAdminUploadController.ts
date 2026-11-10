@@ -14,7 +14,12 @@ import {
   type WaveformConcordanceResult,
 } from '../../../services/musicService';
 import { broadcastLiveSync } from '../../../services/realtimeSync';
-import { syncTrackToServer } from '../../../services/cloud/serverCatalogueSync.service';
+import {
+  syncTrackToServer,
+  syncCatalogueToServer,
+  deleteTrackOnServer,
+  uploadMediaFileToServer,
+} from '../../../services/cloud/serverCatalogueSync.service';
 import type { AlbumNode, AppNotification, EntityDatabase, Track } from '../../../shared/types/domain.types';
 import { formatTime, parseDurationInput, extractExternalStreamId } from '../../../shared/utils/mediaFormatters';
 import { analyzeAudioFileSurgically, ensureTrackSurgicalAnalysis } from '../../music-intelligence';
@@ -742,13 +747,16 @@ export function useAdminUploadController(params: {
     setCustomCategoryInput('');
   };
 
-  const handlePublishTrack = () => {
+  const handlePublishTrack = async () => {
     if (!isWizardStep1Valid || !isWizardStep2Valid || !isWizardStep3Valid) return;
 
     if (isPreviewingUploadDrop) {
       setIsPreviewingUploadDrop(false);
       uploadPreviewAudioRef.current?.pause();
     }
+
+    setIsUploadingFile(true);
+    setUploadProgress(15);
 
     const streamId =
       uploadSourceType === 'STREAM' ? extractExternalStreamId(newExternalUrl) : undefined;
@@ -806,6 +814,29 @@ export function useAdminUploadController(params: {
       newDropContentId ||
       generateDropContentId(finalPeaks, parsedNewDuration, newTitle.trim());
 
+    let universalAudioUrl: string | undefined = undefined;
+    let universalCoverUrl: string = newCoverFileUrl.trim();
+
+    if (selectedRawCoverFile) {
+      try {
+        const uploadedCoverUrl = await uploadMediaFileToServer(selectedRawCoverFile, 'cover');
+        if (uploadedCoverUrl) universalCoverUrl = uploadedCoverUrl;
+      } catch {
+        // fallback
+      }
+    }
+
+    if (uploadSourceType === 'FILE' && selectedRawAudioFile) {
+      setUploadProgress(35);
+      try {
+        const localServerUrl = await uploadMediaFileToServer(selectedRawAudioFile, 'audio');
+        if (localServerUrl) universalAudioUrl = localServerUrl;
+      } catch {
+        // fallback
+      }
+      setUploadProgress(65);
+    }
+
     const createdTrack: Track = {
       id: `t-${Date.now()}`,
       title: newTitle.trim(),
@@ -858,7 +889,7 @@ export function useAdminUploadController(params: {
         dawAuditRequired: dawAuditFlag,
         qrCertificateHash: `DROP-ECG-SHA256-${Date.now().toString(16).toUpperCase()}`,
       },
-      cover: newCoverFileUrl.trim(),
+      cover: universalCoverUrl,
       artworkType: 'creative_yellow',
       ambientPrimary: 'rgba(245, 166, 15, 0.52)',
       ambientSecondary: 'rgba(135, 78, 12, 0.42)',
@@ -885,7 +916,7 @@ export function useAdminUploadController(params: {
         energy: Math.min(1, Math.max(0, Math.round(newAcousticEnergy) / 100)),
         danceability: Math.min(1, Math.max(0, Math.round(newGroove) / 100)),
       },
-      audioUrl: uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined,
+      audioUrl: universalAudioUrl || (uploadSourceType === 'FILE' && newAudioUrl ? newAudioUrl : undefined),
       externalStreamId: streamId || undefined,
       realPlays: 100000, // Démarrage calibré Single d'Or (100K ECG) pour démonstration immédiate
       lastActivityAgo: 'à l’instant',
@@ -913,41 +944,6 @@ export function useAdminUploadController(params: {
     const targetAlbumIndex = existingAlbumIdx >= 0 ? existingAlbumIdx : catalogue.length;
     const targetTrackIndex =
       existingAlbumIdx >= 0 ? catalogue[existingAlbumIdx].tracks.length : 0;
-
-    setCatalogue((prev) => {
-      const idx = prev.findIndex(
-        (a) =>
-          a.artist.toLowerCase() === createdTrack.artist.toLowerCase() &&
-          a.albumTitle.toLowerCase() === createdTrack.album.toLowerCase()
-      );
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = {
-          ...updated[idx],
-          tracks: [...updated[idx].tracks, createdTrack],
-        };
-        return updated;
-      }
-      return [
-        ...prev,
-        {
-          id: `alb-${Date.now()}`,
-          artist: createdTrack.artist,
-          albumTitle: createdTrack.album,
-          category: createdTrack.category,
-          year: '2026',
-          tracks: [createdTrack],
-        },
-      ];
-    });
-
-    // Positionner immédiatement le titre publié en ligne et afficher sa fiche en direct
-    setAlbumIdx(targetAlbumIndex);
-    setTrackIdx(targetTrackIndex);
-    setIsDropMode(true);
-    setCurrentTime(createdTrack.dropStart);
-    setSelectedTrackId(createdTrack.id);
-    setAdminMainTab('CATALOGUE');
 
     // Persistance automatique dans Supabase (Table tracks + Buckets audio_files Opus & cover_files)
     const metadataPayload = {
@@ -980,25 +976,22 @@ export function useAdminUploadController(params: {
     if (uploadSourceType === 'STREAM' && newExternalUrl.trim()) {
       addYoutubeTrack(newExternalUrl.trim(), metadataPayload).catch(() => {});
     } else if (selectedRawAudioFile) {
-      // Sauvegarder immédiatement le fichier audio réel dans IndexedDB sous l'ID de la piste
-      saveAudioBlobToIndexedDb(createdTrack.id, selectedRawAudioFile)
-        .then((persistedUrl) => {
-          setCatalogue((prev) =>
-            prev.map((alb) => ({
-              ...alb,
-              tracks: alb.tracks.map((t) =>
-                t.id === createdTrack.id ? { ...t, audioUrl: persistedUrl } : t
-              ),
-            }))
-          );
-        })
-        .catch(() => {});
-
-      uploadLocalTrack(
-        selectedRawAudioFile,
-        metadataPayload,
-        selectedRawCoverFile
-      ).catch(() => {});
+      saveAudioBlobToIndexedDb(createdTrack.id, selectedRawAudioFile).catch(() => {});
+      try {
+        const sbRow = await uploadLocalTrack(
+          selectedRawAudioFile,
+          metadataPayload,
+          selectedRawCoverFile
+        );
+        if (sbRow && sbRow.stream_url) {
+          createdTrack.audioUrl = sbRow.stream_url;
+          if (sbRow.cover_url) {
+            createdTrack.cover = sbRow.cover_url;
+          }
+        }
+      } catch {
+        // conserve l'url locale du serveur Node
+      }
     } else {
       // Cas Preset Studio Opus ou Audio synthétique : persister également dans Supabase pour réplication multi-appareils
       updateTrackMetadataInStorage(createdTrack.id, {
@@ -1026,22 +1019,67 @@ export function useAdminUploadController(params: {
         stream_url: createdTrack.audioUrl || 'synth://studio-opus-preset',
         source_type: 'file',
       }).catch(() => {});
-
-      broadcastLiveSync({
-        type: 'TRACKS_UPDATED',
-        payload: {
-          action: 'CREATE',
-          trackId: createdTrack.id,
-          trackTitle: createdTrack.title,
-          artist: createdTrack.artist,
-          message: `Nouvelle piste publiée (Preset Studio) : « ${createdTrack.title} »`,
-          timestamp: new Date().toISOString(),
-        },
-      }).catch(() => {});
     }
 
+    let nextCatalogueSnapshot: AlbumNode[] = [];
+    setCatalogue((prev) => {
+      const idx = prev.findIndex(
+        (a) =>
+          a.artist.toLowerCase() === createdTrack.artist.toLowerCase() &&
+          a.albumTitle.toLowerCase() === createdTrack.album.toLowerCase()
+      );
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          tracks: [...updated[idx].tracks, createdTrack],
+        };
+        nextCatalogueSnapshot = updated;
+        return updated;
+      }
+      const updated = [
+        ...prev,
+        {
+          id: `alb-${Date.now()}`,
+          artist: createdTrack.artist,
+          albumTitle: createdTrack.album,
+          category: createdTrack.category,
+          year: '2026',
+          tracks: [createdTrack],
+        },
+      ];
+      nextCatalogueSnapshot = updated;
+      return updated;
+    });
+
+    // Positionner immédiatement le titre publié en ligne et afficher sa fiche en direct
+    setAlbumIdx(targetAlbumIndex);
+    setTrackIdx(targetTrackIndex);
+    setIsDropMode(true);
+    setCurrentTime(createdTrack.dropStart);
+    setSelectedTrackId(createdTrack.id);
+    setAdminMainTab('CATALOGUE');
+
     // Persistance et réplication centralisée sur le serveur (tous les appareils connectés)
-    syncTrackToServer(createdTrack).catch(() => {});
+    await syncTrackToServer(createdTrack);
+    if (nextCatalogueSnapshot.length > 0) {
+      await syncCatalogueToServer(nextCatalogueSnapshot, true);
+    }
+
+    broadcastLiveSync({
+      type: 'TRACKS_UPDATED',
+      payload: {
+        action: 'CREATE',
+        trackId: createdTrack.id,
+        trackTitle: createdTrack.title,
+        artist: createdTrack.artist,
+        message: `Nouvelle piste publiée : « ${createdTrack.title} »`,
+        timestamp: new Date().toISOString(),
+      },
+    }).catch(() => {});
+
+    setUploadProgress(100);
+    setIsUploadingFile(false);
 
     pushNotification(
       'Titre publié et sauvegardé (Opus -14 LUFS) !',
@@ -1077,15 +1115,18 @@ export function useAdminUploadController(params: {
   // --- Admin Catalogue Actions ---
   const handleDeleteTrack = (albumId: string, trackId: string) => {
     deleteSupabaseTrack({ app_track_id: trackId }).catch(() => {});
-    setCatalogue((prev) =>
-      prev
+    deleteTrackOnServer(trackId).catch(() => {});
+    setCatalogue((prev) => {
+      const nextCat = prev
         .map((alb) =>
           alb.id === albumId
             ? { ...alb, tracks: alb.tracks.filter((t) => t.id !== trackId) }
             : alb
         )
-        .filter((alb) => alb.tracks.length > 0)
-    );
+        .filter((alb) => alb.tracks.length > 0);
+      syncCatalogueToServer(nextCat, true).catch(() => {});
+      return nextCat;
+    });
     if (selectedTrackId === trackId) {
       setSelectedTrackId(null);
     }
@@ -1144,32 +1185,34 @@ export function useAdminUploadController(params: {
       handleRegisterEntityInDb('lyricists', track.lyricistName, true);
     }
 
-    setCatalogue((prev) =>
-      prev.map((alb) => {
+    const updatedTrack: Track = {
+      ...track,
+      audioCodec: 'OPUS',
+      lyricistName: track.isInstrumental
+        ? 'Instrumental (Sans paroles)'
+        : track.lyricistName,
+      featuringArtists:
+        parsedFeaturings && parsedFeaturings.length > 0 ? parsedFeaturings : undefined,
+      copyrightText: `Copyright 2026 ${track.labelName}. Tous droits réservés`,
+      duration: updatedDuration,
+      dropStart: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
+      dropDuration: Math.min(track.dropDuration, Math.max(5, updatedDuration - Math.min(track.dropStart, Math.max(0, updatedDuration - 10)))),
+    };
+
+    setCatalogue((prev) => {
+      const nextCat = prev.map((alb) => {
         if (alb.id !== albumId) return alb;
         return {
           ...alb,
           category: track.category,
-          tracks: alb.tracks.map((t) =>
-            t.id === track.id
-              ? {
-                  ...track,
-                  audioCodec: 'OPUS',
-                  lyricistName: track.isInstrumental
-                    ? 'Instrumental (Sans paroles)'
-                    : track.lyricistName,
-                  featuringArtists:
-                    parsedFeaturings && parsedFeaturings.length > 0 ? parsedFeaturings : undefined,
-                  copyrightText: `Copyright 2026 ${track.labelName}. Tous droits réservés`,
-                  duration: updatedDuration,
-                  dropStart: Math.min(track.dropStart, Math.max(0, updatedDuration - 10)),
-                  dropDuration: Math.min(track.dropDuration, Math.max(5, updatedDuration - Math.min(track.dropStart, Math.max(0, updatedDuration - 10)))),
-                }
-              : t
-          ),
+          tracks: alb.tracks.map((t) => (t.id === track.id ? updatedTrack : t)),
         };
-      })
-    );
+      });
+      syncCatalogueToServer(nextCat, true).catch(() => {});
+      return nextCat;
+    });
+
+    syncTrackToServer(updatedTrack).catch(() => {});
 
     // Sauvegarder la mise à jour (notamment la nouvelle pochette ou le titre) dans Supabase + Stockage local
     updateTrackMetadataInStorage(track.id, {
