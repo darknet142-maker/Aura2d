@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { X, Coins, CreditCard, History, ShieldCheck } from 'lucide-react';
+import { X, Coins, CreditCard, History, ShieldCheck, Gift, Sparkles, Flame } from 'lucide-react';
 import {
   getOrCreateUserWallet,
   getUserLedgerHistory,
   applyTokenTransaction,
 } from '../services/token-ledger.service';
+import { getDailyStreakInfo } from '../services/recurring-reward.service';
+import { RecurringRewardModal } from './RecurringRewardModal';
 import { UserPassRedemptionList } from './UserPassRedemptionList';
 import { UserTokenHistoryList } from './UserTokenHistoryList';
 import type { GabonSubscriptionPass } from '../../../services/offlineStreamTracker';
@@ -28,6 +30,7 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'PASS' | 'HISTORY'>('PASS');
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [isRecurringRewardModalOpen, setIsRecurringRewardModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   if (!isOpen) return null;
@@ -106,6 +109,42 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
           </div>
         </div>
 
+        {/* Bannière d'accès rapide au Voucher Quotidien */}
+        {(() => {
+          const streakInfo = getDailyStreakInfo(userId || 'anon_user');
+          return (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-[#DE1B34]/15 via-amber-400/15 to-transparent border border-amber-400/30">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-400/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Gift className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="font-bold text-xs text-[#F8FAFC] block">
+                    Voucher Fidélité Quotidien
+                  </span>
+                  <span className="text-[10px] text-[#A3A9BA]">
+                    {streakInfo.canClaimToday
+                      ? `Prêt à réclamer : +${streakInfo.currentTier.tokens} Jetons`
+                      : `Série J${streakInfo.effectiveDay} active • Prochain drop dans ${streakInfo.formattedCountdown}`}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecurringRewardModalOpen(true)}
+                className={`px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  streakInfo.canClaimToday
+                    ? 'bg-gradient-to-r from-[#DE1B34] to-[#F59E0B] text-white shadow-md hover:opacity-95'
+                    : 'bg-white/10 hover:bg-white/20 text-[#F8FAFC]'
+                }`}
+              >
+                {streakInfo.canClaimToday && <Sparkles className="w-3 h-3 text-amber-200" />}
+                <span>{streakInfo.canClaimToday ? `Réclamer (+${streakInfo.currentTier.tokens})` : 'Voir Ticket'}</span>
+              </button>
+            </div>
+          );
+        })()}
+
         <div className="flex rounded-xl bg-[#080A0F] p-1 border border-white/10 gap-1">
           <button
             type="button"
@@ -139,6 +178,16 @@ export const UserTokenWalletModal: React.FC<UserTokenWalletModalProps> = ({
         ) : (
           <UserTokenHistoryList history={history} />
         )}
+
+        <RecurringRewardModal
+          isOpen={isRecurringRewardModalOpen}
+          onClose={() => {
+            setIsRecurringRewardModalOpen(false);
+            setRefreshKey((k) => k + 1);
+          }}
+          userId={userId || 'anon_user'}
+          onToast={onToast}
+        />
       </div>
     </div>
   );

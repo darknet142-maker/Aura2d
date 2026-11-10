@@ -1,0 +1,410 @@
+/* ==========================================================================
+   DROP BROADCAST - REWARD TICKET VOUCHER (Uiverse.io by dexter-st)
+   Adapté pour le popup de récompense quotidienne des utilisateurs récurrents.
+   ========================================================================== */
+
+.reward-ticket-wrapper {
+  perspective: 1000px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 0.5rem;
+}
+
+.reward-ticket-card {
+  --width: 240px;
+  --height: 400px;
+  --perforation-size: 14px;
+  --cutouts-adjust: 270px;
+
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.75rem;
+  grid-template-areas:
+    "header"
+    "body"
+    "footer";
+
+  width: var(--width);
+  height: var(--height);
+  padding: calc(var(--perforation-size) + 4px) 0;
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  overflow: hidden;
+  border-radius: 8px;
+
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 20px 24px rgba(0, 0, 0, 0.65))
+    drop-shadow(0 34px 44px rgba(222, 27, 52, 0.2));
+  animation: rewardTicketHover 3.2s ease-in-out infinite;
+  will-change: transform, filter;
+  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.reward-ticket-card:hover {
+  transform: translateY(-9px) scale(1.03);
+}
+
+@keyframes rewardTicketHover {
+  0%, 100% {
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45))
+      drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 20px 24px rgba(0, 0, 0, 0.65))
+      drop-shadow(0 34px 44px rgba(222, 27, 52, 0.15));
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35))
+      drop-shadow(0 14px 18px rgba(0, 0, 0, 0.45))
+      drop-shadow(0 28px 32px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 48px 56px rgba(245, 158, 11, 0.28));
+    transform: translateY(-8px) scale(1.025);
+  }
+}
+
+/* Couche de masque avec perforations haut/bas et encoches latérales */
+.reward-ticket-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: #0d1017;
+  overflow: hidden;
+
+  -webkit-mask:
+    radial-gradient(
+      circle at 50% 0,
+      transparent calc(var(--perforation-size) - 4px),
+      #000 calc(var(--perforation-size) - 3px)
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      transparent calc(var(--perforation-size) - 4px),
+      #000 calc(var(--perforation-size) - 3px)
+    ),
+    radial-gradient(circle 9px at left center, transparent 95%, #000 100%),
+    radial-gradient(circle 9px at right center, transparent 95%, #000 100%),
+    repeating-linear-gradient(
+      90deg,
+      #000 0px,
+      #000 8px,
+      transparent 8px,
+      transparent 14px
+    );
+
+  mask:
+    radial-gradient(
+      circle at 50% 0,
+      transparent calc(var(--perforation-size) - 4px),
+      #000 calc(var(--perforation-size) - 3px)
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      transparent calc(var(--perforation-size) - 4px),
+      #000 calc(var(--perforation-size) - 3px)
+    ),
+    radial-gradient(circle 9px at left center, transparent 95%, #000 100%),
+    radial-gradient(circle 9px at right center, transparent 95%, #000 100%),
+    repeating-linear-gradient(
+      90deg,
+      #000 0px,
+      #000 8px,
+      transparent 8px,
+      transparent 14px
+    );
+
+  -webkit-mask-repeat: repeat-x, repeat-x, no-repeat, no-repeat, repeat-x;
+  mask-repeat: repeat-x, repeat-x, no-repeat, no-repeat, repeat-x;
+
+  -webkit-mask-size:
+    calc(var(--perforation-size) * 2) 100%,
+    calc(var(--perforation-size) * 2) 100%,
+    18px 18px,
+    18px 18px,
+    100% 1px;
+  mask-size:
+    calc(var(--perforation-size) * 2) 100%,
+    calc(var(--perforation-size) * 2) 100%,
+    18px 18px,
+    18px 18px,
+    100% 1px;
+
+  -webkit-mask-position:
+    calc(0.5 * var(--perforation-size)) top,
+    calc(0.5 * var(--perforation-size)) bottom,
+    -9px var(--cutouts-adjust),
+    calc(100% + 9px) var(--cutouts-adjust),
+    0 calc(var(--cutouts-adjust) + 9px);
+  mask-position:
+    calc(0.5 * var(--perforation-size)) top,
+    calc(0.5 * var(--perforation-size)) bottom,
+    -9px var(--cutouts-adjust),
+    calc(100% + 9px) var(--cutouts-adjust),
+    0 calc(var(--cutouts-adjust) + 9px);
+}
+
+/* Couche de fond holographique avec réfraction broadcast */
+.reward-ticket-holographic {
+  background-image:
+    linear-gradient(to bottom, rgba(222, 27, 52, 0.5) 0%, rgba(13, 16, 23, 0.75) 50%, rgba(245, 158, 11, 0.45) 100%),
+    conic-gradient(
+      at 60% 50%,
+      #2b354f,
+      #de1b34,
+      #00f9f8,
+      #131722,
+      #f59e0b,
+      #fff4bf,
+      #de1b34,
+      #ff6bfe,
+      rgba(0, 0, 0, 0.7),
+      #f59e0b,
+      #2b354f,
+      #01fefb,
+      #2b354f
+    );
+}
+
+.reward-ticket-holographic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 70% 20%, rgba(222, 27, 52, 0.8), transparent 60%),
+    repeating-radial-gradient(circle at 30% 80%, rgba(255, 255, 255, 0.9), rgba(245, 158, 11, 0.6) 36px, rgba(13, 16, 23, 0.9) 110px);
+  mix-blend-mode: color-burn;
+  pointer-events: none;
+}
+
+.reward-ticket-holographic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to bottom,
+    rgba(222, 27, 52, 0.4),
+    rgba(245, 158, 11, 0.6),
+    rgba(16, 185, 129, 0.5),
+    rgba(222, 27, 52, 0.4)
+  );
+  mix-blend-mode: difference;
+  animation: rewardTicketBgPos 4s ease-in-out infinite alternate;
+  background-position: 0 0;
+  background-size: 100% 300%;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+@keyframes rewardTicketBgPos {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 450px;
+  }
+}
+
+/* En-tête du ticket : Marque DROP et statut */
+.reward-ticket-header {
+  position: relative;
+  grid-area: header;
+  margin: 0.25rem 0.75rem 0;
+  text-align: center;
+  z-index: 2;
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 3px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.8);
+  mix-blend-mode: normal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-ticket-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.reward-ticket-tag {
+  font-family: "Inter", sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #0d1017;
+  background: #f59e0b;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  margin-top: -2px;
+}
+
+/* Corps du ticket : Montant du drop et détails */
+.reward-ticket-body {
+  grid-area: body;
+  position: relative;
+  margin: 0 1rem;
+  padding: 0.5rem 0.25rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.reward-ticket-value {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 2.75rem;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(245, 158, 11, 0.6);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.reward-ticket-value-unit {
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #fef08a;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.reward-ticket-desc {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.5px;
+}
+
+.reward-ticket-subdesc {
+  margin-top: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Symboles décoratifs holographiques (notes & étoiles) */
+.reward-ticket-symbol {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.5rem;
+  font-size: 1.15rem;
+  color: #fff;
+  opacity: 0.4;
+  line-height: 1;
+  pointer-events: none;
+  animation: rewardTicketPulse 2.4s ease-in-out infinite;
+}
+
+.reward-ticket-notes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-size: 4.5rem;
+  color: rgba(255, 255, 255, 0.18);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes rewardTicketPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+/* Pied de ticket : Sérialisation et code-barres */
+.reward-ticket-footer {
+  grid-area: footer;
+  position: relative;
+  z-index: 2;
+  margin: 0.5rem 0.75rem 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-ticket-number {
+  margin-bottom: 0.4rem;
+  text-align: center;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  letter-spacing: 1px;
+}
+
+.reward-ticket-number .bold {
+  font-weight: 900;
+  color: #fef08a;
+}
+
+/* Code-barres géométrique haute précision (Uiverse dexter-st) */
+.reward-ticket-barcode {
+  width: 0;
+  height: 28px;
+  box-shadow:
+    0px 0 0 1px #fff,
+    4px 0 0 1px #fff,
+    6px 0 0 1px #fff,
+    9px 0 0 2px #fff,
+    13px 0 0 1px #fff,
+    16px 0 0 1px #fff,
+    20px 0 0 2px #fff,
+    25px 0 0 1px #fff,
+    28px 0 0 1px #fff,
+    33px 0 0 2px #fff,
+    36px 0 0 1px #fff,
+    40px 0 0 1px #fff,
+    44px 0 0 2px #fff,
+    49px 0 0 1px #fff,
+    52px 0 0 1px #fff,
+    56px 0 0 2px #fff,
+    61px 0 0 1px #fff,
+    64px 0 0 1px #fff,
+    68px 0 0 2px #fff,
+    73px 0 0 1px #fff,
+    76px 0 0 1px #fff;
+  transform: translateX(-38px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* Accessibilité : Réduction de mouvement */
+@media (prefers-reduced-motion: reduce) {
+  .reward-ticket-card,
+  .reward-ticket-holographic::after,
+  .reward-ticket-symbol {
+    animation: none !important;
+    transform: none !important;
+  }
+}

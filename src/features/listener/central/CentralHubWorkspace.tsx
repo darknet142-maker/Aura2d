@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   X,
@@ -30,6 +30,9 @@ import { CentralRecosAndArtistsTabs } from './CentralRecosAndArtistsTabs';
 import { CentralMissionsTab } from './CentralMissionsTab';
 import {
   UserTokenWalletModal,
+  RecurringRewardModal,
+  RecurringRewardTriggerBadge,
+  getDailyStreakInfo,
   getOrCreateUserWallet,
   getSponsorCampaigns,
   hasUserCompletedCampaign,
@@ -106,6 +109,31 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
   } = state;
 
   const [isTokenWalletOpen, setIsTokenWalletOpen] = useState(false);
+  const [isRecurringRewardOpen, setIsRecurringRewardOpen] = useState(false);
+  const [tokenBalanceRefreshKey, setTokenBalanceRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const handleBalanceUpdate = () => {
+      setTokenBalanceRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('drop:token-balance-updated', handleBalanceUpdate);
+    return () => window.removeEventListener('drop:token-balance-updated', handleBalanceUpdate);
+  }, []);
+
+  // Déclenchement automatique bienveillant pour l'utilisateur récurrent
+  useEffect(() => {
+    const uid = currentUser?.id || 'usr-default';
+    const info = getDailyStreakInfo(uid);
+    const sessionKey = `drop_prompted_daily_drop_${uid}_${new Date().toDateString()}`;
+    if (info.canClaimToday && !sessionStorage.getItem(sessionKey)) {
+      sessionStorage.setItem(sessionKey, 'true');
+      const timer = setTimeout(() => {
+        setIsRecurringRewardOpen(true);
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser?.id]);
+
   const activeCampaigns = getSponsorCampaigns('ACTIVE');
   const availableMissionsCount = activeCampaigns.filter(
     (c) => !hasUserCompletedCampaign(currentUser?.id || 'usr-default', c.id)
@@ -153,6 +181,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
           )}
 
           <motion.button
+            key={tokenBalanceRefreshKey}
             type="button"
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.95 }}
@@ -164,6 +193,11 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             <Coins className="w-3.5 h-3.5 shrink-0" />
             <span className="font-mono">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
           </motion.button>
+
+          <RecurringRewardTriggerBadge
+            userId={currentUser?.id || 'usr-default'}
+            onClick={() => setIsRecurringRewardOpen(true)}
+          />
 
 
           <motion.button
@@ -498,6 +532,13 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
         onPassRedeemed={(newPass) => {
           if (onChangeSubscriptionPass) onChangeSubscriptionPass(newPass);
         }}
+        onToast={showToast}
+      />
+
+      <RecurringRewardModal
+        isOpen={isRecurringRewardOpen}
+        onClose={() => setIsRecurringRewardOpen(false)}
+        userId={currentUser?.id || 'usr-default'}
         onToast={showToast}
       />
     </motion.div>
