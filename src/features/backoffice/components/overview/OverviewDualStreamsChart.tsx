@@ -101,11 +101,10 @@ export const OverviewDualStreamsChart: React.FC<OverviewDualStreamsChartProps> =
                   setRange(r);
                   setHoverIdx(null);
                 }}
-                className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${
-                  range === r
+                className={`px-2.5 py-1 rounded-lg cursor-pointer transition ${range === r
                     ? 'bg-emerald-500 text-[#080A0F] font-extrabold shadow-sm'
                     : 'text-[#A3A9BA] hover:text-white'
-                }`}
+                  }`}
               >
                 {r === '24H' ? '24 Heures' : r === '7D' ? '7 Jours' : r === '30D' ? '30 Jours' : '1 An'}
               </button>
