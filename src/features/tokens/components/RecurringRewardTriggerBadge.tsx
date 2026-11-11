@@ -43,7 +43,7 @@ export const RecurringRewardTriggerBadge: React.FC<RecurringRewardTriggerBadgePr
         <>
           <Gift className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="hidden sm:inline">Drop Quotidien</span>
-          <span className="font-mono text-amber-400">+{info.currentTier.tokens}</span>
+          <span className="font-mono tabular-nums text-amber-400">+{info.currentTier.tokens}</span>
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#DE1B34] ring-2 ring-[#080A0F] animate-ping" />
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#DE1B34] ring-2 ring-[#080A0F]" />
         </>
@@ -51,7 +51,7 @@ export const RecurringRewardTriggerBadge: React.FC<RecurringRewardTriggerBadgePr
         <>
           <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="hidden sm:inline">Série</span>
-          <span className="font-mono text-[#F8FAFC]">J{info.effectiveDay}</span>
+          <span className="font-mono tabular-nums text-[#F8FAFC]">J{info.effectiveDay}</span>
           <Check className="w-3 h-3 text-emerald-400 shrink-0 ml-0.5" />
         </>
       )}

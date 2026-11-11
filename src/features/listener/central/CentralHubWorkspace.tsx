@@ -173,7 +173,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             >
               <Bell className="w-4 h-4" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-[#DE1B34] text-white text-[9px] font-mono font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-[#DE1B34] text-white text-[9px] font-mono font-bold tabular-nums flex items-center justify-center">
                   {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                 </span>
               )}
@@ -191,7 +191,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
             title="Mon Portefeuille de Jetons Sponsorisés"
           >
             <Coins className="w-3.5 h-3.5 shrink-0" />
-            <span className="font-mono">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
+            <span className="font-mono tabular-nums">{getOrCreateUserWallet(currentUser?.id || 'usr-default').availableBalanceTokens.toLocaleString()}</span>
           </motion.button>
 
           <RecurringRewardTriggerBadge
@@ -511,7 +511,7 @@ export const CentralHubWorkspace: React.FC<CentralHubWorkspaceProps> = ({
                   <div className="relative flex items-center justify-center">
                     {item.icon}
                     {'badgeCount' in item && typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black flex items-center justify-center shadow-md border border-[#080A0F]">
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#DE1B34] text-white text-[8.5px] font-mono font-black tabular-nums flex items-center justify-center shadow-md border border-[#080A0F]">
                         {item.badgeCount}
                       </span>
                     )}

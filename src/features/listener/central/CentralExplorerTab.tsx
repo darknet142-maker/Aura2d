@@ -158,7 +158,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                           {/* 1. RANGÉE CARRÉE DÉFILANTE : CATÉGORIES MÉTIERS & GENRES */}
                           <section className="space-y-2.5">
                             <div className="flex items-center justify-between px-0.5">
-                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight text-balance">
                                 Catégories &amp; Métiers
                               </h3>
                               <button
@@ -382,7 +382,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                           {/* 2. RANGÉE RECTANGULAIRE PANORAMIQUE (16:9) : DROPS EN VEDETTE */}
                           <section className="space-y-2.5">
                             <div className="flex items-center justify-between px-0.5">
-                              <h3 className="text-sm font-extrabold text-white tracking-tight">
+                              <h3 className="text-sm font-extrabold text-white tracking-tight text-balance">
                                 Drops en Vedette
                               </h3>
                               <button
@@ -530,7 +530,7 @@ export const CentralExplorerTab: React.FC<{ state: ReturnTypeUseImmersivePlayerS
                             <section className="space-y-2.5">
                               <div className="flex items-center justify-between px-0.5">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="text-sm font-extrabold text-cyan-300 tracking-tight">
+                                  <h3 className="text-sm font-extrabold text-cyan-300 tracking-tight text-balance">
                                     Beats &amp; Instrumentales
                                   </h3>
                                   <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[9px] font-mono font-bold">

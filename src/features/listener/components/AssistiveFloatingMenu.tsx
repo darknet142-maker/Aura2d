@@ -184,7 +184,7 @@ export const AssistiveFloatingMenu: React.FC<AssistiveFloatingMenuProps> = ({
         whileDrag={{ scale: 1.05 }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        className="fixed z-[9999] pointer-events-auto touch-none"
+        className="fixed z-[190] pointer-events-auto touch-none"
         style={{
           bottom: '88px',
           right: '24px',

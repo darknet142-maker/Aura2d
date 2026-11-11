@@ -65,3 +65,4 @@ export const StudioLevelSlider: React.FC<StudioLevelSliderProps> = ({
     </div>
   );
 };
+

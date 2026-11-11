@@ -128,7 +128,7 @@ export const AdminStudio2Layout: React.FC<AdminStudio2LayoutProps> = ({
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#080A0F] text-[#F8FAFC]">
+    <div className="flex h-dvh w-full overflow-hidden bg-[#080A0F] text-[#F8FAFC]">
       <AdminSidebar
         currentSpaceId={currentSpaceId}
         onSelectSpace={(s) => {

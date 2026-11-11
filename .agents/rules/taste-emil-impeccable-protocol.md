@@ -1,11 +1,11 @@
 ---
 trigger: always_on
-description: Protocole Permanent Combiné des 5 Compétences (Taste Skill + Emil Kowalski + Impeccable + Staff-Frontend + Unslop) & Obligation de Planification Avant Code.
+description: Protocole Permanent Combiné des 6 Compétences (Taste Skill + Emil Kowalski + Impeccable + Staff-Frontend + Unslop + UI-Skills / Baseline & Improve UI) & Obligation de Planification Avant Code.
 ---
 
-# PROTOCOLE PERMANENT OBLIGATOIRE DES 5 COMPÉTENCES : TASTE SKILL + EMIL KOWALSKI + IMPECCABLE + STAFF-FRONTEND + UNSLOP
+# PROTOCOLE PERMANENT OBLIGATOIRE DES 6 COMPÉTENCES : TASTE SKILL + EMIL KOWALSKI + IMPECCABLE + STAFF-FRONTEND + UNSLOP + UI-SKILLS
 
-Pour chaque composant, écran, audit ou modification de l'application **DROP (+241)**, tu dois systématiquement et simultanément appliquer ces **5 compétences** ET **toujours élaborer un plan structuré avant de coder quoi que ce soit** :
+Pour chaque composant, écran, audit ou modification de l'application **DROP (+241)**, tu dois systématiquement et simultanément appliquer ces **6 compétences** ET **toujours élaborer un plan structuré avant de coder quoi que ce soit** :
 
 ## 0. RÈGLE ABSOLUE : PLANIFICATION AVANT CODE (`Plan-First`)
 - **Interdiction de coder à l'aveugle** : Avant d'écrire ou modifier la moindre ligne de code applicatif, tu dois toujours formuler un plan d'ingénierie et de design explicite (diagnostic, architecture cible, matrice d'états, contrat visuel et étapes de vérification).
@@ -43,3 +43,18 @@ Pour chaque composant, écran, audit ou modification de l'application **DROP (+2
   8. *Visuels & Matériaux* : Matières tangibles de studio (vinyle physique, galvanomètre analogique, bandes magnétiques, crête-mètres) ; rejet absolu des blobs et orbes abstraits IA.
   9. *Mouvement sobre* : Suppression des pulsations en boucle (`animate-pulse`/`animate-ping` non justifiées), micro-transitions ciblées sur propriétés compositées.
 - **Le « Template Check »** : Si en remplaçant la marque 'DROP' par un autre produit ou gabarit générique, l'interface semblait encore fonctionner, l'écran a échoué. Chaque écran doit respirer intimement l'identité studio broadcast de DROP.
+
+## 6. INGENIERIE DE PRÉCISION UI & AUDIT EVIDENCE-BASED (`ui-skills` / Julien Thibeaut @ibelick)
+- **Baseline UI (`baseline-ui`)** :
+  - *Typographie & Rendu* : `text-balance` pour les titres, `text-pretty` pour les paragraphes, `tabular-nums` obligatoire pour tout compteur/donnée chiffrée.
+  - *Layout Mobile & Viewport* : Remplacement strict de tout `h-screen` par `h-dvh` ou contraintes flex, respect scrupuleux des zones de sécurité (`safe-area-inset`).
+  - *Échelle z-index & Tailles* : Utilisation d'une échelle `z-index` ordonnée (zéro valeur arbitraire `z-[9999]`), `size-*` pour les icônes et boutons carrés.
+  - *Performance & Rendu Compositor* : Zéro animation de propriétés de layout (`width`, `height`, `top`, `left`, `margin`, `padding`), animation exclusive des propriétés compositées (`transform`, `opacity`), durée d'interaction $\le 200$ms.
+  - *Protection des entrées* : Ne jamais bloquer le collage (`paste`) dans les champs de texte.
+- **Audit de surface & Preuve en 3 Points (`improve-ui`)** :
+  - *Méthode Evidence-Based* : Pour chaque problème identifié, prouver simultanément : 1. Le **Contrat** (décision de design violée ou contradiction d'état), 2. Le **Runtime** (chemin d'exécution prouvé par les imports et le rendu), 3. La **Correction univoque** (une seule solution déterminée par les tokens du projet, sans inventer l'intention produit).
+  - *Règle du Zéro Présomption* : Ne rapporter que des anomalies vérifiées et documenter les plans de travail autonomes (`design-plans/`).
+- **Accessibilité & Performance Mouvement (`fixing-accessibility` & `fixing-motion-performance`)** :
+  - `aria-label` obligatoire sur tout bouton purement iconographique.
+  - Gestion stricte du focus clavier (`Tab`, `Escape`) et pièges de focus sur les modales.
+  - Pause automatique des animations en boucle hors de l'écran ou au scroll intensif.
